@@ -21,12 +21,6 @@ export interface ResponseData {
     redirectURL: string
 }
 
-// export interface VerifyOtpSuccessResponse {
-//     status: "success"; 
-//     message: string;   
-//     redirectURL: string; 
-//   }
-
 export interface VerifyOtpBaseResponse {
     status: 'success' | 'error';
     message: string;
@@ -39,12 +33,8 @@ export interface VerifyOtpSuccessResponse extends VerifyOtpBaseResponse {
 
 export interface VerifyOtpErrorResponse extends VerifyOtpBaseResponse {
     status: 'error';
-    error?: string;
+    message: string;
 }
 
 export type VerifyOtpResponse = VerifyOtpSuccessResponse | VerifyOtpErrorResponse;
 
-export interface LoginData {
-    email: string;
-    password: string;
-}

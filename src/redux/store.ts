@@ -10,7 +10,7 @@ const store = configureStore({
     reducer: rootReducer,
 });
 
-//to ensure actions allowed by your Redux store(for type safety)
+//to ensure actions allowed by our Redux store(for type safety)
 export type AppDispatch = typeof store.dispatch;
 
 

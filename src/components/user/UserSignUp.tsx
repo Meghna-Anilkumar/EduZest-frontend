@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import bgImage from "@/assets/learning_img.jpg";
+import bgImage from "@/assets/newbg.jpg";
 import { useDispatch, useSelector } from "react-redux";
 import { userClearError } from "../../redux/reducers/userReducer";
 import type { AppDispatch, RootState } from "../../redux/store";
@@ -55,7 +55,7 @@ const UserSignUp: React.FC = (): JSX.Element => {
       const { confirmPassword, ...credentials } = values;
       const typedCredentials: SignUpCredentials = credentials as SignUpCredentials;
       await dispatch(signUpUser(typedCredentials)).unwrap();
-    } catch (err) {
+    } catch {
       setIsLoading(false);
     }
   };

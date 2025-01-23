@@ -1,9 +1,10 @@
 import { IInitialState } from "./IState";
 import { signUpUser } from "../actions/auth/signupAction";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IInitialStateError } from "../../interface/Interface";
+import { IInitialStateError, ResponseStatus } from "../../interface/Interface";
 import { isErrorResponse } from "../../utils/customError";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
+import { login } from "../actions/auth/userLoginAction";
 
 const initialState: IInitialState = {
   isAuthenticated: false,
@@ -64,12 +65,50 @@ const userSlice = createSlice({
           state.otpVerified = false;
         }
       })
-      .addCase(verifyOTP.rejected, (state, action) => {
+      .addCase(verifyOTP.rejected, (state, action: PayloadAction<any>) => {
         state.otpVerified = false;
-        if (isErrorResponse(action.payload)) {
-          state.error = (action.payload.error as IInitialStateError) || null;
+        if (
+          action.payload &&
+          typeof action.payload === "object" &&
+          "error" in action.payload
+        ) {
+          state.error = {
+            message: action.payload.error.message,
+          };
+        } else {
+          state.error = {
+            message: "An error occurred during verification",
+          };
         }
       })
+
+      //user login
+      .addCase(login.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        if (action.payload.status === ResponseStatus.SUCCESS) {
+          state.isAuthenticated = true;
+        } else {
+          state.isAuthenticated = false;
+        }
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.isAuthenticated = false;
+        if (
+          action.payload &&
+          typeof action.payload === "object" &&
+          "message" in action.payload
+        ) {
+          state.error = {
+            message: (action.payload as { message: string }).message,
+          };
+        } else {
+          state.error = {
+            message: "An error occurred during login",
+          };
+        }
+      });
   },
 });
 

@@ -53,11 +53,11 @@ function setupInterceptorsTo(axiosInstance: AxiosInstance): AxiosInstance {
 }
 
 
-export function debounce(func: Function, delay: number) {
-    let timeout: ReturnType<typeof setTimeout>;
+// export function debounce(func: Function, delay: number) {
+//     let timeout: ReturnType<typeof setTimeout>;
 
-    return function (...args: any[]) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-}
+//     return function (...args: any[]) {
+//         clearTimeout(timeout);
+//         timeout = setTimeout(() => func(...args), delay);
+//     };
+// }
