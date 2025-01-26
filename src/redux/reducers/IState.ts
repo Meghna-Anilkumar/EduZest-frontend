@@ -1,9 +1,6 @@
-
-
-
 export interface IInitialState {
     isAuthenticated: boolean;
-    error: IInitialStateError | null;
+    error: any;
     tempMail: {email:string}|null;
     otpVerified:boolean;
   }

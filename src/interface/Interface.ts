@@ -2,8 +2,8 @@
 
 
 export enum ResponseStatus {
-    SUCCESS = 'Success',
-    ERROR = 'Error',
+    SUCCESS = 'success',
+    ERROR = 'error',
 }
 
 export interface IInitialStateError {
@@ -19,7 +19,14 @@ export interface ResponseData {
         [key: string]: any;
     },
     redirectURL: string
+    accessToken?: string; 
+    refreshToken?: string; 
 }
+
+export interface IInitialStateError {
+    error: string
+    message: string
+  }
 
 export interface VerifyOtpBaseResponse {
     status: 'success' | 'error';

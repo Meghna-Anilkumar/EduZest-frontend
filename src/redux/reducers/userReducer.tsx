@@ -1,13 +1,14 @@
 import { IInitialState } from "./IState";
 import { signUpUser } from "../actions/auth/signupAction";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IInitialStateError, ResponseStatus } from "../../interface/Interface";
+import { IInitialStateError } from "../../interface/Interface";
 import { isErrorResponse } from "../../utils/customError";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
 import { login } from "../actions/auth/userLoginAction";
+import Cookies from "js-cookie";
 
 const initialState: IInitialState = {
-  isAuthenticated: false,
+  isAuthenticated: !!Cookies.get("accessToken"),
   error: null,
   tempMail: null,
   otpVerified: false,
@@ -25,8 +26,8 @@ const userSlice = createSlice({
       state.error = action.payload;
     },
 
-    userSetIsAuthenticated(state) {
-      state.isAuthenticated = !state.isAuthenticated;
+    userSetIsAuthenticated(state, action) {
+      state.isAuthenticated = action.payload;
     },
 
     setOtpVerified(state, action: PayloadAction<boolean>) {
@@ -87,12 +88,17 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
-        if (action.payload.status === ResponseStatus.SUCCESS) {
+        console.log("Login Action Fulfilled:", action.payload);
+
+        if (action.payload.status === "success") {
           state.isAuthenticated = true;
+          console.log("AccessToken and RefreshToken are stored in cookies.");
         } else {
+          console.warn("Login failed, setting isAuthenticated to false.");
           state.isAuthenticated = false;
         }
       })
+
       .addCase(login.rejected, (state, action) => {
         state.isAuthenticated = false;
         if (

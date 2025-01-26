@@ -1,10 +1,27 @@
-import React, { useState,useEffect,FormEvent } from "react";
+import React, { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../../../redux/store";
+import { userSetIsAuthenticated } from "../../../redux/reducers/userReducer";
+import Cookies from "js-cookie";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const dispatch = useDispatch();
+
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+
+  console.log(isAuthenticated);
+
+  const username = "John Doe";
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setIsMenuOpen((prevState) => !prevState);
+  };
+
+  const handleLogout = () => {
+    Cookies.remove("accessToken");
+    Cookies.remove("refreshToken");
+    dispatch(userSetIsAuthenticated(false));
   };
 
   const navLinks = [
@@ -19,14 +36,12 @@ const Header = () => {
   return (
     <header className="bg-black py-4 md:py-6 shadow-lg fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto flex flex-wrap justify-between items-center px-4 md:px-6">
-        {/* Logo */}
         <div className="flex items-center">
           <h1 className="text-white text-2xl md:text-3xl font-bold flex items-center">
             Edu<span className="text-[#49bbbd]">Zest</span>
           </h1>
         </div>
 
-        {/* Hamburger Menu Button */}
         <button
           onClick={toggleMenu}
           className="md:hidden text-white p-2 focus:outline-none"
@@ -72,26 +87,50 @@ const Header = () => {
           </ul>
         </nav>
 
-        {/* Sign-In and Login */}
+        {/* Sign-In/Logout and Profile */}
         <div
           className={`${
             isMenuOpen ? "flex" : "hidden"
           } md:flex items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto mt-4 md:mt-0 flex-col md:flex-row`}
         >
-          <a
-            href="/login"
-            className="text-white text-lg hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Login
-          </a>
-          <a
-            href="/signup"
-            className="bg-[#49bbbd] text-black px-5 py-2 rounded-full text-lg font-semibold hover:bg-white hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Get Started
-          </a>
+          {isAuthenticated ? (
+            <>
+              {/* Profile Button */}
+              <a
+                href="/profile"
+                className="text-white text-lg hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Welcome, {username}
+              </a>
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="bg-[#49bbbd] text-black px-5 py-2 rounded-full text-lg font-semibold hover:bg-white hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Login Button */}
+              <a
+                href="/login"
+                className="text-white text-lg hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Login
+              </a>
+              {/* Get Started Button */}
+              <a
+                href="/signup"
+                className="bg-[#49bbbd] text-black px-5 py-2 rounded-full text-lg font-semibold hover:bg-white hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Get Started
+              </a>
+            </>
+          )}
         </div>
       </div>
     </header>

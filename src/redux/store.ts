@@ -1,19 +1,31 @@
-import { combineReducers, configureStore } from '@reduxjs/toolkit';
-import userReducer from './reducers/userReducer';
+import { configureStore } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage"; // Uses local storage
+import userReducer from "./reducers/userReducer";
+import adminReducer from "./reducers/adminReducer"
 
+const persistConfig = {
+  key: "root",
+  storage,
+  whitelist: ["user"], 
+};
 
-const rootReducer=combineReducers({
-    user:userReducer,
-})
+const adminPersistedReducer = persistReducer(persistConfig, adminReducer);
+const userPersistedReducer = persistReducer(persistConfig, userReducer);
 
 const store = configureStore({
-    reducer: rootReducer,
+  reducer: {
+    user: userPersistedReducer,
+    admin: adminPersistedReducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
 });
 
-//to ensure actions allowed by our Redux store(for type safety)
-export type AppDispatch = typeof store.dispatch;
 
-
-export type RootState = ReturnType<typeof rootReducer>;
-
+export const persistor = persistStore(store);
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch; 
 export default store;

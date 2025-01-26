@@ -7,3 +7,8 @@ export interface UserEndpoints extends IEndPoints {
     signup: string;
     verifyOTP: string;
 }
+
+
+export interface AdminEndpoints extends IEndPoints {
+    
+}

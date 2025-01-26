@@ -12,7 +12,7 @@ const UserLogin = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { error, isAuthenticated } = useSelector((state: RootState) => state.user);
+  const { error } = useSelector((state: RootState) => state.user);
 
   const formik = useFormik({
     initialValues: {
@@ -50,7 +50,7 @@ const UserLogin = () => {
           Please sign in to continue
         </p>
 
-        {error && <div className="error-message">{error.message}</div>}
+        {/* {error && <div className="error-message">{error.message}</div>} */}
 
         <form onSubmit={formik.handleSubmit}>
           {/* Email Field */}
