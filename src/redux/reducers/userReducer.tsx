@@ -2,16 +2,18 @@ import { IInitialState } from "./IState";
 import { signUpUser } from "../actions/auth/signupAction";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IInitialStateError } from "../../interface/Interface";
-import { isErrorResponse } from "../../utils/customError";
+// import { isErrorResponse } from "../../utils/customError";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
 import { login } from "../actions/auth/userLoginAction";
 import Cookies from "js-cookie";
+import { IUserdata } from "../../interface/user/IUserData";
 
 const initialState: IInitialState = {
   isAuthenticated: !!Cookies.get("accessToken"),
   error: null,
   tempMail: null,
   otpVerified: false,
+  userData:null
 };
 
 const userSlice = createSlice({
@@ -33,6 +35,10 @@ const userSlice = createSlice({
     setOtpVerified(state, action: PayloadAction<boolean>) {
       state.otpVerified = action.payload;
     },
+
+    setUserData(state, action: PayloadAction<IUserdata | null>) {
+      state.userData = action.payload;
+    }
   },
 
   extraReducers: (builder) => {
@@ -43,27 +49,19 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(signUpUser.fulfilled, (state, action) => {
-        if (action.payload.status === false) {
-            state.error = {
-                error: "Signup Error",
-                message: action.payload.message
-            };
-            return;
-        }
         state.tempMail = action.payload.data
-            ? (action.payload.data as { email: string })
-            : null;
-    })
+          ? (action.payload.data as { email: string })
+          : null;
+      })
 
       .addCase(signUpUser.rejected, (state, action: PayloadAction<any>) => {
-        console.log(action.payload)
+        console.log(action.payload);
         state.isAuthenticated = false;
         state.error = {
-            error: "Signup Error",
-            message: action.payload?.error?.message || "Something went wrong"
+          error: "Signup Error",
+          message: action.payload?.error?.message || "Something went wrong",
         } as IInitialStateError;
-    })
-      
+      })
 
       // verify OTP
       .addCase(verifyOTP.pending, (state) => {
@@ -72,9 +70,9 @@ const userSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.otpVerified = true;
-        } else {
-          state.otpVerified = false;
-        }
+          state.isAuthenticated=true
+          state.userData = action.payload.userData as IUserdata; 
+        } 
       })
       .addCase(verifyOTP.rejected, (state, action: PayloadAction<any>) => {
         state.otpVerified = false;
@@ -102,28 +100,16 @@ const userSlice = createSlice({
 
         if (action.payload.success === true) {
           state.isAuthenticated = true;
+          state.userData = action.payload.userData as IUserdata; 
           console.log("AccessToken and RefreshToken are stored in cookies.");
-        } else {
-          console.warn("Login failed, setting isAuthenticated to false.");
-          state.isAuthenticated = false;
         }
       })
-
       .addCase(login.rejected, (state, action) => {
         state.isAuthenticated = false;
-        if (
-          action.payload &&
-          typeof action.payload === "object" &&
-          "message" in action.payload
-        ) {
-          state.error = {
-            message: (action.payload as { message: string }).message,
-          };
-        } else {
-          state.error = {
-            message: "An error occurred during login",
-          };
-        }
+        state.error = {
+          message:
+            (action.payload as { message?: string })?.message || "Login failed",
+        };
       });
   },
 });
@@ -133,6 +119,7 @@ export const {
   userSetError,
   userSetIsAuthenticated,
   setOtpVerified,
+  setUserData
 } = userSlice.actions;
 
 export default userSlice.reducer;

@@ -4,6 +4,7 @@ import { VerifyOtpSuccessResponse } from "../../../interface/Interface";
 import { serverUser } from "../../../services";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
 import { OtpVerificationData } from "../../../interface/user/IUserData";
+import Cookies from "js-cookie";
 
 
 export const verifyOTP = createAsyncThunk<VerifyOtpSuccessResponse, OtpVerificationData>(
@@ -11,7 +12,8 @@ export const verifyOTP = createAsyncThunk<VerifyOtpSuccessResponse, OtpVerificat
   async (otpData: OtpVerificationData, { rejectWithValue }) => {
     try {
       const response = await serverUser.post(userEndPoints.verifyOTP, otpData);
-      
+      Cookies.set('accessToken', response.data.token, { expires: 7 });
+            Cookies.set('refreshToken', response.data.refreshToken, { expires: 7 });
       if (!response.data.success) {  
         return rejectWithValue({
           error: {

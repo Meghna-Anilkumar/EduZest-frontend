@@ -1,18 +1,17 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../redux/store";
-import { userSetIsAuthenticated } from "../../../redux/reducers/userReducer";
+import { userSetIsAuthenticated, setUserData } from "../../../redux/reducers/userReducer";
 import Cookies from "js-cookie";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dispatch = useDispatch();
 
-  const { isAuthenticated } = useSelector((state: RootState) => state.user);
-
+  const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
   console.log(isAuthenticated);
+  console.log(userData?.name)
 
-  const username = "John";
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);
@@ -22,6 +21,7 @@ const Header = () => {
     Cookies.remove("accessToken");
     Cookies.remove("refreshToken");
     dispatch(userSetIsAuthenticated(false));
+    dispatch(setUserData(null));
   };
 
   const navLinks = [
@@ -101,7 +101,7 @@ const Header = () => {
                 className="text-white text-lg hover:text-[#49bbbd] transition duration-300 text-center w-full md:w-auto"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Welcome, {username}
+                Welcome, {userData?.name || "User"}
               </a>
               {/* Logout Button */}
               <button

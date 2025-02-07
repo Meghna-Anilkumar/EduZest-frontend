@@ -15,7 +15,7 @@ export const login = createAsyncThunk<ResponseData, LoginData>(
             console.log("Login Response:", response.data);
 
             // Set both access and refresh tokens
-            Cookies.set('accessToken', response.data.accessToken, { expires: 7 });
+            Cookies.set('accessToken', response.data.token, { expires: 7 });
             Cookies.set('refreshToken', response.data.refreshToken, { expires: 7 });
 
             return response.data;

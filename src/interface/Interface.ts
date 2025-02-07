@@ -18,6 +18,7 @@ export interface ResponseData {
         message: string;
     };
     data?: unknown;
+    userData:unknown;
     redirectURL?: string
     accessToken?: string;
     refreshToken?: string;
@@ -36,6 +37,7 @@ export interface VerifyOtpBaseResponse {
 export interface VerifyOtpSuccessResponse extends VerifyOtpBaseResponse {
     success: true;
     data?: any;
+    userData:unknown
 }
 
 export interface VerifyOtpErrorResponse extends VerifyOtpBaseResponse {

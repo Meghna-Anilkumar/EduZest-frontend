@@ -5,8 +5,6 @@ export interface UserSignUpData {
   confirmPassword: string;
 }
 
-// export type SignUpCredentials = Omit<UserSignUpData, "confirmPassword">;
-
 
 export interface OtpVerificationData {
   otp: number;
@@ -16,4 +14,38 @@ export interface OtpVerificationData {
 export interface LoginData{
   email: string;
   password: string;
+}
+
+
+export interface IUserdata {
+  email: string;
+  name: string;
+  isVerified: boolean;
+  profile?: {
+    dob?: Date;
+    firstName?: string;
+    gender?: "Male" | "Female" | "Other" | string;
+    lastName?: string;
+    profilePic?: string;
+  };
+  updatedAt?: Date;
+  role?: "Student" | "Instructor" | "Admin";
+  createdAt?: Date;
+  isBlocked?: boolean;
+  password: string;
+  studentDetails?: {
+    additionalEmail?: string;
+    enrolledCourses?: {
+      courseId: string;  
+      progress: number;
+      rating: string;
+    }[];
+    phone?: number;
+    socialMedia?: string[];
+  };
+  instructorDetails?: {
+    createdCourses?: string;  
+    profit?: number;
+    rating?: number;
+  };
 }
