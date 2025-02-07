@@ -12,7 +12,7 @@ const Header = () => {
 
   console.log(isAuthenticated);
 
-  const username = "John Doe";
+  const username = "John";
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);

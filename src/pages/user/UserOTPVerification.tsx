@@ -19,6 +19,7 @@ const OTPVerification: React.FC = () => {
   const { otpVerified, error, tempMail } = useSelector(
     (state: RootState) => state.user
   );
+  console.log(otpVerified)
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   // Format time left into minutes and seconds

@@ -7,7 +7,7 @@ import type { AppDispatch, RootState } from "../../redux/store";
 import { useForm } from "../../hooks/UseForm";
 import { signUpUser } from "../../redux/actions/auth/signupAction";
 import { validationRules } from "../../utils/validation";
-import { SignUpCredentials } from "../../interface/user/IUserData";
+import { UserSignUpData } from "../../interface/user/IUserData";
 import { FaUser, FaEnvelope, FaLock, FaCheckCircle } from "react-icons/fa";
 
 const UserSignUp: React.FC = (): JSX.Element => {
@@ -26,11 +26,7 @@ const UserSignUp: React.FC = (): JSX.Element => {
     }
   }, [tempMail, navigate]);
 
-  const {
-    values,
-    errors,
-    handleChange,
-  } = useForm({
+  const { values, errors, handleChange } = useForm({
     initialValues: {
       name: "",
       email: "",
@@ -44,17 +40,16 @@ const UserSignUp: React.FC = (): JSX.Element => {
       confirmPassword: (value: string) =>
         validationRules.confirmPassword(value, values),
     },
-    onSubmit: async () => {}, 
+    onSubmit: async () => {},
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
-      const { confirmPassword, ...credentials } = values;
-      const typedCredentials: SignUpCredentials = credentials as SignUpCredentials;
-      await dispatch(signUpUser(typedCredentials)).unwrap();
+      const userData: UserSignUpData = values;
+      await dispatch(signUpUser(userData)).unwrap();
     } catch {
       setIsLoading(false);
     }
@@ -73,10 +68,12 @@ const UserSignUp: React.FC = (): JSX.Element => {
         {isLoading && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 rounded-lg">
             <div className="w-12 h-12 border-4 border-[#49bbbd] border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-700 font-medium">Creating your account...</p>
+            <p className="mt-4 text-gray-700 font-medium">
+              Creating your account...
+            </p>
           </div>
         )}
-        
+
         <h2 className="text-xl font-bold text-center text-black mb-2">
           Hello, friend!
         </h2>
@@ -208,7 +205,7 @@ const UserSignUp: React.FC = (): JSX.Element => {
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        <button 
+        <button
           className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition duration-200"
           disabled={isLoading}
         >
@@ -222,7 +219,10 @@ const UserSignUp: React.FC = (): JSX.Element => {
 
         <p className="text-center text-sm text-gray-600 mt-4">
           Already have an account?{" "}
-          <Link to="/login" className="text-[#49bbbd] font-bold hover:underline">
+          <Link
+            to="/login"
+            className="text-[#49bbbd] font-bold hover:underline"
+          >
             Log in
           </Link>
         </p>

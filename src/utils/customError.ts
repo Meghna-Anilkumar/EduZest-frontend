@@ -1,4 +1,3 @@
-import { AxiosError } from "axios";
 import { ResponseData } from "../interface/Interface";
 
 export interface ErrorResponse extends ResponseData {

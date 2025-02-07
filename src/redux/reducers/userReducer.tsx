@@ -43,24 +43,34 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(signUpUser.fulfilled, (state, action) => {
-        state.tempMail = action.payload.data
-          ? (action.payload.data as { email: string })
-          : null;
-      })
-
-      .addCase(signUpUser.rejected, (state, action) => {
-        state.isAuthenticated = false;
-        if (isErrorResponse(action.payload)) {
-          state.error = action.payload.error as IInitialStateError | null;
+        if (action.payload.status === false) {
+            state.error = {
+                error: "Signup Error",
+                message: action.payload.message
+            };
+            return;
         }
-      })
+        state.tempMail = action.payload.data
+            ? (action.payload.data as { email: string })
+            : null;
+    })
 
-      //verify otp
+      .addCase(signUpUser.rejected, (state, action: PayloadAction<any>) => {
+        console.log(action.payload)
+        state.isAuthenticated = false;
+        state.error = {
+            error: "Signup Error",
+            message: action.payload?.error?.message || "Something went wrong"
+        } as IInitialStateError;
+    })
+      
+
+      // verify OTP
       .addCase(verifyOTP.pending, (state) => {
         state.error = null;
       })
       .addCase(verifyOTP.fulfilled, (state, action) => {
-        if (action.payload.status === "success") {
+        if (action.payload.success) {
           state.otpVerified = true;
         } else {
           state.otpVerified = false;
@@ -83,14 +93,14 @@ const userSlice = createSlice({
         }
       })
 
-      //user login
+      // user login
       .addCase(login.pending, (state) => {
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         console.log("Login Action Fulfilled:", action.payload);
 
-        if (action.payload.status === "success") {
+        if (action.payload.success === true) {
           state.isAuthenticated = true;
           console.log("AccessToken and RefreshToken are stored in cookies.");
         } else {

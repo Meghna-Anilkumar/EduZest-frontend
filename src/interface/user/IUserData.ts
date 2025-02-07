@@ -5,7 +5,7 @@ export interface UserSignUpData {
   confirmPassword: string;
 }
 
-export type SignUpCredentials = Omit<UserSignUpData, "confirmPassword">;
+// export type SignUpCredentials = Omit<UserSignUpData, "confirmPassword">;
 
 
 export interface OtpVerificationData {

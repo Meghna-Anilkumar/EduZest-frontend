@@ -10,15 +10,24 @@ import { userEndPoints } from "../../../services/endPoints/endPoints";
 
 export const signUpUser = createAsyncThunk<ResponseData, SignUpCredentials>(
   "user/signup",
-  async (userData:SignUpCredentials, { rejectWithValue }) => {
-    try {
-      const response = await serverUser.post(userEndPoints.signup, userData);
-      return await response.data;
-    } catch (error) {
-      if (error instanceof AxiosError) {
-        return rejectWithValue(error.response?.data);
+  async (userData: SignUpCredentials, { rejectWithValue }) => {
+      try {
+          const response = await serverUser.post(userEndPoints.signup, userData);
+          if (!response.data.status) {
+              return rejectWithValue({
+                  error: {
+                      message: response.data.message
+                  }
+              });
+          }
+          return response.data;
+      } catch (err) {
+          const error = err as AxiosError;
+          return rejectWithValue({
+              error: {
+                  message: error.response?.data?.message || "Signup failed"
+              }
+          });
       }
-      return rejectWithValue('An unknown error occurred');
-    }
   }
 );

@@ -12,36 +12,36 @@ export interface IInitialStateError {
 }
 
 export interface ResponseData {
-    status: ResponseStatus;
+    success: boolean;
     message: string;
-    error?: IInitialStateError | null,
-    data?: {
-        [key: string]: any;
-    },
-    redirectURL: string
-    accessToken?: string; 
-    refreshToken?: string; 
+    error?: {
+        message: string;
+    };
+    data?: unknown;
+    redirectURL?: string
+    accessToken?: string;
+    refreshToken?: string;
 }
 
-export interface IInitialStateError {
-    error: string
-    message: string
-  }
+
+
+
 
 export interface VerifyOtpBaseResponse {
-    status: 'success' | 'error';
+    success: boolean;
     message: string;
+    redirectURL: string;
 }
 
 export interface VerifyOtpSuccessResponse extends VerifyOtpBaseResponse {
-    status: 'success';
+    success: true;
     data?: any;
 }
 
 export interface VerifyOtpErrorResponse extends VerifyOtpBaseResponse {
-    status: 'error';
-    message: string;
+    success: false;
 }
+
 
 export type VerifyOtpResponse = VerifyOtpSuccessResponse | VerifyOtpErrorResponse;
 

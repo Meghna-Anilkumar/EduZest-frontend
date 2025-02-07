@@ -6,16 +6,16 @@ import { userEndPoints } from "../../../services/endPoints/endPoints";
 import { OtpVerificationData } from "../../../interface/user/IUserData";
 
 
-
 export const verifyOTP = createAsyncThunk<VerifyOtpSuccessResponse, OtpVerificationData>(
   "user/verifyOTP",
   async (otpData: OtpVerificationData, { rejectWithValue }) => {
     try {
       const response = await serverUser.post(userEndPoints.verifyOTP, otpData);
-      if (response.data.status === 'error') {
+      
+      if (!response.data.success) {  
         return rejectWithValue({
           error: {
-            message: response.data.message
+            message: response.data.message || "OTP verification failed."
           }
         });
       }
