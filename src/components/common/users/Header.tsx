@@ -1,29 +1,31 @@
-import React, { useState} from "react";
+import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "../../../redux/store";
-import { userSetIsAuthenticated, setUserData } from "../../../redux/reducers/userReducer";
-import Cookies from "js-cookie";
+import { AppDispatch, RootState } from "../../../redux/store";
+// import {
+//   userSetIsAuthenticated,
+//   setUserData,
+//   setTempMail
+// } from "../../../redux/reducers/userReducer";
+// import Cookies from "js-cookie";
+import { logoutUser } from "../../../redux/actions/auth/logoutUserAction";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const dispatch = useDispatch();
-  
-  const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch<AppDispatch>();
 
- 
+  const { isAuthenticated, userData } = useSelector(
+    (state: RootState) => state.user
+  );
+
   console.log(isAuthenticated);
-  console.log(userData?.name)
-
+  console.log(userData?.name);
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);
   };
 
   const handleLogout = () => {
-    Cookies.remove("accessToken");
-    Cookies.remove("refreshToken");
-    dispatch(userSetIsAuthenticated(false));
-    dispatch(setUserData(null));
+   dispatch(logoutUser())
   };
 
   const navLinks = [

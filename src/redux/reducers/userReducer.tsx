@@ -6,15 +6,15 @@ import { IInitialStateError } from "../../interface/Interface";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
 import { login } from "../actions/auth/userLoginAction";
 import { fetchUserData } from "../actions/auth/fetchUserdataAction";
-import Cookies from "js-cookie";
 import { IUserdata } from "../../interface/user/IUserData";
+import { logoutUser } from "../actions/auth/logoutUserAction";
 
 const initialState: IInitialState = {
   isAuthenticated: false,
   error: null,
   tempMail: null,
   otpVerified: false,
-  userData:null
+  userData: null,
 };
 
 const userSlice = createSlice({
@@ -36,7 +36,10 @@ const userSlice = createSlice({
         state.otpVerified = false;
       }
     },
-    
+
+    setTempMail(state, action: PayloadAction<{ email: string } | null>) {
+      state.tempMail = action.payload;
+    },
 
     setOtpVerified(state, action: PayloadAction<boolean>) {
       state.otpVerified = action.payload;
@@ -44,7 +47,7 @@ const userSlice = createSlice({
 
     setUserData(state, action: PayloadAction<IUserdata | null>) {
       state.userData = action.payload;
-    }
+    },
   },
 
   extraReducers: (builder) => {
@@ -76,9 +79,9 @@ const userSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.otpVerified = true;
-          state.isAuthenticated=true
-          state.userData = action.payload.userData as IUserdata; 
-        } 
+          state.isAuthenticated = true;
+          state.userData = action.payload.userData as IUserdata;
+        }
       })
       .addCase(verifyOTP.rejected, (state, action: PayloadAction<any>) => {
         state.otpVerified = false;
@@ -107,7 +110,7 @@ const userSlice = createSlice({
           state.userData = action.payload.userData as IUserdata;
         }
       })
-      
+
       .addCase(login.rejected, (state, action) => {
         state.isAuthenticated = false;
         state.error = {
@@ -115,7 +118,6 @@ const userSlice = createSlice({
             (action.payload as { message?: string })?.message || "Login failed",
         };
       })
-
 
       //fetch user data
       .addCase(fetchUserData.pending, (state) => {
@@ -129,11 +131,31 @@ const userSlice = createSlice({
       .addCase(fetchUserData.rejected, (state, action) => {
         state.isAuthenticated = false;
         state.userData = null;
-        state.error = { 
-          message: typeof action.payload === 'string' ? action.payload : 'Failed to fetch user data'
+        state.error = {
+          message:
+            typeof action.payload === "string"
+              ? action.payload
+              : "Failed to fetch user data",
         };
-        // Optionally clear cookies on fetch failure
-        Cookies.remove("accessToken");
+      })
+
+      // Logout user
+      .addCase(logoutUser.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.isAuthenticated = false;
+        state.userData = null;
+        state.tempMail = null;
+        state.otpVerified = false;
+        state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.error = {
+          message:
+            (action.payload as { message?: string })?.message ||
+            "Logout failed. Please try again.",
+        };
       });
   },
 });
@@ -143,7 +165,8 @@ export const {
   userSetError,
   userSetIsAuthenticated,
   setOtpVerified,
-  setUserData
+  setUserData,
+  setTempMail,
 } = userSlice.actions;
 
 export default userSlice.reducer;

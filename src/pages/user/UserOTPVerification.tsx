@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { verifyOTP } from "../../redux/actions/auth/verifyOtpAction";
 import { RootState, AppDispatch } from "../../redux/store";
 import { userClearError } from "../../redux/reducers/userReducer";
+import { resendOtpThunk } from "../../redux/actions/userActions";
 
 const OTP_TIMER_SECONDS = 120; // 2 minutes
 
@@ -155,19 +156,23 @@ const OTPVerification: React.FC = () => {
 
   const handleResendOTP = async () => {
     try {
-      setIsSubmitting(true);
-      //dispatch for resend otp here...............................
-      
+        setIsSubmitting(true);
+        if (!tempMail?.email) {
+            console.error("Email is missing! Cannot resend OTP.");
+            return;
+        }
+        
+        await dispatch(resendOtpThunk(tempMail.email)).unwrap();
 
-      
-      startTimer(); 
-      setOtp(Array(6).fill(""));
+        startTimer(); 
+        setOtp(Array(6).fill(""));
     } catch (error) {
-      console.error("Failed to resend OTP:", error);
+        console.error("Failed to resend OTP:", error);
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
     }
-  };
+};
+
 
   return (
     <div className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen">

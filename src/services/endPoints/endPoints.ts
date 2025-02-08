@@ -5,7 +5,8 @@ export const userEndPoints: UserEndpoints = {
     verifyOTP: '/otp-verification',
     login: '/login',
     logout: '/logout',
-    fetchUserdata:'/getUserdata'
+    fetchUserdata:'/getUserdata',
+    resendOTP:'/resend-otp'
 }
 
 export const adminEndpoints: AdminEndpoints = {

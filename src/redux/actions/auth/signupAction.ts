@@ -4,7 +4,7 @@ import { UserSignUpData } from "../../../interface/user/IUserData";
 import { ResponseData } from "../../../interface/Interface";
 import { serverUser } from "../../../services";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
-import Cookies from "js-cookie";
+
 
 
 
@@ -13,8 +13,7 @@ export const signUpUser = createAsyncThunk<ResponseData, UserSignUpData>(
     async (userData: UserSignUpData, { rejectWithValue }) => {
         try {
             const response = await serverUser.post(userEndPoints.signup, userData);
-            Cookies.set('accessToken', response.data.token, { expires: 7 });
-            Cookies.set('refreshToken', response.data.refreshToken, { expires: 7 });
+          
             if (!response.data.status) {
                 return rejectWithValue({
                     error: {
