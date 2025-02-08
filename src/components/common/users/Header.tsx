@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../redux/store";
 import { userSetIsAuthenticated, setUserData } from "../../../redux/reducers/userReducer";
@@ -7,8 +7,10 @@ import Cookies from "js-cookie";
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const dispatch = useDispatch();
-
+  
   const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
+
+ 
   console.log(isAuthenticated);
   console.log(userData?.name)
 

@@ -5,11 +5,12 @@ import { IInitialStateError } from "../../interface/Interface";
 // import { isErrorResponse } from "../../utils/customError";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
 import { login } from "../actions/auth/userLoginAction";
+import { fetchUserData } from "../actions/auth/fetchUserdataAction";
 import Cookies from "js-cookie";
 import { IUserdata } from "../../interface/user/IUserData";
 
 const initialState: IInitialState = {
-  isAuthenticated: !!Cookies.get("accessToken"),
+  isAuthenticated: false,
   error: null,
   tempMail: null,
   otpVerified: false,
@@ -30,7 +31,12 @@ const userSlice = createSlice({
 
     userSetIsAuthenticated(state, action) {
       state.isAuthenticated = action.payload;
+      if (!action.payload) {
+        state.userData = null;
+        state.otpVerified = false;
+      }
     },
+    
 
     setOtpVerified(state, action: PayloadAction<boolean>) {
       state.otpVerified = action.payload;
@@ -96,20 +102,38 @@ const userSlice = createSlice({
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
-        console.log("Login Action Fulfilled:", action.payload);
-
         if (action.payload.success === true) {
           state.isAuthenticated = true;
-          state.userData = action.payload.userData as IUserdata; 
-          console.log("AccessToken and RefreshToken are stored in cookies.");
+          state.userData = action.payload.userData as IUserdata;
         }
       })
+      
       .addCase(login.rejected, (state, action) => {
         state.isAuthenticated = false;
         state.error = {
           message:
             (action.payload as { message?: string })?.message || "Login failed",
         };
+      })
+
+
+      //fetch user data
+      .addCase(fetchUserData.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(fetchUserData.fulfilled, (state, action) => {
+        state.isAuthenticated = true;
+        state.userData = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchUserData.rejected, (state, action) => {
+        state.isAuthenticated = false;
+        state.userData = null;
+        state.error = { 
+          message: typeof action.payload === 'string' ? action.payload : 'Failed to fetch user data'
+        };
+        // Optionally clear cookies on fetch failure
+        Cookies.remove("accessToken");
       });
   },
 });

@@ -1,6 +1,6 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore,combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
-import storage from "redux-persist/lib/storage"; // Uses local storage
+import storage from "redux-persist/lib/storage"; 
 import userReducer from "./reducers/userReducer";
 import adminReducer from "./reducers/adminReducer"
 
@@ -10,19 +10,21 @@ const persistConfig = {
   whitelist: ["user"], 
 };
 
-const adminPersistedReducer = persistReducer(persistConfig, adminReducer);
-const userPersistedReducer = persistReducer(persistConfig, userReducer);
+const rootReducer = combineReducers({
+  user: userReducer,
+  admin: adminReducer,
+});
+
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 const store = configureStore({
-  reducer: {
-    user: userPersistedReducer,
-    admin: adminPersistedReducer,
-  },
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: false,
     }),
 });
+
 
 
 export const persistor = persistStore(store);

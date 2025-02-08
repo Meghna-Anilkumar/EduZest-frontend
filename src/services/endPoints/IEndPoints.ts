@@ -6,6 +6,7 @@ export interface IEndPoints {
 export interface UserEndpoints extends IEndPoints {
     signup: string;
     verifyOTP: string;
+    fetchUserdata:string
 }
 
 
