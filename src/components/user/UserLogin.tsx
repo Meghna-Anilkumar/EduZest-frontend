@@ -146,10 +146,21 @@ const UserLogin = () => {
           />
           Continue with Google
         </button>
-
+        <p className="text-center text-sm text-gray-600 mt-6">
+          Forgot Password?{" "}
+          <Link
+            to="/email-forgot-pass"
+            className="text-[#49bbbd] font-bold hover:underline"
+          >
+           Reset here
+          </Link>
+        </p>
         <p className="text-center text-sm text-gray-600 mt-6">
           Don't have an account?{" "}
-          <Link to="/signup" className="text-[#49bbbd] font-bold hover:underline">
+          <Link
+            to="/signup"
+            className="text-[#49bbbd] font-bold hover:underline"
+          >
             Sign up
           </Link>
         </p>

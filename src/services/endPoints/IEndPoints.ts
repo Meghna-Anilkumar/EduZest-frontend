@@ -8,6 +8,8 @@ export interface UserEndpoints extends IEndPoints {
     verifyOTP: string;
     fetchUserdata:string
     resendOTP:string
+    forgotPassword:string
+    resetPassword:string
 }
 
 

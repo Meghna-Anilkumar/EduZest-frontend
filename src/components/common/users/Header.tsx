@@ -1,12 +1,6 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "../../../redux/store";
-// import {
-//   userSetIsAuthenticated,
-//   setUserData,
-//   setTempMail
-// } from "../../../redux/reducers/userReducer";
-// import Cookies from "js-cookie";
 import { logoutUser } from "../../../redux/actions/auth/logoutUserAction";
 
 const Header = () => {

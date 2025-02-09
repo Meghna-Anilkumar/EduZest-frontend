@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { verifyOTP } from "../../redux/actions/auth/verifyOtpAction";
 import { RootState, AppDispatch } from "../../redux/store";
 import { userClearError } from "../../redux/reducers/userReducer";
@@ -8,7 +8,7 @@ import { resendOtpThunk } from "../../redux/actions/userActions";
 
 const OTP_TIMER_SECONDS = 120; // 2 minutes
 
-const OTPVerification: React.FC = () => {
+const UserOTPVerification: React.FC = () => {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOtpExpired, setIsOtpExpired] = useState(false);
@@ -17,20 +17,18 @@ const OTPVerification: React.FC = () => {
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { otpVerified, error, tempMail } = useSelector(
-    (state: RootState) => state.user
-  );
-  console.log(otpVerified)
+  const location = useLocation();
+
+  const { error, tempMail } = useSelector((state: RootState) => state.user);
+  const userEmail = location.state?.email || tempMail?.email; 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
-  // Format time left into minutes and seconds
   const formatTimeLeft = () => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // Initialize and handle timer
   useEffect(() => {
     startTimer();
     return () => {
@@ -50,9 +48,7 @@ const OTPVerification: React.FC = () => {
     timerRef.current = window.setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
-          if (timerRef.current) {
-            window.clearInterval(timerRef.current);
-          }
+          clearInterval(timerRef.current);
           setIsOtpExpired(true);
           return 0;
         }
@@ -73,26 +69,14 @@ const OTPVerification: React.FC = () => {
 
       if (error.message?.toLowerCase().includes("expired")) {
         setIsOtpExpired(true);
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
+        clearInterval(timerRef.current);
         setTimeLeft(0);
       }
     }
   }, [error]);
 
-  useEffect(() => {
-    if (otpVerified) {
-      navigate("/");
-    }
-  }, [otpVerified, navigate]);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const value = e.target.value;
-
     if (/^[0-9]$/.test(value) || value === "") {
       if (error) {
         dispatch(userClearError());
@@ -103,22 +87,15 @@ const OTPVerification: React.FC = () => {
       setOtp(newOtp);
 
       if (value !== "" && index < 5) {
-        const nextInput = document.getElementById(
-          `otp-input-${index + 1}`
-        ) as HTMLInputElement;
+        const nextInput = document.getElementById(`otp-input-${index + 1}`) as HTMLInputElement;
         nextInput?.focus();
       }
     }
   };
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    index: number
-  ) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && otp[index] === "" && index > 0) {
-      const prevInput = document.getElementById(
-        `otp-input-${index - 1}`
-      ) as HTMLInputElement;
+      const prevInput = document.getElementById(`otp-input-${index - 1}`) as HTMLInputElement;
       prevInput?.focus();
     }
   };
@@ -127,8 +104,8 @@ const OTPVerification: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!tempMail) {
-      console.error("Email is missing! Cannot verify OTP without an email.");
+    if (!userEmail) {
+      console.error("Email is missing! Cannot verify OTP.");
       setIsSubmitting(false);
       return;
     }
@@ -140,13 +117,22 @@ const OTPVerification: React.FC = () => {
       }
 
       const otpNumber = parseInt(otpString, 10);
-      await dispatch(
+      const response = await dispatch(
         verifyOTP({
           otp: otpNumber,
-          email: tempMail.email,
+          email: userEmail,
         })
       ).unwrap();
-    } catch {
+
+      console.log("OTP Verification Response:", response);
+
+      if (response?.redirectURL) {
+        navigate(response.redirectURL,{ state: { userEmail }});
+      } else {
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("OTP verification failed:", error);
       setOtp(Array(6).fill(""));
       firstInputRef.current?.focus();
     } finally {
@@ -156,23 +142,21 @@ const OTPVerification: React.FC = () => {
 
   const handleResendOTP = async () => {
     try {
-        setIsSubmitting(true);
-        if (!tempMail?.email) {
-            console.error("Email is missing! Cannot resend OTP.");
-            return;
-        }
-        
-        await dispatch(resendOtpThunk(tempMail.email)).unwrap();
+      setIsSubmitting(true);
+      if (!userEmail) {
+        console.error("Email is missing! Cannot resend OTP.");
+        return;
+      }
 
-        startTimer(); 
-        setOtp(Array(6).fill(""));
+      await dispatch(resendOtpThunk(userEmail)).unwrap();
+      startTimer();
+      setOtp(Array(6).fill(""));
     } catch (error) {
-        console.error("Failed to resend OTP:", error);
+      console.error("Failed to resend OTP:", error);
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
-};
-
+  };
 
   return (
     <div className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen">
@@ -183,15 +167,21 @@ const OTPVerification: React.FC = () => {
         <p className="text-center text-gray-600 mb-4">
           Enter the 6-digit OTP sent to your email.
         </p>
+
+        {/* Error message */}
+        {error && (
+          <div className="text-center text-red-500 mb-4 -mt-2">
+            {error.message || "Invalid OTP. Please try again."}
+          </div>
+        )}
+
+        {/* Timer */}
         <div className="text-center mb-4">
-          <span
-            className={`font-medium ${
-              timeLeft < 30 ? "text-red-500" : "text-gray-600"
-            }`}
-          >
+          <span className={`font-medium ${timeLeft < 30 ? "text-red-500" : "text-gray-600"}`}>
             OTP Expires in: {formatTimeLeft()}
           </span>
         </div>
+
         <form onSubmit={handleSubmit}>
           <div className="flex space-x-2 justify-center mb-6">
             {otp.map((digit, index) => (
@@ -205,35 +195,19 @@ const OTPVerification: React.FC = () => {
                 onChange={(e) => handleChange(e, index)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 disabled={isSubmitting || isOtpExpired}
-                className={`w-10 h-10 md:w-12 md:h-12 border ${
-                  error ? "border-red-500" : "border-gray-300"
-                } rounded-lg text-center text-lg font-semibold focus:outline-none focus:ring-2 ${
-                  error ? "focus:ring-red-500" : "focus:ring-[#49bbbd]"
-                } transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                className="w-10 h-10 md:w-12 md:h-12 border border-gray-300 rounded-lg text-center text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-[#49bbbd] transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
             ))}
           </div>
-          {error && (
-            <div className="text-center text-red-500 mb-4 -mt-2">
-              {error.message || "Invalid OTP. Please try again."}
-            </div>
-          )}
-          {isOtpExpired ? (
-            <button
-              type="button"
-              onClick={handleResendOTP}
-              disabled={isSubmitting}
-              className="w-full bg-[#49bbbd] text-white py-2 md:py-3 rounded-lg font-semibold hover:bg-[#41a7a7] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Sending..." : "Resend OTP"}
+
+          {/* Verify OTP Button */}
+          {!isOtpExpired ? (
+            <button type="submit" className="w-full bg-[#49bbbd] text-white py-2 md:py-3 rounded-lg font-semibold hover:bg-[#41a7a7] transition duration-200">
+              {isSubmitting ? "Verifying..." : "Verify OTP"}
             </button>
           ) : (
-            <button
-              type="submit"
-              disabled={isSubmitting || isOtpExpired}
-              className="w-full bg-[#49bbbd] text-white py-2 md:py-3 rounded-lg font-semibold hover:bg-[#41a7a7] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Verifying..." : "Verify OTP"}
+            <button type="button" onClick={handleResendOTP} className="w-full bg-[#49bbbd] text-white py-2 md:py-3 rounded-lg font-semibold hover:bg-[#41a7a7] transition duration-200">
+              {isSubmitting ? "Sending..." : "Resend OTP"}
             </button>
           )}
         </form>
@@ -242,4 +216,4 @@ const OTPVerification: React.FC = () => {
   );
 };
 
-export default OTPVerification;
+export default UserOTPVerification;

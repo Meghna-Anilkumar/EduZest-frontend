@@ -6,7 +6,9 @@ export const userEndPoints: UserEndpoints = {
     login: '/login',
     logout: '/logout',
     fetchUserdata:'/getUserdata',
-    resendOTP:'/resend-otp'
+    resendOTP:'/resend-otp',
+    forgotPassword:'/forgot-pass',
+    resetPassword:'/reset-password'
 }
 
 export const adminEndpoints: AdminEndpoints = {

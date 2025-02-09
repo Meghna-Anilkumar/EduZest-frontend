@@ -26,7 +26,7 @@ export const signUpUser = createAsyncThunk<ResponseData, UserSignUpData>(
             const error = err as AxiosError;
             return rejectWithValue({
                 error: {
-                    message: error.response?.data?.message || "Signup failed"
+                    message: error?.message || "Signup failed"
                 }
             });
         }
