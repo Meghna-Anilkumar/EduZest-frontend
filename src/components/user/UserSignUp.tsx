@@ -13,9 +13,16 @@ import { FaUser, FaEnvelope, FaLock, FaCheckCircle } from "react-icons/fa";
 const UserSignUp: React.FC = (): JSX.Element => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  const { error, tempMail } = useSelector((state: RootState) => state.user);
+  const { isAuthenticated,error, tempMail } = useSelector((state: RootState) => state.user);
   const [isLoading, setIsLoading] = React.useState(false);
+  
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+  
   useEffect(() => {
     dispatch(userClearError());
   }, [dispatch]);

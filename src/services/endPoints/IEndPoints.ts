@@ -14,5 +14,5 @@ export interface UserEndpoints extends IEndPoints {
 
 
 export interface AdminEndpoints extends IEndPoints {
-    
+    getAllStudents:(page:number,limit:number)=>string
 }

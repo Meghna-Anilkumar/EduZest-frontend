@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "react-toastify";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { logoutUser } from "../../../redux/actions/auth/logoutUserAction";
@@ -19,6 +20,7 @@ const Header = () => {
   };
 
   const handleLogout = () => {
+    toast.success('Logout successful')
    dispatch(logoutUser())
   };
 

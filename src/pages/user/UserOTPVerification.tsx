@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import {toast} from 'react-toastify'
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { verifyOTP } from "../../redux/actions/auth/verifyOtpAction";
@@ -6,7 +7,7 @@ import { RootState, AppDispatch } from "../../redux/store";
 import { userClearError } from "../../redux/reducers/userReducer";
 import { resendOtpThunk } from "../../redux/actions/userActions";
 
-const OTP_TIMER_SECONDS = 120; // 2 minutes
+const OTP_TIMER_SECONDS = 120; 
 
 const UserOTPVerification: React.FC = () => {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));

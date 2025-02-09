@@ -69,8 +69,7 @@ export default function ResetPassword() {
 
   return (
     <div
-      className="flex justify-center items-center min-h-screen bg-[#49bbbd] bg-cover"
-      style={{ backgroundImage: "url(/path-to-your-bg-image.jpg)", backgroundPosition: "center 30%" }}
+      className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen"
     >
       <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md border border-black relative">
         <h2 className="text-xl font-bold text-center text-black mb-2">Reset Password</h2>

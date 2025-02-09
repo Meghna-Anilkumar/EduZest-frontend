@@ -13,5 +13,6 @@ export const userEndPoints: UserEndpoints = {
 
 export const adminEndpoints: AdminEndpoints = {
     login:'/login',
-    logout:'/logout'
+    logout:'/logout',
+    getAllStudents:(page,limit)=>`fetchAllStudents?page=${page}&limit=${limit}`
 }

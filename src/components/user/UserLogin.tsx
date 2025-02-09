@@ -1,4 +1,4 @@
-import React from "react";
+import React,{useEffect} from "react";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEnvelope, FaLock } from "react-icons/fa";
@@ -12,7 +12,13 @@ const UserLogin = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { error } = useSelector((state: RootState) => state.user);
+  const { isAuthenticated,error } = useSelector((state: RootState) => state.user);
+
+  useEffect(()=>{
+    if(isAuthenticated){
+      navigate('/')
+    }
+  },[isAuthenticated,navigate])
 
   const formik = useFormik({
     initialValues: {
@@ -41,7 +47,7 @@ const UserLogin = () => {
   });
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-[#49bbbd]">
+    <div className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen">
       <div className="w-full max-w-md mx-4 bg-white p-8 rounded-lg shadow-md border">
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
           Welcome Back!
