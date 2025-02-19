@@ -10,6 +10,7 @@ export interface UserEndpoints extends IEndPoints {
     resendOTP:string
     forgotPassword:string
     resetPassword:string
+    updateProfile:string
 }
 
 

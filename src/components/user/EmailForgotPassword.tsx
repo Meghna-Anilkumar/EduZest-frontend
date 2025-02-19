@@ -8,33 +8,34 @@ import { useNavigate } from "react-router-dom";
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); 
+    setError(null);
 
     if (email.trim() === "") {
       setError("Please enter your email.");
       return;
     }
 
+    setLoading(true);
     const response = await dispatch(forgotPasswordThunk(email));
+    setLoading(false);
 
     console.log(response);
 
     if (response.payload?.success) {
-      navigate(response.payload.redirectURL,{ state: { email } });
+      navigate(response.payload.redirectURL, { state: { email } });
     } else {
       setError(response.payload?.message || "Failed to send OTP. Please try again.");
     }
   };
 
   return (
-    <div
-      className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen"
-    >
+    <div className="bg-gradient-to-r from-[#49bbbd] via-gray-400 to-white flex items-center justify-center min-h-screen">
       <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md border border-black relative">
         <h2 className="text-xl font-bold text-center text-black mb-2">Forgot Password</h2>
         <p className="text-sm text-center text-gray-600 mb-4">
@@ -62,15 +63,24 @@ export default function ForgotPassword() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full outline-none text-sm"
+                disabled={loading}
               />
             </div>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#49bbbd] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#3aa8a3] transition duration-200"
+            className="w-full bg-[#49bbbd] text-white font-bold py-2 px-4 rounded-lg hover:bg-[#3aa8a3] transition duration-200 flex justify-center items-center"
+            disabled={loading}
           >
-            Send OTP
+            {loading ? (
+              <svg
+                className="animate-spin h-5 w-5 mr-2 border-2 border-white border-t-transparent rounded-full"
+                viewBox="0 0 24 24"
+              ></svg>
+            ) : (
+              "Send OTP"
+            )}
           </button>
         </form>
       </div>

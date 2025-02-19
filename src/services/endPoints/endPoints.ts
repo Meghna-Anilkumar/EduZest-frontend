@@ -8,7 +8,8 @@ export const userEndPoints: UserEndpoints = {
     fetchUserdata:'/getUserdata',
     resendOTP:'/resend-otp',
     forgotPassword:'/forgot-pass',
-    resetPassword:'/reset-password'
+    resetPassword:'/reset-password',
+    updateProfile:'/student-profile'
 }
 
 export const adminEndpoints: AdminEndpoints = {

@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { serverUser } from "../../services";
 import { userEndPoints } from "../../services/endPoints/endPoints";
-import { ResponseData } from "../../interface/Interface";
+import { ResponseData,IUserdata } from "../../interface/Interface";
 
 export interface ResetPasswordData{
 email:string,
@@ -50,3 +50,48 @@ export const resetPasswordThunk = createAsyncThunk<ResponseData, ResetPasswordDa
         }
     }
 );
+
+
+export const updateUserProfileThunk = createAsyncThunk(
+    "auth/updateUserProfile",
+    async (profile: IUserdata, { rejectWithValue }) => {
+      // Structure the data exactly as expected by the backend
+      const payload = {
+        email: profile.email,
+        name: profile.username,
+        additionalEmail: profile.additionalEmail,
+        profileData: {
+          dob: profile.dob,
+          gender: profile.gender,
+          profilePic: profile.profilePic,
+        },
+      };
+  
+      console.log("Final Payload to API:", payload);
+  
+      try {
+        const response = await serverUser.put(userEndPoints.updateProfile, payload);
+        console.log("Server Response:", response.data);
+        
+        // Return updated data in a format that matches the reducer expectations
+        return {
+          success: true,
+          updatedUserData: {
+            name: profile.username,
+            email: profile.email,
+            studentDetails: {
+              additionalEmail: profile.additionalEmail
+            },
+            profile: {
+              dob: profile.dob,
+              gender: profile.gender,
+              profilePic: profile.profilePic
+            }
+          }
+        };
+      } catch (error) {
+        console.error("Error updating profile:", error.response?.data);
+        return rejectWithValue(error.response?.data || "Failed to update profile");
+      }
+    }
+  );

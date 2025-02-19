@@ -1,4 +1,4 @@
-import React,{useEffect} from "react";
+import React, { useEffect } from "react";
 import { toast } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
 import { FaEnvelope, FaLock } from "react-icons/fa";
@@ -7,19 +7,29 @@ import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../redux/store";
 import { login } from "../../redux/actions/auth/userLoginAction";
+import { userClearError } from "../../redux/reducers/userReducer";
 
 const UserLogin = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { isAuthenticated,error } = useSelector((state: RootState) => state.user);
+  const { isAuthenticated, error } = useSelector(
+    (state: RootState) => state.user
+  );
 
-  useEffect(()=>{
-    if(isAuthenticated){
-      navigate('/')
+  useEffect(() => {
+    dispatch(userClearError());
+  }, [dispatch]);
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
     }
-  },[isAuthenticated,navigate])
+  }, [isAuthenticated, navigate]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    formik.handleChange(e);
+    dispatch(userClearError());
+  };
   const formik = useFormik({
     initialValues: {
       email: "",
@@ -81,6 +91,7 @@ const UserLogin = () => {
                 placeholder="Enter your email"
                 className="w-full outline-none text-sm"
                 {...formik.getFieldProps("email")}
+                onChange={handleInputChange}
               />
             </div>
             {formik.touched.email && formik.errors.email && (
@@ -110,6 +121,7 @@ const UserLogin = () => {
                 placeholder="Enter your password"
                 className="w-full outline-none text-sm"
                 {...formik.getFieldProps("password")}
+                onChange={handleInputChange}
               />
             </div>
             {formik.touched.password && formik.errors.password && (
@@ -158,7 +170,7 @@ const UserLogin = () => {
             to="/email-forgot-pass"
             className="text-[#49bbbd] font-bold hover:underline"
           >
-           Reset here
+            Reset here
           </Link>
         </p>
         <p className="text-center text-sm text-gray-600 mt-6">

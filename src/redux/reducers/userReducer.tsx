@@ -8,6 +8,7 @@ import { login } from "../actions/auth/userLoginAction";
 import { fetchUserData } from "../actions/auth/fetchUserdataAction";
 import { IUserdata } from "../../interface/user/IUserData";
 import { logoutUser } from "../actions/auth/logoutUserAction";
+import { updateUserProfileThunk } from "../actions/userActions";
 
 const initialState: IInitialState = {
   isAuthenticated: false,
@@ -79,8 +80,8 @@ const userSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.otpVerified = true;
-          state.isAuthenticated = true;
           state.userData = action.payload.userData as IUserdata;
+          state.isAuthenticated = !!state.userData;
         }
       })
       .addCase(verifyOTP.rejected, (state, action: PayloadAction<any>) => {
@@ -106,8 +107,8 @@ const userSlice = createSlice({
       })
       .addCase(login.fulfilled, (state, action) => {
         if (action.payload.success === true) {
-          state.isAuthenticated = true;
           state.userData = action.payload.userData as IUserdata;
+          state.isAuthenticated = !!state.userData;
         }
       })
 
@@ -155,6 +156,27 @@ const userSlice = createSlice({
           message:
             (action.payload as { message?: string })?.message ||
             "Logout failed. Please try again.",
+        };
+      })
+
+      // Update User Profile
+      .addCase(updateUserProfileThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(updateUserProfileThunk.fulfilled, (state, action) => {
+        if (action.payload.success) {
+          state.userData = {
+            ...state.userData,
+            ...action.payload.updatedUserData,
+          };
+        }
+      })
+      .addCase(updateUserProfileThunk.rejected, (state, action) => {
+        state.error = {
+          message:
+            typeof action.payload === "string"
+              ? action.payload
+              : "Failed to update user profile",
         };
       });
   },

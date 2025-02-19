@@ -11,7 +11,7 @@ export default function ResetPassword() {
   const location = useLocation();
   const { error } = useSelector((state: RootState) => state.user);
 
-  const email = location.state?.userEmail; // Ensure email is available
+  const email = location.state?.userEmail; 
 
   const [values, setValues] = useState({
     newPassword: "",
@@ -19,7 +19,7 @@ export default function ResetPassword() {
   });
 
   const [message, setMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false); // 🔹 Added this
+  const [loading, setLoading] = useState(false); 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValues({ ...values, [e.target.name]: e.target.value });
@@ -41,7 +41,7 @@ export default function ResetPassword() {
       return;
     }
 
-    setLoading(true); // 🔹 Start loading
+    setLoading(true); 
     console.log("Sending request:", { email, password: values.newPassword, confirmPassword: values.confirmPassword });
 
     try {
@@ -63,7 +63,7 @@ export default function ResetPassword() {
     } catch (error) {
       setMessage("Something went wrong. Please try again.");
     } finally {
-      setLoading(false); // 🔹 Stop loading
+      setLoading(false); 
     }
   };
 
