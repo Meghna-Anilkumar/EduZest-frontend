@@ -55,7 +55,6 @@ export const resetPasswordThunk = createAsyncThunk<ResponseData, ResetPasswordDa
 export const updateUserProfileThunk = createAsyncThunk(
     "auth/updateUserProfile",
     async (profile: IUserdata, { rejectWithValue }) => {
-      // Structure the data exactly as expected by the backend
       const payload = {
         email: profile.email,
         name: profile.username,
@@ -72,8 +71,6 @@ export const updateUserProfileThunk = createAsyncThunk(
       try {
         const response = await serverUser.put(userEndPoints.updateProfile, payload);
         console.log("Server Response:", response.data);
-        
-        // Return updated data in a format that matches the reducer expectations
         return {
           success: true,
           updatedUserData: {
@@ -95,3 +92,24 @@ export const updateUserProfileThunk = createAsyncThunk(
       }
     }
   );
+
+
+  interface ChangePasswordData {
+    currentPassword: string;
+    newPassword: string;
+  }
+  
+  export const changePasswordThunk = createAsyncThunk(
+    "auth/changePassword",
+    async (passwordData: ChangePasswordData, { rejectWithValue }) => {
+      try {
+        const response = await serverUser.put(userEndPoints.changePassword, passwordData);
+        return response.data;
+      } catch (error) {
+        return rejectWithValue(error.response?.data || "Failed to change password");
+      }
+    }
+  );
+
+
+

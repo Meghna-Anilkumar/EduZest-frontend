@@ -11,6 +11,7 @@ export interface UserEndpoints extends IEndPoints {
     forgotPassword:string
     resetPassword:string
     updateProfile:string
+    changePassword:string
 }
 
 

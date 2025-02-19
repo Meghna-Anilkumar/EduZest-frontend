@@ -1,271 +1,308 @@
-import React, { useState, lazy, Suspense } from "react";
-import { ChevronLeft, Eye, EyeOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../../redux/store";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import bgImage from "@/assets/newbg.jpg";
+import { FaLock, FaKey, FaEye, FaEyeSlash, FaArrowLeft } from "react-icons/fa";
+import { useDispatch, useSelector } from "react-redux";
+import { userClearError } from "../../redux/reducers/userReducer";
+import type { AppDispatch, RootState } from "../../redux/store";
+import { useForm } from "../../hooks/UseForm";
+import { validationRules } from "../../utils/validation";
+import { changePasswordThunk } from "../../redux/actions/userActions";
+import { toast } from "react-toastify";
 
-// import { changePasswordThunk } from "../../redux/actions/userActions"; 
+// interface PasswordData {
+//   currentPassword: string;
+//   newPassword: string;
+//   confirmPassword: string;
+// }
 
-const Header = lazy(() => import("../../components/common/users/Header"));
-
-const ChangePasswordPage = () => {
+const ChangePasswordPage: React.FC = (): JSX.Element => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
-  
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  
-  const [showPasswords, setShowPasswords] = useState({
+  const { error, userData } = useSelector((state: RootState) => state.user);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [passwordVisibility, setPasswordVisibility] = useState({
     current: false,
     new: false,
     confirm: false,
   });
-  
-  const [errors, setErrors] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Clear error when typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
-  };
+  useEffect(() => {
+    dispatch(userClearError());
+  }, [dispatch]);
 
-  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
-    setShowPasswords((prev) => ({
+  const togglePasswordVisibility = (field: keyof typeof passwordVisibility) => {
+    setPasswordVisibility((prev) => ({
       ...prev,
       [field]: !prev[field],
     }));
   };
 
-  const validateForm = () => {
-    const newErrors = {
+  const { values, errors, handleChange } = useForm({
+    initialValues: {
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
-    };
-    
-    let isValid = true;
-    
-    if (!passwordData.currentPassword) {
-      newErrors.currentPassword = "Current password is required";
-      isValid = false;
-    }
-    
-    if (!passwordData.newPassword) {
-      newErrors.newPassword = "New password is required";
-      isValid = false;
-    } else if (passwordData.newPassword.length < 8) {
-      newErrors.newPassword = "Password must be at least 8 characters";
-      isValid = false;
-    }
-    
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
-      isValid = false;
-    }
-    
-    setErrors(newErrors);
-    return isValid;
-  };
+    },
+    validationRules: {
+      currentPassword: (value: string) =>
+        !value ? "Current password is required" : "",
+      newPassword: (value: string) => validationRules.password(value),
+      confirmPassword: (value: string) =>
+        validationRules.confirmPassword(value, values),
+    },
+    onSubmit: async () => {},
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-    
-    setIsSubmitting(true);
-    
+    setIsLoading(true);
+    setServerError(null);
     try {
-      // Dispatch the change password action
-      await dispatch(changePasswordThunk({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      }));
-      
-      setSuccess(true);
-      
-      // Reset form after successful submission
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      
-      // Redirect back to profile after 2 seconds
+      const email = userData?.email;
+      if (!email) {
+        throw new Error("User email is missing");
+      }
+
+      const passwordData = {
+        email,
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      };
+
+      await dispatch(changePasswordThunk(passwordData)).unwrap();
+
+      setShowSuccess(true);
       setTimeout(() => {
-        navigate(-1);
+        navigate("/profile");
       }, 2000);
-      
-    } catch (error) {
-      console.error("Failed to change password:", error);
-      setErrors({
-        ...errors,
-        currentPassword: "Failed to change password. Please verify your current password.",
-      });
-    } finally {
-      setIsSubmitting(false);
+    } catch (error: any) {
+      console.error("Password change failed:", error);
+      setIsLoading(false);
+
+      if (error?.message) {
+        setServerError(error.message);
+      } else {
+        setServerError("An unexpected error occurred. Please try again.");
+      }
     }
   };
 
-  const handleGoBack = () => {
-    navigate(-1);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <Suspense fallback={<div className="h-16 bg-white border-b shadow-sm flex items-center justify-center">Loading...</div>}>
-        <Header />
-      </Suspense>
-      
-      {/* Back button and title */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center">
-          <button
-            onClick={handleGoBack}
-            className="mr-4 p-1 rounded-full hover:bg-gray-100"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-semibold">Change Password</h1>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          {success ? (
-            <div className="text-center py-8">
-              <div className="mb-4 mx-auto w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Password Changed Successfully</h2>
-              <p className="text-gray-600 mb-6">Your password has been updated. You'll be redirected shortly.</p>
+    <div
+      className="flex justify-center items-center min-h-screen bg-[#49bbbd] bg-cover"
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundPosition: "center 30%",
+        backgroundSize: "cover",
+      }}
+    >
+      <div className="w-full max-w-lg bg-white p-6 rounded-lg shadow-md border border-black relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 rounded-lg">
+            <div className="w-12 h-12 border-4 border-[#49bbbd] border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-700 font-medium">
+              Updating your password...
+            </p>
+          </div>
+        )}
+
+        {showSuccess ? (
+          toast.success("Password changed successfully!")
+        ) : (
+          <>
+            <div className="flex items-center mb-6">
+              <button
+                onClick={() => navigate(-1)}
+                className="text-gray-600 hover:text-gray-800 mr-3"
+                aria-label="Go back"
+              >
+                <FaArrowLeft />
+              </button>
+              <h2 className="text-xl font-bold text-center text-black flex-1 pr-6">
+                Change Password
+              </h2>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-2">
+
+            <p className="text-sm text-center text-gray-600 mb-6">
+              Update your password to keep your account secure
+            </p>
+
+            {error && (
+              <div className="mb-6 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {error.message || "An error occurred. Please try again."}
+              </div>
+            )}
+
+            {serverError && (
+              <p className="text-red-500 text-sm mt-1">{serverError}</p>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="mb-5">
+                <label
+                  htmlFor="currentPassword"
+                  className="block text-gray-700 font-medium mb-1"
+                >
                   Current Password
                 </label>
                 <div className="relative">
-                  <input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type={showPasswords.current ? "text" : "password"}
-                    value={passwordData.currentPassword}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.currentPassword ? "border-red-500 ring-1 ring-red-500" : ""
-                    }`}
-                    placeholder="Enter your current password"
-                  />
+                  <div className="flex items-center px-4 py-3 border-2 border-gray-300 rounded-md">
+                    <FaKey className="w-5 h-5 text-gray-500 mr-2" />
+                    <input
+                      id="currentPassword"
+                      name="currentPassword"
+                      type={passwordVisibility.current ? "text" : "password"}
+                      value={values.currentPassword}
+                      onChange={handleChange}
+                      placeholder="Enter your current password"
+                      className="w-full outline-none text-sm pr-10"
+                      disabled={isLoading}
+                    />
+                  </div>
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     onClick={() => togglePasswordVisibility("current")}
+                    aria-label={
+                      passwordVisibility.current
+                        ? "Hide password"
+                        : "Show password"
+                    }
                   >
-                    {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {passwordVisibility.current ? (
+                      <FaEyeSlash className="w-5 h-5" />
+                    ) : (
+                      <FaEye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
                 {errors.currentPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.currentPassword}
+                  </p>
                 )}
               </div>
-            
-              <div>
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2">
+
+              <div className="mb-5">
+                <label
+                  htmlFor="newPassword"
+                  className="block text-gray-700 font-medium mb-1"
+                >
                   New Password
                 </label>
                 <div className="relative">
-                  <input
-                    id="newPassword"
-                    name="newPassword"
-                    type={showPasswords.new ? "text" : "password"}
-                    value={passwordData.newPassword}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.newPassword ? "border-red-500 ring-1 ring-red-500" : ""
-                    }`}
-                    placeholder="Enter your new password"
-                  />
+                  <div className="flex items-center px-4 py-3 border-2 border-gray-300 rounded-md">
+                    <FaLock className="w-5 h-5 text-gray-500 mr-2" />
+                    <input
+                      id="newPassword"
+                      name="newPassword"
+                      type={passwordVisibility.new ? "text" : "password"}
+                      value={values.newPassword}
+                      onChange={handleChange}
+                      placeholder="Enter new password"
+                      className="w-full outline-none text-sm pr-10"
+                      disabled={isLoading}
+                    />
+                  </div>
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     onClick={() => togglePasswordVisibility("new")}
+                    aria-label={
+                      passwordVisibility.new ? "Hide password" : "Show password"
+                    }
                   >
-                    {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {passwordVisibility.new ? (
+                      <FaEyeSlash className="w-5 h-5" />
+                    ) : (
+                      <FaEye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
                 {errors.newPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.newPassword}
+                  </p>
                 )}
-                <p className="mt-1 text-sm text-gray-500">Password must be at least 8 characters long.</p>
+                <p className="text-xs text-gray-500 mt-1 pl-1">
+                  Password must be at least 8 characters with lowercase,
+                  uppercase, number, and special character.
+                </p>
               </div>
-            
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+
+              <div className="mb-6">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-gray-700 font-medium mb-1"
+                >
                   Confirm New Password
                 </label>
                 <div className="relative">
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type={showPasswords.confirm ? "text" : "password"}
-                    value={passwordData.confirmPassword}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      errors.confirmPassword ? "border-red-500 ring-1 ring-red-500" : ""
-                    }`}
-                    placeholder="Confirm your new password"
-                  />
+                  <div className="flex items-center px-4 py-3 border-2 border-gray-300 rounded-md">
+                    <FaLock className="w-5 h-5 text-gray-500 mr-2" />
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={passwordVisibility.confirm ? "text" : "password"}
+                      value={values.confirmPassword}
+                      onChange={handleChange}
+                      placeholder="Confirm new password"
+                      className="w-full outline-none text-sm pr-10"
+                      disabled={isLoading}
+                    />
+                  </div>
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                     onClick={() => togglePasswordVisibility("confirm")}
+                    aria-label={
+                      passwordVisibility.confirm
+                        ? "Hide password"
+                        : "Show password"
+                    }
                   >
-                    {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {passwordVisibility.confirm ? (
+                      <FaEyeSlash className="w-5 h-5" />
+                    ) : (
+                      <FaEye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.confirmPassword}
+                  </p>
                 )}
               </div>
-            
-              <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 font-medium transition-colors duration-200"
-                >
-                  {isSubmitting ? "Changing Password..." : "Change Password"}
-                </button>
-              </div>
+
+              <button
+                type="submit"
+                disabled={
+                  isLoading ||
+                  !values.currentPassword ||
+                  !values.newPassword ||
+                  !values.confirmPassword ||
+                  Object.values(errors).some((error) => error)
+                }
+                className="w-full bg-[#49bbbd] text-white font-bold py-3 px-4 rounded-lg hover:bg-[#3aa8a3] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Updating Password..." : "Update Password"}
+              </button>
             </form>
-          )}
-        </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                to="/profile"
+                className="text-[#49bbbd] hover:underline text-sm font-medium"
+              >
+                Cancel and return to profile
+              </Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

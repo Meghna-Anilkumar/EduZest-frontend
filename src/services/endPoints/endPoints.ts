@@ -9,7 +9,8 @@ export const userEndPoints: UserEndpoints = {
     resendOTP:'/resend-otp',
     forgotPassword:'/forgot-pass',
     resetPassword:'/reset-password',
-    updateProfile:'/student-profile'
+    updateProfile:'/student-profile',
+    changePassword:'/change-password'
 }
 
 export const adminEndpoints: AdminEndpoints = {
