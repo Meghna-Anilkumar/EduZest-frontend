@@ -9,6 +9,7 @@ import { fetchUserData } from "../actions/auth/fetchUserdataAction";
 import { IUserdata } from "../../interface/user/IUserData";
 import { logoutUser } from "../actions/auth/logoutUserAction";
 import { updateUserProfileThunk } from "../actions/userActions";
+import { googleAuth } from "../actions/auth/googleSigninAction";
 
 const initialState: IInitialState = {
   isAuthenticated: false,
@@ -178,7 +179,23 @@ const userSlice = createSlice({
               ? action.payload
               : "Failed to update user profile",
         };
+      })
+
+      .addCase(googleAuth.fulfilled, (state, action) => {
+        if (action.payload.success) {
+          state.userData = action.payload.userData as IUserdata;
+          state.isAuthenticated = true;  // Set authentication to true
+        }
+      })
+      .addCase(googleAuth.rejected, (state, action) => {
+        state.isAuthenticated = false;
+        state.error = {
+          message:
+            (action.payload as { message?: string })?.message ||
+            "Google authentication failed",
+        };
       });
+    
   },
 });
 

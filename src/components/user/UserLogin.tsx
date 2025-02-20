@@ -5,8 +5,10 @@ import { FaEnvelope, FaLock } from "react-icons/fa";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
+import { GoogleLogin } from "@react-oauth/google";
 import { AppDispatch, RootState } from "../../redux/store";
 import { login } from "../../redux/actions/auth/userLoginAction";
+import { googleAuth } from "../../redux/actions/auth/googleSigninAction";
 import { userClearError } from "../../redux/reducers/userReducer";
 
 const UserLogin = () => {
@@ -20,16 +22,29 @@ const UserLogin = () => {
   useEffect(() => {
     dispatch(userClearError());
   }, [dispatch]);
+
   useEffect(() => {
     if (isAuthenticated) {
       navigate("/");
     }
   }, [isAuthenticated, navigate]);
 
+  const handleGoogleAuth = async (token: string) => {
+    try {
+      await dispatch(googleAuth(token)).unwrap();
+      toast.success("Logged in with Google successfully!");
+      navigate("/");
+    } catch (err) {
+      console.error("Google login failed:", err);
+      toast.error("Google login failed. Please try again.");
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     formik.handleChange(e);
     dispatch(userClearError());
   };
+
   const formik = useFormik({
     initialValues: {
       email: "",
@@ -65,8 +80,6 @@ const UserLogin = () => {
         <p className="text-sm text-center text-gray-600 mb-6">
           Please sign in to continue
         </p>
-
-        {/* {error && <div className="error-message">{error.message}</div>} */}
 
         <form onSubmit={formik.handleSubmit}>
           {/* Email Field */}
@@ -156,14 +169,26 @@ const UserLogin = () => {
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        <button className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-100 transition duration-200">
-          <img
-            src="/api/placeholder/20/20"
-            alt="Google Logo"
-            className="w-5 h-5 mr-2"
+        {/* Google Login Button */}
+        <div className="mb-4">
+          <GoogleLogin
+            onSuccess={(credentialResponse) => {
+              if (credentialResponse.credential) {
+                handleGoogleAuth(credentialResponse.credential);
+              }
+            }}
+            onError={() => {
+              toast.error("Google authentication failed");
+            }}
+            useOneTap
+            theme="outline"
+            text="continue_with"
+            shape="rectangular"
+            width="100%"
+            logo_alignment="center"
           />
-          Continue with Google
-        </button>
+        </div>
+
         <p className="text-center text-sm text-gray-600 mt-6">
           Forgot Password?{" "}
           <Link

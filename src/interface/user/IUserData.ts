@@ -49,3 +49,12 @@ export interface IUserdata {
     rating?: number;
   };
 }
+
+
+
+export interface IAdminUserData extends Partial<IUserdata> {
+  email: string;
+  password: string;
+  role: "Admin";
+}
+

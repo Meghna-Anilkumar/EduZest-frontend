@@ -10,7 +10,8 @@ export const userEndPoints: UserEndpoints = {
     forgotPassword:'/forgot-pass',
     resetPassword:'/reset-password',
     updateProfile:'/student-profile',
-    changePassword:'/change-password'
+    changePassword:'/change-password',
+    googleAuth:'/google-auth'
 }
 
 export const adminEndpoints: AdminEndpoints = {

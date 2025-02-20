@@ -12,6 +12,7 @@ export interface UserEndpoints extends IEndPoints {
     resetPassword:string
     updateProfile:string
     changePassword:string
+    googleAuth:string
 }
 
 
