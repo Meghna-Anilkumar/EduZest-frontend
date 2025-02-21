@@ -52,9 +52,13 @@ export interface IUserdata {
 
 
 
-export interface IAdminUserData extends Partial<IUserdata> {
+export interface IAdminData {
+  _id?: string;
   email: string;
-  password: string;
   role: "Admin";
+  name?: string;
+
 }
+
+
 

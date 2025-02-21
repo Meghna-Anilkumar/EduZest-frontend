@@ -1,16 +1,23 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IInitialState } from "./IState";
 import { IInitialStateError, ResponseData } from "../../interface/Interface";
 import { isErrorResponse } from "../../utils/customError";
 import { loginAdmin } from "../actions/auth/adminLoginAction";
-import { IAdminUserData } from "../../interface/user/IUserData";  
+import { IAdminData } from "../../interface/user/IUserData";
+
+// Admin State interface
+export interface IAdminState {
+  isAuthenticated: boolean;
+  tempMail: string | null;
+  error: IInitialStateError | null;
+  userData: IAdminData | null;
+}
 
 // Initial state
-const initialState: IInitialState = {
+const initialState: IAdminState = {
   isAuthenticated: false,
   tempMail: null,
   error: null,
-  userData: null,  
+  userData: null,
 };
 
 const adminSlice = createSlice({
@@ -33,28 +40,29 @@ const adminSlice = createSlice({
       .addCase(loginAdmin.pending, (state) => {
         state.error = null;
       })
-      .addCase(loginAdmin.fulfilled, (state, action: PayloadAction<ResponseData>) => {
-        state.isAuthenticated = true;
-
-        // ✅ Extract userData correctly
-        const userData = action.payload.data as IAdminUserData; 
-
-        if (userData) {
-          state.userData = {
-            email: userData.email,
-            password: userData.password,
-            role: userData.role ?? "Admin", // Ensure role is set
-            name: userData.name ?? "", 
-            isVerified: userData.isVerified ?? false,
-            profile: userData.profile ?? {},
-            updatedAt: userData.updatedAt ?? new Date(),
-            createdAt: userData.createdAt ?? new Date(),
-            isBlocked: userData.isBlocked ?? false,
+      .addCase(
+        loginAdmin.fulfilled,
+        (state, action: PayloadAction<ResponseData>) => {
+          state.isAuthenticated = true;
+          const userData = action.payload.userData as {
+            _id: string;
+            email: string;
+            role: string;
+            name?: string;
           };
-        }
 
-        state.error = null;
-      })
+          if (userData) {
+            state.userData = {
+              _id: userData._id,
+              email: userData.email,
+              role: "Admin",
+              name: userData.name || "Admin",
+            };
+          }
+
+          state.error = null;
+        }
+      )
       .addCase(loginAdmin.rejected, (state, action) => {
         state.isAuthenticated = false;
         if (isErrorResponse(action.payload)) {
@@ -64,5 +72,6 @@ const adminSlice = createSlice({
   },
 });
 
-export const { adminClearError, adminSetError, adminSetIsAuthenticated } = adminSlice.actions;
+export const { adminClearError, adminSetError, adminSetIsAuthenticated } =
+  adminSlice.actions;
 export default adminSlice.reducer;

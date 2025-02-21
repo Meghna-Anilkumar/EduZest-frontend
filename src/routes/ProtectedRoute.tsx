@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
-    const user = useSelector((state: RootState) => state.user.userData);
+    const user = useSelector((state: RootState) => state.user.userData||state.admin.userData);
     console.log("User Data from Redux:", user);
     
     if (!user || !allowedRoles.includes(user.role || "")) {
