@@ -13,9 +13,11 @@ export interface UserEndpoints extends IEndPoints {
     updateProfile:string
     changePassword:string
     googleAuth:string
+    applyInstructor:string
 }
 
 
 export interface AdminEndpoints extends IEndPoints {
     getAllStudents:(page:number,limit:number)=>string
+    blockUnblockUser: (userId: string) => string
 }

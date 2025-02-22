@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { serverUser } from "../../services";
 import { userEndPoints } from "../../services/endPoints/endPoints";
 import { ResponseData,IUserdata } from "../../interface/Interface";
+import { InstructorApplicationData } from "../../interface/user/IInstructorApply";
 
 export interface ResetPasswordData{
 email:string,
@@ -112,4 +113,21 @@ export const updateUserProfileThunk = createAsyncThunk(
   );
 
 
+  //apply instructor
+  export const applyForInstructorThunk = createAsyncThunk<ResponseData, InstructorApplicationData>(
+    "instructor/apply",
+    async (applicationData, { rejectWithValue }) => {
+      try {
+        console.log("Applying for Instructor with data:", applicationData);
+  
+        const response = await serverUser.post(userEndPoints.applyInstructor, applicationData);
+        console.log("Server Response:", response.data);
+  
+        return response.data;
+      } catch (error) {
+        console.error("Instructor Application Error:", error.response?.data);
+        return rejectWithValue(error.response?.data || "Failed to apply for instructor position");
+      }
+    }
+  );
 

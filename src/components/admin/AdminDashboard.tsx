@@ -8,7 +8,7 @@ export const AdminDashboard: React.FC = () => {
       <Suspense fallback={<div>Loading Sidebar...</div>}>
         <Sidebar />
       </Suspense>
-      <h1>Admin Dashboard</h1>
+
     </div>
   );
 };

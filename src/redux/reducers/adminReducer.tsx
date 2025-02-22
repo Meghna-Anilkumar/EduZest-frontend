@@ -2,9 +2,9 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IInitialStateError, ResponseData } from "../../interface/Interface";
 import { isErrorResponse } from "../../utils/customError";
 import { loginAdmin } from "../actions/auth/adminLoginAction";
+import { adminLogout } from "../actions/auth/adminLogoutAction"; 
 import { IAdminData } from "../../interface/user/IUserData";
 
-// Admin State interface
 export interface IAdminState {
   isAuthenticated: boolean;
   tempMail: string | null;
@@ -12,7 +12,6 @@ export interface IAdminState {
   userData: IAdminData | null;
 }
 
-// Initial state
 const initialState: IAdminState = {
   isAuthenticated: false,
   tempMail: null,
@@ -34,7 +33,6 @@ const adminSlice = createSlice({
       state.isAuthenticated = !state.isAuthenticated;
     },
   },
-
   extraReducers: (builder) => {
     builder
       .addCase(loginAdmin.pending, (state) => {
@@ -65,6 +63,19 @@ const adminSlice = createSlice({
       )
       .addCase(loginAdmin.rejected, (state, action) => {
         state.isAuthenticated = false;
+        if (isErrorResponse(action.payload)) {
+          state.error = action.payload.error as IInitialStateError;
+        }
+      })
+      .addCase(adminLogout.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(adminLogout.fulfilled, (state) => {
+        state.isAuthenticated = false;
+        state.userData = null;
+        state.error = null;
+      })
+      .addCase(adminLogout.rejected, (state, action) => {
         if (isErrorResponse(action.payload)) {
           state.error = action.payload.error as IInitialStateError;
         }

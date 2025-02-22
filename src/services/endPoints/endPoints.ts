@@ -11,11 +11,13 @@ export const userEndPoints: UserEndpoints = {
     resetPassword:'/reset-password',
     updateProfile:'/student-profile',
     changePassword:'/change-password',
-    googleAuth:'/google-auth'
+    googleAuth:'/google-auth',
+    applyInstructor:'/instructor-apply'
 }
 
 export const adminEndpoints: AdminEndpoints = {
     login:'/login',
     logout:'/logout',
-    getAllStudents:(page,limit)=>`fetchAllStudents?page=${page}&limit=${limit}`
+    getAllStudents:(page,limit)=>`fetchAllStudents?page=${page}&limit=${limit}`,
+    blockUnblockUser: (userId: string) => `/block-unblock/${userId}`
 }

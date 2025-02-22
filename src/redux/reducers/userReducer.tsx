@@ -2,7 +2,6 @@ import { IInitialState } from "./IState";
 import { signUpUser } from "../actions/auth/signupAction";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { IInitialStateError } from "../../interface/Interface";
-// import { isErrorResponse } from "../../utils/customError";
 import { verifyOTP } from "../actions/auth/verifyOtpAction";
 import { login } from "../actions/auth/userLoginAction";
 import { fetchUserData } from "../actions/auth/fetchUserdataAction";
@@ -81,6 +80,7 @@ const userSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.otpVerified = true;
+          state.tempMail = null;
           state.userData = action.payload.userData as IUserdata;
           state.isAuthenticated = !!state.userData;
         }
@@ -184,7 +184,7 @@ const userSlice = createSlice({
       .addCase(googleAuth.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.userData = action.payload.userData as IUserdata;
-          state.isAuthenticated = true;  // Set authentication to true
+          state.isAuthenticated = true; // Set authentication to true
         }
       })
       .addCase(googleAuth.rejected, (state, action) => {
@@ -195,7 +195,6 @@ const userSlice = createSlice({
             "Google authentication failed",
         };
       });
-    
   },
 });
 

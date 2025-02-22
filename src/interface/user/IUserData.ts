@@ -21,6 +21,8 @@ export interface IUserdata {
   email: string;
   name: string;
   isVerified: boolean;
+  qualification:string;
+  phone?: number;
   profile?: {
     dob?: Date;
     firstName?: string;
@@ -40,7 +42,7 @@ export interface IUserdata {
       progress: number;
       rating: string;
     }[];
-    phone?: number;
+    
     socialMedia?: string[];
   };
   instructorDetails?: {
@@ -48,6 +50,8 @@ export interface IUserdata {
     profit?: number;
     rating?: number;
   };
+  aboutMe:string;
+  isRequested:string;
 }
 
 

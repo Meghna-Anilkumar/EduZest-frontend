@@ -18,5 +18,19 @@ export const getAllStudentsAction = createAsyncThunk(
             return rejectWithValue(e.response?.data || e.message);
         }
     }
-
 )
+
+// Block/Unblock User Thunk
+export const blockUnblockUserAction = createAsyncThunk(
+    "admin/blockUnblockUser",
+    async ({ userId, isBlocked }: { userId: string; isBlocked: boolean }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.put(adminEndpoints.blockUnblockUser(userId), { isBlocked: !isBlocked });
+            return response.data;
+        } catch (error: any) {
+            console.error("Block/Unblock action Error: ", error);
+            const e: AxiosError = error as AxiosError;
+            return rejectWithValue(e.response?.data || e.message);
+        }
+    }
+);
