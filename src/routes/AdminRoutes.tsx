@@ -5,6 +5,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import AdminDashboard from "../components/admin/AdminDashboard";
 import AdminLogin from "../pages/admin/AdminLogin";
 import AdminStudents from "../components/admin/AdminStudents";
+import RequestsPage from "../pages/admin/RequestsPage";
 
 const AdminRoutes: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const AdminRoutes: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
           <Route path="/dashboard" element={<AdminDashboard />} />
           <Route path="/students" element={<AdminStudents />} />
+          <Route path='/requests' element={<RequestsPage/>}/>
         </Route>
       </Routes>
     </Suspense>

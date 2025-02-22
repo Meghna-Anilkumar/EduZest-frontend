@@ -5,12 +5,15 @@ import { applyForInstructorThunk } from "../../redux/actions/userActions";
 import { AppDispatch, RootState } from "../../redux/store";
 import { InstructorApplicationData } from "../../interface/user/IInstructorApply";
 import { toast } from "react-toastify";
+import { fetchUserData } from "../../redux/actions/auth/fetchUserdataAction";
 
 const Header = lazy(() => import("../../components/common/users/Header"));
 
 const InstructorApplicationForm = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { userData } = useSelector((state: RootState) => state.user);
+  const { userData, isAuthenticated } = useSelector(
+    (state: RootState) => state.user
+  );
 
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
@@ -31,13 +34,20 @@ const InstructorApplicationForm = () => {
     cv: null as File | null,
   });
 
-  // Single useEffect for userData synchronization
+  // Fetch user data on mount if authenticated but no userData
+  useEffect(() => {
+    if (isAuthenticated && !userData) {
+      dispatch(fetchUserData());
+    }
+  }, [dispatch, isAuthenticated, userData]);
+
+  // Sync form data with userData
   useEffect(() => {
     if (userData) {
-      setFormData(prevFormData => ({
-        ...prevFormData, // Keep existing state including cv
+      setFormData((prevFormData) => ({
+        ...prevFormData,
         name: userData.name || "",
-        email: userData.email || "",
+        email: userData.email || "", // Ensure email is set from userData
         phone: userData.phone?.toString() || "",
         qualification: userData.qualification || "",
         aboutMe: userData.aboutMe || "",
@@ -46,8 +56,6 @@ const InstructorApplicationForm = () => {
           ? new Date(userData.profile.dob).toISOString().split("T")[0]
           : "",
       }));
-
-      // Set profile preview if exists
       if (userData.profile?.profilePic) {
         setProfilePreview(userData.profile.profilePic);
       }
@@ -55,9 +63,7 @@ const InstructorApplicationForm = () => {
   }, [userData]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
@@ -74,7 +80,6 @@ const InstructorApplicationForm = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setProfileImage(file);
-
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePreview(reader.result as string);
@@ -87,23 +92,33 @@ const InstructorApplicationForm = () => {
     e.preventDefault();
     setSubmitStatus({ loading: true, error: null, success: false });
 
+    // Log formData for debugging
+    console.log("Submitting formData:", formData);
+
     try {
       const applicationData: InstructorApplicationData = {
         name: formData.name,
-        email: formData.email,
+        email: formData.email, // Ensure email is included
         phone: formData.phone,
         qualification: formData.qualification,
         profile: {
           dob: formData.dob,
           gender: formData.gender as "Male" | "Female" | "Other",
-          profilePic: profileImage ? URL.createObjectURL(profileImage) : "",
+          profilePic: profileImage ? URL.createObjectURL(profileImage) : userData?.profile?.profilePic || "",
         },
         aboutMe: formData.aboutMe,
-        cv: formData.cv ? URL.createObjectURL(formData.cv) : "",
+        cv: formData.cv ? URL.createObjectURL(formData.cv) : userData?.cv || "",
       };
 
+      console.log("Submitting applicationData:", applicationData);
+
       await dispatch(applyForInstructorThunk(applicationData)).unwrap();
-      
+
+      // Fetch updated user data after submission
+      if (userData?.email) {
+        dispatch(fetchUserData());
+      }
+
       setSubmitStatus({ loading: false, error: null, success: true });
       toast.success("Application submitted successfully");
     } catch (error: any) {
@@ -117,8 +132,15 @@ const InstructorApplicationForm = () => {
     }
   };
 
-  // Check if application is already requested
   const isApplicationRequested = userData?.isRequested;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center">
+        Please log in to apply as an instructor.
+      </div>
+    );
+  }
 
   if (!userData) {
     return (
@@ -136,11 +158,10 @@ const InstructorApplicationForm = () => {
         </div>
       }
     >
-      <Header />
+      <Header /> {/* Keep the Header visible */}
       <div className="flex justify-center bg-gray-50 px-4 pt-24 pb-8">
-        <div className="w-full max-w-3xl bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Success Messages */}
-          {isApplicationRequested && (
+        {isApplicationRequested ? (
+          <div className="w-full max-w-3xl bg-white rounded-lg shadow-md overflow-hidden">
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-6 rounded relative mx-6 mt-6 text-center">
               <h2 className="text-xl font-semibold mb-2">
                 Application Submitted Successfully
@@ -149,55 +170,51 @@ const InstructorApplicationForm = () => {
                 Please wait for our response while we review your application.
               </p>
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="w-full max-w-3xl bg-white rounded-lg shadow-md overflow-hidden">
+            {submitStatus.success && (
+              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mx-6 mt-6">
+                Application submitted successfully! We will review your
+                application and get back to you soon.
+              </div>
+            )}
 
-          {!isApplicationRequested && submitStatus.success && (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mx-6 mt-6">
-              Application submitted successfully! We will review your
-              application and get back to you soon.
-            </div>
-          )}
+            {submitStatus.error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mx-6 mt-6">
+                Error: {submitStatus.error}
+              </div>
+            )}
 
-          {/* Error Message */}
-          {submitStatus.error && !isApplicationRequested && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mx-6 mt-6">
-              Error: {submitStatus.error}
-            </div>
-          )}
-
-          {/* Header Section */}
-          <div className="bg-gradient-to-r from-[#49bbbd] to-gray-500 p-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-white">
-              Apply to be an Instructor
-            </h1>
-            <div className="flex items-center space-x-2">
-              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center relative overflow-hidden">
-                {profilePreview ? (
-                  <img
-                    src={profilePreview}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
+            <div className="bg-gradient-to-r from-[#49bbbd] to-gray-500 p-6 flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-white">
+                Apply to be an Instructor
+              </h1>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center relative overflow-hidden">
+                  {profilePreview ? (
+                    <img
+                      src={profilePreview}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="w-20 h-20 text-gray-400" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
                   />
-                ) : (
-                  <UserCircle className="w-20 h-20 text-gray-400" />
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfileImageChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <div className="absolute -bottom-2 -right-2 bg-[#49bbbd] p-2 rounded-full text-white">
-                  <Upload size={16} />
+                  <div className="absolute -bottom-2 -right-2 bg-[#49bbbd] p-2 rounded-full text-white">
+                    <Upload size={16} />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Application Form */}
-          {!isApplicationRequested && (
             <form className="p-6" onSubmit={handleSubmit}>
-              {/* Name and Email Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label
@@ -226,6 +243,7 @@ const InstructorApplicationForm = () => {
                     type="email"
                     id="email"
                     value={formData.email}
+                    onChange={handleChange}
                     className="w-full border border-gray-400 rounded p-2.5 bg-gray-100"
                     required
                     disabled
@@ -233,7 +251,6 @@ const InstructorApplicationForm = () => {
                 </div>
               </div>
 
-              {/* Gender and DOB Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label
@@ -273,7 +290,6 @@ const InstructorApplicationForm = () => {
                 </div>
               </div>
 
-              {/* Phone and Qualification Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <label
@@ -309,7 +325,6 @@ const InstructorApplicationForm = () => {
                 </div>
               </div>
 
-              {/* About Me Field */}
               <div className="mb-6">
                 <label
                   htmlFor="aboutMe"
@@ -328,7 +343,6 @@ const InstructorApplicationForm = () => {
                 ></textarea>
               </div>
 
-              {/* CV Upload Field */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Upload Your CV
@@ -349,7 +363,6 @@ const InstructorApplicationForm = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div>
                 <button
                   type="submit"
@@ -360,8 +373,8 @@ const InstructorApplicationForm = () => {
                 </button>
               </div>
             </form>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Suspense>
   );

@@ -1,22 +1,22 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
-import { IUserdata } from "../../../interface/user/IUserData";
+import { IUserdataResponse } from "../../../interface/user/IUserData";
 import { serverUser } from "../../../services";
 
 export const fetchUserData = createAsyncThunk(
   "user/fetchUserData",
-  async (email: string, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      if (!email) {
-        throw new Error("Email is required.");
-      }
+      console.log("Fetching user data...");
 
-      const response = await serverUser.post(userEndPoints.fetchUserdata, { email });
+      const response = await serverUser.get(userEndPoints.fetchUserdata, {
+        withCredentials: true, 
+      });
 
-      console.log("Fetched user data:", response.data);
-      return response.data as IUserdata;
+      console.log("Fetch user data response:", response.data);
+      return response.data as IUserdataResponse; 
     } catch (error: any) {
-      console.error("Error fetching user data:", error);
+      console.error("fetchUserData error:", error.response?.data || error.message);
       return rejectWithValue(error.response?.data || "Failed to fetch user data");
     }
   }

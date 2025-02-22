@@ -34,3 +34,19 @@ export const blockUnblockUserAction = createAsyncThunk(
         }
     }
 );
+
+
+// Fetch all requested users
+export const getAllRequestedUsersAction = createAsyncThunk(
+    "admin/getAllRequestedUsers",
+    async ({ page, limit }: { page: number; limit: number }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.get(adminEndpoints.fetchAllRequestedUsers(page, limit));
+            return response.data;
+        } catch (error: any) {
+            console.error("Get requested users action Error: ", error);
+            const e: AxiosError = error as AxiosError;
+            return rejectWithValue(e.response?.data || e.message);
+        }
+    }
+);

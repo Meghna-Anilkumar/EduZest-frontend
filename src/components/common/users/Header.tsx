@@ -1,27 +1,53 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useSelector, useDispatch } from "react-redux";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { logoutUser } from "../../../redux/actions/auth/logoutUserAction";
+import { fetchUserData } from "../../../redux/actions/auth/fetchUserdataAction";
+
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false); // Local loading state
   const dispatch = useDispatch<AppDispatch>();
 
-  const { isAuthenticated, userData } = useSelector(
+  const { isAuthenticated, userData, error } = useSelector(
     (state: RootState) => state.user
   );
 
-  console.log(isAuthenticated);
-  console.log(userData?.name);
+  // Fetch user data on mount if authenticated but no userData
+  useEffect(() => {
+    if (isAuthenticated && !userData) {
+      setLoading(true); // Set loading to true before fetching
+      dispatch(fetchUserData())
+        .unwrap()
+        .then(() => {
+          setLoading(false); // Set loading to false on success
+        })
+        .catch((err) => {
+          console.error("Error fetching user data:", err);
+          setLoading(false); // Set loading to false on error
+        });
+    }
+  }, [dispatch, isAuthenticated, userData]);
+
+  // Log userData changes for debugging
+  useEffect(() => {
+    console.log("userData updated:", userData);
+  }, [userData]);
+
+  console.log("Header - isAuthenticated:", isAuthenticated);
+  console.log("Header - userData:", userData);
+  console.log("Header - loading:", loading);
+  console.log("Header - error:", error);
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);
   };
 
   const handleLogout = () => {
-    toast.success('Logout successful')
-   dispatch(logoutUser())
+    toast.success("Logout successful");
+    dispatch(logoutUser());
   };
 
   const navLinks = [
@@ -32,6 +58,30 @@ const Header = () => {
     { href: "/contact", text: "Contact" },
     { href: "/my-account", text: "My Account" },
   ];
+
+  if (loading) {
+    return (
+      <header className="bg-black py-4 md:py-6 shadow-lg fixed top-0 left-0 right-0 z-50">
+        <div className="container mx-auto flex justify-center px-4 md:px-6">
+          <span className="text-white">Loading...</span>
+        </div>
+      </header>
+    );
+  }
+
+  if (error) {
+    return (
+      <header className="bg-black py-4 md:py-6 shadow-lg fixed top-0 left-0 right-0 z-50">
+        <div className="container mx-auto flex justify-center px-4 md:px-6">
+          <span className="text-white text-red-500">Error: {error.message}</span>
+        </div>
+      </header>
+    );
+  }
+
+  // Debugging of userData in render
+  console.log("Rendering Header - userData:", userData);
+  console.log("Rendering Header - userData.name:", userData?.name);
 
   return (
     <header className="bg-black py-4 md:py-6 shadow-lg fixed top-0 left-0 right-0 z-50">

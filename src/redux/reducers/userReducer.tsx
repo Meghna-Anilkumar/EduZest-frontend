@@ -127,18 +127,16 @@ const userSlice = createSlice({
       })
       .addCase(fetchUserData.fulfilled, (state, action) => {
         state.isAuthenticated = true;
-        state.userData = action.payload;
+        state.userData = action.payload.data; // Extract the nested data
         state.error = null;
       })
       .addCase(fetchUserData.rejected, (state, action) => {
         state.isAuthenticated = false;
         state.userData = null;
-        state.error = {
-          message:
-            typeof action.payload === "string"
-              ? action.payload
-              : "Failed to fetch user data",
-        };
+        state.error =
+          typeof action.payload === "string"
+            ? action.payload
+            : "Failed to fetch user data";
       })
 
       // Logout user
