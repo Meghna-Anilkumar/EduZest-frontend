@@ -12,19 +12,32 @@ const StudentProfilePage = () => {
   const userData = useSelector((state: RootState) => state.user.userData);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [profile, setProfile] = useState({
+  // Define the profile state with explicit typing
+  interface ProfileState {
+    username: string;
+    email: string;
+    additionalEmail: string;
+    dob: string;
+    gender: string;
+    profilePic: string | null; // For preview
+    file?: File; // For file upload
+  }
+
+  const [profile, setProfile] = useState<ProfileState>({
     username: "",
     email: "",
     additionalEmail: "",
     dob: "",
     gender: "",
-    profilePic: null as string | null,
+    profilePic: null,
+    file: undefined,
   });
 
   const [activeTab, setActiveTab] = useState("Profile");
   const [isSaved, setIsSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Populate profile state from Redux userData
   useEffect(() => {
     console.log("User Data from Redux:", userData);
     if (userData) {
@@ -32,11 +45,12 @@ const StudentProfilePage = () => {
         username: userData.name || "",
         email: userData.email || "",
         additionalEmail: userData.studentDetails?.additionalEmail || "",
-        dob: userData.profile?.dob 
-          ? new Date(userData.profile.dob).toISOString().split("T")[0] 
+        dob: userData.profile?.dob
+          ? new Date(userData.profile.dob).toISOString().split("T")[0]
           : "",
         gender: userData.profile?.gender || "",
         profilePic: userData.profile?.profilePic || null,
+        file: undefined, // Reset file on load
       });
     }
   }, [userData]);
@@ -56,7 +70,8 @@ const StudentProfilePage = () => {
       reader.onloadend = () => {
         setProfile((prev) => ({
           ...prev,
-          profilePic: reader.result as string,
+          profilePic: reader.result as string, // Preview image
+          file, // Store the raw file for upload
         }));
       };
       reader.readAsDataURL(file);
@@ -64,27 +79,36 @@ const StudentProfilePage = () => {
   };
 
   const handleRemoveProfilePic = () => {
-    setProfile((prev) => ({ ...prev, profilePic: null }));
+    setProfile((prev) => ({
+      ...prev,
+      profilePic: null,
+      file: undefined, // Clear the file as well
+    }));
   };
 
   const handleSave = () => {
-    console.log("Sending profile data:", profile);
-    
-    dispatch(updateUserProfileThunk({
-      username: profile.username,
-      email: profile.email,
-      additionalEmail: profile.additionalEmail,
-      dob: profile.dob,
-      gender: profile.gender,
-      profilePic: profile.profilePic
-    }));
-    
+    const formData = new FormData();
+    formData.append("email", profile.email);
+    formData.append("username", profile.username);
+    formData.append("additionalEmail", profile.additionalEmail || "");
+    formData.append("dob", profile.dob || "");
+    formData.append("gender", profile.gender || "");
+    if (profile.file) {
+      formData.append("profilePic", profile.file); // Append the raw file
+    }
+
+    // Debug FormData contents (FormData doesn't log directly)
+    for (const [key, value] of formData.entries()) {
+      console.log(`${key}:`, value);
+    }
+
+    dispatch(updateUserProfileThunk(formData));
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
 
   const handleChangePassword = () => {
-    navigate('/change-password');
+    navigate("/change-password");
   };
 
   const toggleMobileMenu = () => {
@@ -94,10 +118,16 @@ const StudentProfilePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Suspense fallback for the Header component */}
-      <Suspense fallback={<div className="h-16 bg-white border-b shadow-sm flex items-center justify-center">Loading...</div>}>
+      <Suspense
+        fallback={
+          <div className="h-16 bg-white border-b shadow-sm flex items-center justify-center">
+            Loading...
+          </div>
+        }
+      >
         <Header />
       </Suspense>
-      
+
       {/* Settings subheader */}
       <div className="bg-white border-b shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -117,21 +147,17 @@ const StudentProfilePage = () => {
         <div className="bg-white rounded-lg shadow flex flex-col md:flex-row">
           {/* Mobile menu toggle button */}
           <div className="md:hidden p-4 border-b">
-            <button 
+            <button
               onClick={toggleMobileMenu}
               className="flex items-center justify-between w-full py-2 px-4 rounded-lg bg-gray-50 text-gray-700"
             >
               <span className="font-medium">{activeTab}</span>
-              {mobileMenuOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
 
           {/* Sidebar navigation - mobile */}
-          <div className={`md:hidden ${mobileMenuOpen ? 'block' : 'hidden'} border-b`}>
+          <div className={`md:hidden ${mobileMenuOpen ? "block" : "hidden"} border-b`}>
             <div className="p-4 space-y-1">
               {["Profile", "Account", "Notifications"].map((tab) => (
                 <button
@@ -202,7 +228,13 @@ const StudentProfilePage = () => {
                       Delete picture
                     </button>
                   </div>
-                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleProfilePicChange} className="hidden" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleProfilePicChange}
+                    className="hidden"
+                  />
                 </div>
               </div>
 
@@ -265,7 +297,7 @@ const StudentProfilePage = () => {
                     <option value="">Select gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
@@ -283,9 +315,9 @@ const StudentProfilePage = () => {
 
               {/* Save Button */}
               <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
-                <button 
-                  onClick={handleSave} 
-                  disabled={isSaved} 
+                <button
+                  onClick={handleSave}
+                  disabled={isSaved}
                   className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 w-full sm:w-auto"
                 >
                   {isSaved ? "Saved!" : "Save changes"}

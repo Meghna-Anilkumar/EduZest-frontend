@@ -19,5 +19,8 @@ export interface UserEndpoints extends IEndPoints {
 export interface AdminEndpoints extends IEndPoints {
     getAllStudents: (page: number, limit: number) => string;
     blockUnblockUser: (userId: string) => string;
-    fetchAllRequestedUsers: (page: number, limit: number) => string;  
+    fetchAllRequestedUsers: (page: number, limit: number) => string;
+    approveInstructor: (userId: string) => string;
+    rejectInstructor: (userId: string) => string;
 }
+

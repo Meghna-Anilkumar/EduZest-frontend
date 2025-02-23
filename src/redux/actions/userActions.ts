@@ -54,45 +54,42 @@ export const resetPasswordThunk = createAsyncThunk<ResponseData, ResetPasswordDa
 
 
 export const updateUserProfileThunk = createAsyncThunk(
-    "auth/updateUserProfile",
-    async (profile: IUserdata, { rejectWithValue }) => {
-      const payload = {
-        email: profile.email,
-        name: profile.username,
-        additionalEmail: profile.additionalEmail,
-        profileData: {
-          dob: profile.dob,
-          gender: profile.gender,
-          profilePic: profile.profilePic,
+  "auth/updateUserProfile",
+  async (formData: FormData, { rejectWithValue }) => {
+    try {
+      // Send the FormData to the backend
+      const response = await serverUser.put(userEndPoints.updateProfile, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data", // Required for FormData
+        },
+      });
+
+      console.log("Server Response:", response.data);
+
+      // Extract values from FormData for the return object
+      const updatedUserData = {
+        name: formData.get("username") as string,
+        email: formData.get("email") as string,
+        studentDetails: {
+          additionalEmail: formData.get("additionalEmail") as string,
+        },
+        profile: {
+          dob: formData.get("dob") as string,
+          gender: formData.get("gender") as string,
+          profilePic: response.data.data?.profile?.profilePic || "", // Use the Cloudinary URL from the response
         },
       };
-  
-      console.log("Final Payload to API:", payload);
-  
-      try {
-        const response = await serverUser.put(userEndPoints.updateProfile, payload);
-        console.log("Server Response:", response.data);
-        return {
-          success: true,
-          updatedUserData: {
-            name: profile.username,
-            email: profile.email,
-            studentDetails: {
-              additionalEmail: profile.additionalEmail
-            },
-            profile: {
-              dob: profile.dob,
-              gender: profile.gender,
-              profilePic: profile.profilePic
-            }
-          }
-        };
-      } catch (error) {
-        console.error("Error updating profile:", error.response?.data);
-        return rejectWithValue(error.response?.data || "Failed to update profile");
-      }
+
+      return {
+        success: true,
+        updatedUserData,
+      };
+    } catch (error) {
+      console.error("Error updating profile:", error.response?.data);
+      return rejectWithValue(error.response?.data || "Failed to update profile");
     }
-  );
+  }
+);
 
 
   interface ChangePasswordData {
@@ -114,15 +111,20 @@ export const updateUserProfileThunk = createAsyncThunk(
 
 
   //apply instructor
-  export const applyForInstructorThunk = createAsyncThunk<ResponseData, InstructorApplicationData>(
+  export const applyForInstructorThunk = createAsyncThunk(
     "instructor/apply",
-    async (applicationData, { rejectWithValue }) => {
+    async (formData: FormData, { rejectWithValue }) => {
       try {
-        console.log("Applying for Instructor with data:", applicationData);
+        console.log("Applying for Instructor with FormData:");
+        for (const [key, value] of formData.entries()) {
+          console.log(`${key}:`, value);
+        }
   
-        const response = await serverUser.post(userEndPoints.applyInstructor, applicationData);
+        const response = await serverUser.post(userEndPoints.applyInstructor, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+  
         console.log("Server Response:", response.data);
-  
         return response.data;
       } catch (error) {
         console.error("Instructor Application Error:", error.response?.data);

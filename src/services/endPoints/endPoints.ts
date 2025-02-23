@@ -21,4 +21,6 @@ export const adminEndpoints: AdminEndpoints = {
     getAllStudents: (page, limit) => `/fetchAllStudents?page=${page}&limit=${limit}`,
     blockUnblockUser: (userId: string) => `/block-unblock/${userId}`,
     fetchAllRequestedUsers: (page, limit) => `/fetchAllRequestedUsers?page=${page}&limit=${limit}`,
+    approveInstructor: (userId: string) => `/approve-instructor/${userId}`,
+    rejectInstructor: (userId: string) => `/reject-instructor/${userId}` 
 };

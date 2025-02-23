@@ -7,7 +7,7 @@ import UserLogin from "../pages/user/Userlogin";
 import EmailForgotPassword from "../components/user/EmailForgotPassword";
 import ResetPassword from "../components/user/ResetPassword";
 import ChangePasswordPage from "../pages/user/ChangePassword";
-import InstructorApplicationForm from "../components/instructor/InstructorApply";
+import InstructorApplicationForm from "../components/user/InstructorApply";
 
 const Home = lazy(() => import("../pages/user/Home"));
 const SignUp = lazy(() => import("../pages/user/SignUp"));

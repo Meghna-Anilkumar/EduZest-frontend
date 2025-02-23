@@ -42,9 +42,41 @@ export const getAllRequestedUsersAction = createAsyncThunk(
     async ({ page, limit }: { page: number; limit: number }, { rejectWithValue }) => {
         try {
             const response = await serverAdmin.get(adminEndpoints.fetchAllRequestedUsers(page, limit));
+            console.log('Action response:', response.data);
             return response.data;
         } catch (error: any) {
             console.error("Get requested users action Error: ", error);
+            const e: AxiosError = error as AxiosError;
+            return rejectWithValue(e.response?.data || e.message);
+        }
+    }
+);
+
+
+//approve instructor
+export const approveInstructorAction = createAsyncThunk(
+    "admin/approveInstructor",
+    async ({ userId }: { userId: string }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.patch(adminEndpoints.approveInstructor(userId));
+            return response.data;
+        } catch (error: any) {
+            console.error("Approve instructor action Error: ", error);
+            const e: AxiosError = error as AxiosError;
+            return rejectWithValue(e.response?.data || e.message);
+        }
+    }
+);
+
+// Reject Instructor Thunk
+export const rejectInstructorAction = createAsyncThunk(
+    "admin/rejectInstructor",
+    async ({ userId }: { userId: string }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.patch(adminEndpoints.rejectInstructor(userId));
+            return response.data;
+        } catch (error: any) {
+            console.error("Reject instructor action Error: ", error);
             const e: AxiosError = error as AxiosError;
             return rejectWithValue(e.response?.data || e.message);
         }
