@@ -16,9 +16,7 @@ interface Student {
   isBlocked: boolean;
 }
 
-const Sidebar = lazy(
-  () => import("../../components/common/admin/AdminSidebar")
-);
+const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 export const AdminStudents: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,9 +56,19 @@ export const AdminStudents: React.FC = () => {
         blockUnblockUserAction({ userId, isBlocked })
       ).unwrap();
       console.log("User block/unblock status updated:", response);
-      fetchStudents(currentPage);
+
+      // Update local state instead of refetching
+      setStudents((prevStudents) =>
+        prevStudents.map((student) =>
+          student._id === userId
+            ? { ...student, isBlocked: !isBlocked } // Toggle the isBlocked status
+            : student
+        )
+      );
     } catch (error) {
       console.error("Failed to update user status:", error);
+      // Optionally refetch on error to ensure data consistency
+      fetchStudents(currentPage);
     }
   };
 
@@ -160,10 +168,7 @@ export const AdminStudents: React.FC = () => {
                         <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           <button
                             onClick={() =>
-                              handleBlockUnblock(
-                                student._id,
-                                student.isBlocked ?? false
-                              )
+                              handleBlockUnblock(student._id, student.isBlocked ?? false)
                             }
                             className={`px-3 py-1 rounded-md text-sm font-medium text-white ${
                               student.isBlocked

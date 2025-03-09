@@ -68,12 +68,19 @@ const Requests: React.FC = () => {
     setActionLoading(true);
     try {
       await dispatch(approveInstructorAction({ userId: selectedUser._id })).unwrap();
+      // Update local state instead of refetching
+      setRequestedUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user._id === selectedUser._id ? { ...user, isApproved: true } : user
+        ).filter((user) => !user.isApproved) // Remove approved users from the list
+      );
       setSelectedUser({ ...selectedUser, isApproved: true });
       setIsSuccessModalOpen(true);
-      await fetchRequestedUsers(currentPage);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to approve instructor");
       console.error("Approval failed:", error);
+      // Refetch only on error to ensure consistency
+      await fetchRequestedUsers(currentPage);
     } finally {
       setActionLoading(false);
     }
@@ -86,12 +93,19 @@ const Requests: React.FC = () => {
     setActionLoading(true);
     try {
       await dispatch(rejectInstructorAction({ userId: selectedUser._id })).unwrap();
+      // Update local state instead of refetching
+      setRequestedUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user._id === selectedUser._id ? { ...user, isApproved: false } : user
+        ).filter((user) => !user.isApproved) // Remove rejected users from the list (assuming rejection removes them)
+      );
       setSelectedUser({ ...selectedUser, isApproved: false });
       setIsSuccessModalOpen(true);
-      await fetchRequestedUsers(currentPage);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to reject instructor");
       console.error("Rejection failed:", error);
+      // Refetch only on error to ensure consistency
+      await fetchRequestedUsers(currentPage);
     } finally {
       setActionLoading(false);
     }

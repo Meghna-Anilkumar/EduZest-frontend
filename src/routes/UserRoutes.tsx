@@ -11,10 +11,16 @@ import InstructorApplicationForm from "../components/user/InstructorApply";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 
+
 const Home = lazy(() => import("../pages/user/Home"));
 const SignUp = lazy(() => import("../pages/user/SignUp"));
-const StudentProfile = lazy(() => import("../components/student/StudentProfile"));
-const InstructorProfilePage = lazy(() => import("../components/instructor/InstructorProfile"));
+const StudentProfile = lazy(
+  () => import("../components/student/StudentProfile")
+);
+const InstructorProfilePage = lazy(
+  () => import("../components/instructor/InstructorProfile")
+);
+const NotFound=lazy(()=>import("../pages/NotFound"))
 
 const UserRoutes: React.FC = () => {
   const userRole = useSelector((state: RootState) => state.user.userData?.role);
@@ -24,7 +30,7 @@ const UserRoutes: React.FC = () => {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
-        <Route path="/Home" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/otp-verification" element={<UserOTPVerification />} />
         <Route path="/login" element={<UserLogin />} />
@@ -32,14 +38,34 @@ const UserRoutes: React.FC = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/teach" element={<InstructorApplicationForm />} />
+        <Route path="/teach">
+          {userRole === "Instructor" ? (
+            <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
+              <Route index element={<InstructorProfilePage />} />
+            </Route>
+          ) : (
+            <Route index element={<InstructorApplicationForm />} />
+          )}
+        </Route>
 
-        {/* Protected Profile Route (Dynamically Rendered) */}
-        <Route element={<ProtectedRoute allowedRoles={["Student", "Instructor"]} />}>
+        <Route
+          element={<ProtectedRoute allowedRoles={["Student", "Instructor"]} />}
+        >
           <Route
             path="/profile"
-            element={userRole === "Student" ? <StudentProfile /> : <InstructorProfilePage />}
+            element={
+              userRole === "Student" ? (
+                <StudentProfile />
+              ) : (
+                <InstructorProfilePage />
+              )
+            }
           />
         </Route>
+         
+
+        {/*404 page*/}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

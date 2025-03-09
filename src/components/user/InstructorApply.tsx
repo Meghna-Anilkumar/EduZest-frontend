@@ -58,7 +58,7 @@ const InstructorApplicationForm = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate("/login"); // Navigate to login if not authenticated
+      navigate("/login"); 
     } else if (!userData) {
       dispatch(fetchUserData());
     }

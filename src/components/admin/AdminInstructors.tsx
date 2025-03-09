@@ -16,9 +16,7 @@ interface Instructor {
   isBlocked: boolean;
 }
 
-const Sidebar = lazy(
-  () => import("../../components/common/admin/AdminSidebar")
-);
+const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 export const AdminInstructors: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -58,9 +56,19 @@ export const AdminInstructors: React.FC = () => {
         blockUnblockUserAction({ userId, isBlocked })
       ).unwrap();
       console.log("Instructor block/unblock status updated:", response);
-      fetchInstructors(currentPage);
+
+      // Update local state instead of refetching
+      setInstructors((prevInstructors) =>
+        prevInstructors.map((instructor) =>
+          instructor._id === userId
+            ? { ...instructor, isBlocked: !isBlocked } // Toggle the isBlocked status
+            : instructor
+        )
+      );
     } catch (error) {
       console.error("Failed to update instructor status:", error);
+      // Refetch on error to ensure data consistency
+      fetchInstructors(currentPage);
     }
   };
 

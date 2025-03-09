@@ -15,9 +15,7 @@ const Header = () => {
     (state: RootState) => state.user
   );
 
-  // Clear error on mount and fetch user data if needed
   useEffect(() => {
-    // Clear any existing errors
     dispatch(userClearError());
     
     if (isAuthenticated && !userData) {
@@ -49,7 +47,7 @@ const Header = () => {
     { href: "/teach", text: "Teach" },
     { href: "/about", text: "About" },
     { href: "/contact", text: "Contact" },
-    { href: "/my-account", text: "My Account" },
+    // { href: "/my-account", text: "My Account" },
   ];
 
   if (loading) {
