@@ -212,7 +212,7 @@ const UserSignUp: React.FC = (): JSX.Element => {
           <div className="flex-grow border-t border-gray-300"></div>
         </div>
 
-        <button
+        {/* <button
           className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-100 transition duration-200"
           disabled={isLoading}
         >
@@ -222,7 +222,7 @@ const UserSignUp: React.FC = (): JSX.Element => {
             className="w-5 h-5 mr-2"
           />
           Continue with Google
-        </button>
+        </button> */}
 
         <p className="text-center text-sm text-gray-600 mt-4">
           Already have an account?{" "}

@@ -127,7 +127,7 @@ const userSlice = createSlice({
       })
       .addCase(fetchUserData.fulfilled, (state, action) => {
         state.isAuthenticated = true;
-        state.userData = action.payload.data; // Extract the nested data
+        state.userData = action.payload.data;
         state.error = null;
       })
       .addCase(fetchUserData.rejected, (state, action) => {

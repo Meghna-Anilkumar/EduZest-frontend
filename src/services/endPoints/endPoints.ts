@@ -22,5 +22,10 @@ export const adminEndpoints: AdminEndpoints = {
     blockUnblockUser: (userId: string) => `/block-unblock/${userId}`,
     fetchAllRequestedUsers: (page, limit) => `/fetchAllRequestedUsers?page=${page}&limit=${limit}`,
     approveInstructor: (userId: string) => `/approve-instructor/${userId}`,
-    rejectInstructor: (userId: string) => `/reject-instructor/${userId}` 
+    rejectInstructor: (userId: string) => `/reject-instructor/${userId}`,
+    createCategory: '/create-category',
+    fetchAllCategories: '/fetch-all-categories',
+    editCategory: (categoryId: string) => `/edit-category/${categoryId}`,
+    deleteCategory: (categoryId: string) => `/delete-category/${categoryId}`,
+    getAllInstructors: (page: number, limit: number) => `/fetchAllInstructors?page=${page}&limit=${limit}`,
 };

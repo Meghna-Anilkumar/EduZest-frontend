@@ -6,19 +6,19 @@ import { AppDispatch, RootState } from "../../redux/store";
 import { updateUserProfileThunk } from "../../redux/actions/userActions";
 const Header = lazy(() => import("../../components/common/users/Header"));
 
-const StudentProfilePage = () => {
+const InstructorProfilePage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const userData = useSelector((state: RootState) => state.user.userData);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   interface ProfileState {
     username: string;
     email: string;
-    additionalEmail: string;
     dob: string;
     gender: string;
+    qualification: string;
     profilePic: string | null;
     file?: File;
   }
@@ -26,9 +26,9 @@ const StudentProfilePage = () => {
   const [profile, setProfile] = useState<ProfileState>({
     username: "",
     email: "",
-    additionalEmail: "",
     dob: "",
     gender: "",
+    qualification: "",
     profilePic: null,
     file: undefined,
   });
@@ -43,24 +43,25 @@ const StudentProfilePage = () => {
       setProfile({
         username: userData.name || "",
         email: userData.email || "",
-        additionalEmail: userData.studentDetails?.additionalEmail || "",
         dob: userData.profile?.dob
           ? new Date(userData.profile.dob).toISOString().split("T")[0]
           : "",
         gender: userData.profile?.gender || "",
+        qualification: userData.qualification?.toString() || "",
         profilePic: userData.profile?.profilePic || null,
         file: undefined,
       });
     }
   }, [userData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setProfile((prev) => ({
       ...prev,
       [name]: value,
     }));
-    setError(null); // Clear error when user starts typing
   };
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,29 +77,33 @@ const StudentProfilePage = () => {
       };
       reader.readAsDataURL(file);
     }
-    setError(null); // Clear error when user changes profile picture
   };
 
   const handleSave = async () => {
     try {
-      setError(null); // Clear any previous error
       const formData = new FormData();
       formData.append("email", profile.email);
       formData.append("username", profile.username);
-      formData.append("additionalEmail", profile.additionalEmail || "");
       formData.append("dob", profile.dob || "");
       formData.append("gender", profile.gender || "");
+      formData.append("qualification", profile.qualification || "");
       if (profile.file) {
         formData.append("profilePic", profile.file);
       }
 
-      await dispatch(updateUserProfileThunk(formData)).unwrap(); // Use unwrap to handle promise rejection
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      await dispatch(updateUserProfileThunk(formData)).unwrap();
+      
       setIsSaved(true);
+      setErrorMessage(null);
       setTimeout(() => setIsSaved(false), 2000);
-    } catch (err: any) {
-      // Handle the error
-      const errorMessage = err?.message || "Failed to update profile. Please try again.";
-      setError(errorMessage);
+    } catch (error: any) {
+      const errorMsg = error?.message || "An error occurred while updating profile";
+      setErrorMessage(errorMsg);
+      setTimeout(() => setErrorMessage(null), 5000);
     }
   };
 
@@ -150,7 +155,7 @@ const StudentProfilePage = () => {
 
           <div className={`md:hidden ${mobileMenuOpen ? "block" : "hidden"} border-b`}>
             <div className="p-4 space-y-1">
-              {["Profile", "Account", "Notifications"].map((tab) => (
+              {["Profile", "My courses", "Notifications"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -168,7 +173,7 @@ const StudentProfilePage = () => {
           </div>
 
           <div className="hidden md:block w-64 border-r p-4 space-y-1">
-            {["Profile", "My Courses", "Assessments"].map((tab) => (
+            {["Profile", "My courses", "Notifications"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -183,17 +188,9 @@ const StudentProfilePage = () => {
 
           <div className="flex-1 p-4 md:p-6">
             <div className="max-w-2xl mx-auto md:mx-0">
-              {/* Error Message Display */}
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                  {error}
-                </div>
-              )}
-
-              {/* Success Message Display */}
-              {isSaved && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
-                  Profile updated successfully!
+              {errorMessage && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+                  <span className="font-medium">{errorMessage}</span>
                 </div>
               )}
 
@@ -259,18 +256,6 @@ const StudentProfilePage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Email</label>
-                  <input
-                    type="email"
-                    name="additionalEmail"
-                    value={profile.additionalEmail || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter additional email"
-                  />
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
                   <input
                     type="date"
@@ -294,6 +279,18 @@ const StudentProfilePage = () => {
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications</label>
+                  <input
+                    type="text"
+                    name="qualification"
+                    value={profile.qualification || ""}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter your qualifications"
+                  />
                 </div>
               </div>
 
@@ -324,4 +321,4 @@ const StudentProfilePage = () => {
   );
 };
 
-export default StudentProfilePage;
+export default InstructorProfilePage;

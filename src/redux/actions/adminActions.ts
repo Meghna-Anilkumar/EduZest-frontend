@@ -82,3 +82,20 @@ export const rejectInstructorAction = createAsyncThunk(
         }
     }
 );
+
+
+// Fetch all instructors
+export const getAllInstructorsAction = createAsyncThunk(
+    "admin/getAllInstructors",
+    async ({ page, limit }: { page: number; limit: number }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.get(adminEndpoints.getAllInstructors(page, limit));
+            console.log('Action response:', response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error("Get instructors action Error: ", error);
+            const e: AxiosError = error as AxiosError;
+            return rejectWithValue(e.response?.data || e.message);
+        }
+    }
+);

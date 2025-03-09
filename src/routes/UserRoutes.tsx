@@ -8,19 +8,23 @@ import EmailForgotPassword from "../components/user/EmailForgotPassword";
 import ResetPassword from "../components/user/ResetPassword";
 import ChangePasswordPage from "../pages/user/ChangePassword";
 import InstructorApplicationForm from "../components/user/InstructorApply";
+import { useSelector } from "react-redux";
+import { RootState } from "../redux/store";
 
 const Home = lazy(() => import("../pages/user/Home"));
 const SignUp = lazy(() => import("../pages/user/SignUp"));
-const StudentProfile = lazy(
-  () => import("../components/student/StudentProfile")
-);
+const StudentProfile = lazy(() => import("../components/student/StudentProfile"));
+const InstructorProfilePage = lazy(() => import("../components/instructor/InstructorProfile"));
 
 const UserRoutes: React.FC = () => {
+  const userRole = useSelector((state: RootState) => state.user.userData?.role);
+
   return (
     <Suspense fallback={<Loader />}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
+        <Route path="/Home" element={<Home />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/otp-verification" element={<UserOTPVerification />} />
         <Route path="/login" element={<UserLogin />} />
@@ -29,18 +33,13 @@ const UserRoutes: React.FC = () => {
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/teach" element={<InstructorApplicationForm />} />
 
-
-        {/* Protected Routes for Students */}
-        <Route element={<ProtectedRoute allowedRoles={["Student"]} />}>
-          <Route path="/profile" element={<StudentProfile />} />
+        {/* Protected Profile Route (Dynamically Rendered) */}
+        <Route element={<ProtectedRoute allowedRoles={["Student", "Instructor"]} />}>
+          <Route
+            path="/profile"
+            element={userRole === "Student" ? <StudentProfile /> : <InstructorProfilePage />}
+          />
         </Route>
-
-
-        {/* Protected Routes for Instructors */}
-        <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
-            
-        </Route>
-
       </Routes>
     </Suspense>
   );
