@@ -3,7 +3,7 @@ import { Camera, Search, User, Menu, X, Lock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { AppDispatch, RootState } from "../../redux/store";
-import { updateUserProfileThunk } from "../../redux/actions/userActions";
+import { updateStudentProfileThunk } from "../../redux/actions/userActions";
 const Header = lazy(() => import("../../components/common/users/Header"));
 
 const StudentProfilePage = () => {
@@ -92,7 +92,7 @@ const StudentProfilePage = () => {
         formData.append("profilePic", profile.file);
       }
 
-      await dispatch(updateUserProfileThunk(formData)).unwrap(); // Use unwrap to handle promise rejection
+      await dispatch(updateStudentProfileThunk(formData)).unwrap(); // Use unwrap to handle promise rejection
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
     } catch (err: any) {

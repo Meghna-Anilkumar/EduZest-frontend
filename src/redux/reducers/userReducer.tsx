@@ -7,7 +7,7 @@ import { login } from "../actions/auth/userLoginAction";
 import { fetchUserData } from "../actions/auth/fetchUserdataAction";
 import { IUserdata } from "../../interface/user/IUserData";
 import { logoutUser } from "../actions/auth/logoutUserAction";
-import { updateUserProfileThunk } from "../actions/userActions";
+import { updateStudentProfileThunk} from "../actions/userActions";
 import { googleAuth } from "../actions/auth/googleSigninAction";
 
 const initialState: IInitialState = {
@@ -159,10 +159,10 @@ const userSlice = createSlice({
       })
 
       // Update User Profile
-      .addCase(updateUserProfileThunk.pending, (state) => {
+      .addCase(updateStudentProfileThunk.pending, (state) => {
         state.error = null;
       })
-      .addCase(updateUserProfileThunk.fulfilled, (state, action) => {
+      .addCase(updateStudentProfileThunk.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.userData = {
             ...state.userData,
@@ -170,7 +170,7 @@ const userSlice = createSlice({
           };
         }
       })
-      .addCase(updateUserProfileThunk.rejected, (state, action) => {
+      .addCase(updateStudentProfileThunk.rejected, (state, action) => {
         state.error = {
           message:
             typeof action.payload === "string"
@@ -182,7 +182,7 @@ const userSlice = createSlice({
       .addCase(googleAuth.fulfilled, (state, action) => {
         if (action.payload.success) {
           state.userData = action.payload.userData as IUserdata;
-          state.isAuthenticated = true; // Set authentication to true
+          state.isAuthenticated = true;
         }
       })
       .addCase(googleAuth.rejected, (state, action) => {

@@ -20,8 +20,8 @@ export interface LoginData{
 export interface IUserdata {
   email: string;
   name: string;
-  isVerified: boolean;
-  qualification: string;
+  isVerified?: boolean;
+  qualification?: string;
   phone?: number;
   profile?: {
     dob?: Date;

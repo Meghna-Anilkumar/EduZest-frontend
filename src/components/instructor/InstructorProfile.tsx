@@ -3,7 +3,7 @@ import { Camera, Search, User, Menu, X, Lock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { AppDispatch, RootState } from "../../redux/store";
-import { updateUserProfileThunk } from "../../redux/actions/userActions";
+import { updateInstructorProfileThunk } from "../../redux/actions/userActions";
 const Header = lazy(() => import("../../components/common/users/Header"));
 
 const InstructorProfilePage = () => {
@@ -95,7 +95,7 @@ const InstructorProfilePage = () => {
         console.log(`${key}:`, value);
       }
 
-      await dispatch(updateUserProfileThunk(formData)).unwrap();
+      await dispatch(updateInstructorProfileThunk(formData)).unwrap();
       
       setIsSaved(true);
       setErrorMessage(null);

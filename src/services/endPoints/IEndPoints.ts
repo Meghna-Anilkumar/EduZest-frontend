@@ -10,7 +10,8 @@ export interface UserEndpoints extends IEndPoints {
     resendOTP: string;
     forgotPassword: string;
     resetPassword: string;
-    updateProfile: string;
+    updateStudentProfile: string;
+    updateInstructorProfile: string;
     changePassword: string;
     googleAuth: string;
     applyInstructor: string;

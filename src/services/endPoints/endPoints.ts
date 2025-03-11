@@ -9,7 +9,8 @@ export const userEndPoints: UserEndpoints = {
     resendOTP:'/resend-otp',
     forgotPassword:'/forgot-pass',
     resetPassword:'/reset-password',
-    updateProfile:'/student-profile',
+    updateStudentProfile:'/student-profile',
+    updateInstructorProfile:'/instructor-profile',
     changePassword:'/change-password',
     googleAuth:'/google-auth',
     applyInstructor:'/instructor-apply'

@@ -53,11 +53,11 @@ export const resetPasswordThunk = createAsyncThunk<ResponseData, ResetPasswordDa
 );
 
 
-export const updateUserProfileThunk = createAsyncThunk(
+export const updateStudentProfileThunk = createAsyncThunk(
   "auth/updateUserProfile",
   async (formData: FormData, { rejectWithValue }) => {
     try {
-      const response = await serverUser.put(userEndPoints.updateProfile, formData, {
+      const response = await serverUser.put(userEndPoints.updateStudentProfile, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -68,6 +68,45 @@ export const updateUserProfileThunk = createAsyncThunk(
       const updatedUserData = {
         name: formData.get("username") as string,
         email: formData.get("email") as string,
+        studentDetails: {
+          additionalEmail: formData.get("additionalEmail") as string,
+        },
+        profile: {
+          dob: formData.get("dob") as string,
+          gender: formData.get("gender") as string,
+          profilePic: response.data.data?.profile?.profilePic || "",
+        },
+      };
+
+      return {
+        success: true,
+        updatedUserData,
+      };
+    } catch (error: any) {
+      console.error("Error updating profile:", error.response?.data);
+      return rejectWithValue(error.response?.data || "Failed to update profile");
+    }
+  }
+);
+
+
+
+export const updateInstructorProfileThunk = createAsyncThunk(
+  "auth/updateUserProfile",
+  async (formData: FormData, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.put(userEndPoints.updateInstructorProfile, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("Server Response:", response.data);
+
+      const updatedUserData = {
+        name: formData.get("username") as string,
+        email: formData.get("email") as string,
+        qualification: formData.get("qualification") as string,
         studentDetails: {
           additionalEmail: formData.get("additionalEmail") as string,
         },
