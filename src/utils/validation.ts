@@ -47,11 +47,7 @@ export const validationRules: Record<
   confirmPassword: (value: string, values?: { [key: string]: any }) =>
     required(value) || match("Password", values?.password || "")(value),
 
-  // confirmPassword: (value: string, values?: { [key: string]: any }) => {
-  //   if (!value) return "Confirm Password is required";
-  //   if (value !== values?.newPassword) return "Passwords do not match";
-  //   return null;
-  // },
+  
   
 
   otp: (value: string) => required(value) || otp(value),

@@ -45,7 +45,6 @@ export const serverAdmin = axios.create({
     baseURL: API_URL_ADMIN
 })
 
-setupInterceptorsTo(serverUser)
 
 function setupInterceptorsTo(axiosInstance: AxiosInstance): AxiosInstance {
     axiosInstance.interceptors.response.use(onResponse, (error: AxiosError) => onResponseError(error))
@@ -53,11 +52,8 @@ function setupInterceptorsTo(axiosInstance: AxiosInstance): AxiosInstance {
 }
 
 
-// export function debounce(func: Function, delay: number) {
-//     let timeout: ReturnType<typeof setTimeout>;
+setupInterceptorsTo(serverInstance);
+setupInterceptorsTo(serverUser);
+setupInterceptorsTo(serverAdmin);
 
-//     return function (...args: any[]) {
-//         clearTimeout(timeout);
-//         timeout = setTimeout(() => func(...args), delay);
-//     };
-// }
+

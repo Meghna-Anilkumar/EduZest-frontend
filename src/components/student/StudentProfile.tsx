@@ -4,7 +4,62 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { AppDispatch, RootState } from "../../redux/store";
 import { updateStudentProfileThunk } from "../../redux/actions/userActions";
+import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
+import * as Yup from "yup";
 const Header = lazy(() => import("../../components/common/users/Header"));
+
+// Validation schema using Yup
+const ProfileValidationSchema = Yup.object().shape({
+  username: Yup.string()
+    .required("Username is required")
+    .min(3, "Username must be at least 3 characters long")
+    .matches(/^[a-zA-Z]{3,20}(?: [a-zA-Z]+)*$/, "Invalid username format"),
+  
+  email: Yup.string()
+    .required("Email is required")
+    .email("Invalid email format")
+    .matches(
+      /^(?=.{11,100}$)([a-zA-Z\d]+([.-_]?[a-zA-Z\d]+)*)\@([a-zA-Z]{4,9})+\.com$/,
+      "Invalid email address format"
+    ),
+  
+  additionalEmail: Yup.string()
+    .email("Invalid email format")
+    .matches(
+      /^(?=.{11,100}$)([a-zA-Z\d]+([.-_]?[a-zA-Z\d]+)*)\@([a-zA-Z]{4,9})+\.com$/,
+      "Invalid email address format"
+    )
+    .nullable(),
+  
+  dob: Yup.date()
+    .nullable()
+    .test("dob", "You must be at least 16 years old", function(value) {
+      if (!value) return true; // Allow empty value
+      
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - 16);
+      return value <= cutoff;
+    })
+    .test("future-date", "Date of birth cannot be in the future", function(value) {
+      if (!value) return true;
+      const today = new Date();
+      return value <= today;
+    }),
+  
+  gender: Yup.string().nullable(),
+  
+  profilePic: Yup.mixed().nullable()
+});
+
+interface ProfileFormValues {
+  username: string;
+  email: string;
+  additionalEmail: string;
+  dob: string;
+  gender: string;
+  profilePic: string | null;
+  file?: File;
+}
 
 const StudentProfilePage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -12,18 +67,11 @@ const StudentProfilePage = () => {
   const userData = useSelector((state: RootState) => state.user.userData);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState("Profile");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  interface ProfileState {
-    username: string;
-    email: string;
-    additionalEmail: string;
-    dob: string;
-    gender: string;
-    profilePic: string | null;
-    file?: File;
-  }
-
-  const [profile, setProfile] = useState<ProfileState>({
+  const initialValues: ProfileFormValues = {
     username: "",
     email: "",
     additionalEmail: "",
@@ -31,16 +79,14 @@ const StudentProfilePage = () => {
     gender: "",
     profilePic: null,
     file: undefined,
-  });
+  };
 
-  const [activeTab, setActiveTab] = useState("Profile");
-  const [isSaved, setIsSaved] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [formInitialValues, setFormInitialValues] = useState<ProfileFormValues>(initialValues);
 
   useEffect(() => {
     console.log("User Data from Redux:", userData);
     if (userData) {
-      setProfile({
+      setFormInitialValues({
         username: userData.name || "",
         email: userData.email || "",
         additionalEmail: userData.studentDetails?.additionalEmail || "",
@@ -54,51 +100,43 @@ const StudentProfilePage = () => {
     }
   }, [userData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setError(null); // Clear error when user starts typing
-  };
-
-  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePicChange = (setFieldValue: any) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfile((prev) => ({
-          ...prev,
-          profilePic: reader.result as string,
-          file,
-        }));
+        setFieldValue("profilePic", reader.result as string);
+        setFieldValue("file", file);
       };
       reader.readAsDataURL(file);
     }
-    setError(null); // Clear error when user changes profile picture
+    setError(null);
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (
+    values: ProfileFormValues,
+    { setSubmitting }: FormikHelpers<ProfileFormValues>
+  ) => {
     try {
-      setError(null); // Clear any previous error
+      setError(null);
       const formData = new FormData();
-      formData.append("email", profile.email);
-      formData.append("username", profile.username);
-      formData.append("additionalEmail", profile.additionalEmail || "");
-      formData.append("dob", profile.dob || "");
-      formData.append("gender", profile.gender || "");
-      if (profile.file) {
-        formData.append("profilePic", profile.file);
+      formData.append("email", values.email);
+      formData.append("username", values.username);
+      formData.append("additionalEmail", values.additionalEmail || "");
+      formData.append("dob", values.dob || "");
+      formData.append("gender", values.gender || "");
+      if (values.file) {
+        formData.append("profilePic", values.file);
       }
 
-      await dispatch(updateStudentProfileThunk(formData)).unwrap(); // Use unwrap to handle promise rejection
+      await dispatch(updateStudentProfileThunk(formData)).unwrap();
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
     } catch (err: any) {
-      // Handle the error
       const errorMessage = err?.message || "Failed to update profile. Please try again.";
       setError(errorMessage);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -197,125 +235,141 @@ const StudentProfilePage = () => {
                 </div>
               )}
 
-              <div className="mb-8">
-                <h3 className="text-sm font-medium text-gray-700 mb-4">Profile Picture</h3>
-                <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                  <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                      {profile.profilePic ? (
-                        <img src={profile.profilePic} alt="Profile" className="w-full h-full object-cover" />
-                      ) : (
-                        <User className="w-12 h-12 text-gray-400" />
-                      )}
+              <Formik
+                initialValues={formInitialValues}
+                validationSchema={ProfileValidationSchema}
+                onSubmit={handleSubmit}
+                enableReinitialize
+                validateOnChange
+                validateOnBlur
+              >
+                {({ values, errors, touched, isSubmitting, setFieldValue }) => (
+                  <Form>
+                    <div className="mb-8">
+                      <h3 className="text-sm font-medium text-gray-700 mb-4">Profile Picture</h3>
+                      <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                        <div className="relative">
+                          <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+                            {values.profilePic ? (
+                              <img src={values.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="w-12 h-12 text-gray-400" />
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="absolute bottom-0 right-0 bg-blue-500 p-1.5 rounded-full text-white hover:bg-blue-600"
+                          >
+                            <Camera className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="text-blue-500 font-medium hover:text-blue-600 text-center sm:text-left"
+                          >
+                            Change picture
+                          </button>
+                        </div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleProfilePicChange(setFieldValue)}
+                          className="hidden"
+                        />
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-0 right-0 bg-blue-500 p-1.5 rounded-full text-white hover:bg-blue-600"
-                    >
-                      <Camera className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-blue-500 font-medium hover:text-blue-600 text-center sm:text-left"
-                    >
-                      Change picture
-                    </button>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleProfilePicChange}
-                    className="hidden"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={profile.username}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter username"
-                  />
-                </div>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <Field
+                          type="text"
+                          name="username"
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                            errors.username && touched.username ? "border-red-500" : ""
+                          }`}
+                          placeholder="Enter username"
+                        />
+                        <ErrorMessage name="username" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={profile.email}
-                    readOnly
-                    className="w-full px-4 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
+                        <Field
+                          type="email"
+                          name="email"
+                          readOnly
+                          className="w-full px-4 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Additional Email</label>
-                  <input
-                    type="email"
-                    name="additionalEmail"
-                    value={profile.additionalEmail || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter additional email"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Additional Email</label>
+                        <Field
+                          type="email"
+                          name="additionalEmail"
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                            errors.additionalEmail && touched.additionalEmail ? "border-red-500" : ""
+                          }`}
+                          placeholder="Enter additional email"
+                        />
+                        <ErrorMessage name="additionalEmail" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={profile.dob || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                        <Field
+                          type="date"
+                          name="dob"
+                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                            errors.dob && touched.dob ? "border-red-500" : ""
+                          }`}
+                        />
+                        <ErrorMessage name="dob" component="div" className="mt-1 text-sm text-red-600" />
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                  <select
-                    name="gender"
-                    value={profile.gender || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                        <Field
+                          as="select"
+                          name="gender"
+                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </Field>
+                      </div>
+                    </div>
 
-              <div className="mt-6">
-                <button
-                  onClick={handleChangePassword}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Change Password</span>
-                </button>
-              </div>
+                    <div className="mt-6">
+                      <button
+                        type="button"
+                        onClick={handleChangePassword}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
+                      >
+                        <Lock className="w-4 h-4" />
+                        <span>Change Password</span>
+                      </button>
+                    </div>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
-                <button
-                  onClick={handleSave}
-                  disabled={isSaved}
-                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 w-full sm:w-auto"
-                >
-                  {isSaved ? "Saved!" : "Save changes"}
-                </button>
-              </div>
+                    <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || isSaved}
+                        className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 w-full sm:w-auto"
+                      >
+                        {isSubmitting ? "Saving..." : isSaved ? "Saved!" : "Save changes"}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
             </div>
           </div>
         </div>

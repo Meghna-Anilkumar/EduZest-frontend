@@ -28,6 +28,7 @@ export interface IUserdata {
     firstName?: string;
     gender?: "Male" | "Female" | "Other" | string;
     lastName?: string;
+    address?:string;
     profilePic?: string;
   };
   cv: string;
@@ -43,7 +44,7 @@ export interface IUserdata {
       progress: number;
       rating: string;
     }[];
-    socialMedia?: string[];
+   
   };
   instructorDetails?: {
     createdCourses?: string;
@@ -51,14 +52,19 @@ export interface IUserdata {
     rating?: number;
   };
   aboutMe: string;
-  isRequested: string; // Should be boolean? Adjust based on actual API response
+  isRequested: string; 
+  socialMedia?: {
+    linkedin?: string;
+    github?: string;
+  }
+  experience:string;
 }
 
 
 export interface IUserdataResponse {
   success: boolean;
   message: string;
-  data: IUserdata; // The actual user data is nested under `data`
+  data: IUserdata;
 }
    
 
