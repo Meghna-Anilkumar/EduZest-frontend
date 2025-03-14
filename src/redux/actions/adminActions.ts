@@ -3,6 +3,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { adminEndpoints } from "../../services/endPoints/endPoints";
 import { serverAdmin } from "../../services";
 import { AxiosError } from "axios";
+import { handleAxiosError } from "../../utils/customError";
 
 
 //fetch all students
@@ -99,3 +100,18 @@ export const getAllInstructorsAction = createAsyncThunk(
         }
     }
 );
+
+
+//get instructor request details
+export const getInstructorRequestDetailsAction = createAsyncThunk(
+    "admin/getInstructorRequestDetails",
+    async ({ userId }: { userId: string }, { rejectWithValue }) => {
+        try {
+            const response = await serverAdmin.get(adminEndpoints.getInstructorRequestDetails(userId));
+            return response.data;
+        } catch (error) {
+            return rejectWithValue(handleAxiosError(error, "Failed to fetch instructor request details."));
+        }
+    }
+);
+

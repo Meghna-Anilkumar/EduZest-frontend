@@ -29,4 +29,5 @@ export const adminEndpoints: AdminEndpoints = {
     editCategory: (categoryId: string) => `/edit-category/${categoryId}`,
     deleteCategory: (categoryId: string) => `/delete-category/${categoryId}`,
     getAllInstructors: (page: number, limit: number) => `/fetchAllInstructors?page=${page}&limit=${limit}`,
+    getInstructorRequestDetails: (userId: string) => `/get-instructor-request-details/${userId}`,
 };

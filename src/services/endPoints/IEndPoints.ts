@@ -27,6 +27,7 @@ export interface AdminEndpoints extends IEndPoints {
     fetchAllCategories: string;
     editCategory: (categoryId: string) => string; 
     deleteCategory: (categoryId: string) => string; 
-    getAllInstructors:(page: number, limit: number)=>string
+    getAllInstructors:(page: number, limit: number)=>string;
+    getInstructorRequestDetails: (userId: string) => string; 
 }
 

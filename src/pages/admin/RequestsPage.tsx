@@ -1,15 +1,24 @@
 import React, { useState, useEffect, lazy, useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "../../redux/store";
-import { 
-  getAllRequestedUsersAction, 
+import {
+  getAllRequestedUsersAction,
   approveInstructorAction,
-  rejectInstructorAction 
+  rejectInstructorAction,
 } from "../../redux/actions/adminActions";
 import Pagination from "../../components/common/admin/Pagination";
-import { RiMenuLine, RiDownloadLine, RiUserLine, RiCheckLine, RiCloseLine } from "react-icons/ri";
+import {
+  RiMenuLine,
+  RiDownloadLine,
+  RiUserLine,
+  RiCheckLine,
+  RiCloseLine,
+  RiEyeLine,
+} from "react-icons/ri";
 
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
+const Sidebar = lazy(
+  () => import("../../components/common/admin/AdminSidebar")
+);
 
 const Requests: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -24,24 +33,30 @@ const Requests: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchRequestedUsers = useCallback(async (page: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await dispatch(
-        getAllRequestedUsersAction({ page, limit: usersPerPage })
-      ).unwrap();
-      setRequestedUsers(response.data.requestedUsers || []);
-      setTotalPages(response.data.totalPages || 1);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to fetch requested users");
-      console.error("Error details:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [dispatch, usersPerPage]);
+  const fetchRequestedUsers = useCallback(
+    async (page: number) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await dispatch(
+          getAllRequestedUsersAction({ page, limit: usersPerPage })
+        ).unwrap();
+        setRequestedUsers(response.data.requestedUsers || []);
+        setTotalPages(response.data.totalPages || 1);
+      } catch (error: any) {
+        setError(
+          error.response?.data?.message || "Failed to fetch requested users"
+        );
+        console.error("Error details:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [dispatch, usersPerPage]
+  );
 
   useEffect(() => {
     fetchRequestedUsers(currentPage);
@@ -61,25 +76,32 @@ const Requests: React.FC = () => {
     setIsRejectModalOpen(true);
   };
 
+  const handleViewDetailsClick = (user: any) => {
+    setSelectedUser(user);
+    setIsDetailsModalOpen(true);
+  };
+
   const handleConfirmApproval = async () => {
     if (!selectedUser) return;
 
     setIsConfirmModalOpen(false);
     setActionLoading(true);
     try {
-      await dispatch(approveInstructorAction({ userId: selectedUser._id })).unwrap();
-      // Update local state instead of refetching
+      await dispatch(
+        approveInstructorAction({ userId: selectedUser._id })
+      ).unwrap();
       setRequestedUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === selectedUser._id ? { ...user, isApproved: true } : user
-        ).filter((user) => !user.isApproved) // Remove approved users from the list
+        prevUsers
+          .map((user) =>
+            user._id === selectedUser._id ? { ...user, isApproved: true } : user
+          )
+          .filter((user) => !user.isApproved)
       );
       setSelectedUser({ ...selectedUser, isApproved: true });
       setIsSuccessModalOpen(true);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to approve instructor");
       console.error("Approval failed:", error);
-      // Refetch only on error to ensure consistency
       await fetchRequestedUsers(currentPage);
     } finally {
       setActionLoading(false);
@@ -92,19 +114,23 @@ const Requests: React.FC = () => {
     setIsRejectModalOpen(false);
     setActionLoading(true);
     try {
-      await dispatch(rejectInstructorAction({ userId: selectedUser._id })).unwrap();
-      // Update local state instead of refetching
+      await dispatch(
+        rejectInstructorAction({ userId: selectedUser._id })
+      ).unwrap();
       setRequestedUsers((prevUsers) =>
-        prevUsers.map((user) =>
-          user._id === selectedUser._id ? { ...user, isApproved: false } : user
-        ).filter((user) => !user.isApproved) // Remove rejected users from the list (assuming rejection removes them)
+        prevUsers
+          .map((user) =>
+            user._id === selectedUser._id
+              ? { ...user, isApproved: false }
+              : user
+          )
+          .filter((user) => !user.isApproved)
       );
       setSelectedUser({ ...selectedUser, isApproved: false });
       setIsSuccessModalOpen(true);
     } catch (error: any) {
       setError(error.response?.data?.message || "Failed to reject instructor");
       console.error("Rejection failed:", error);
-      // Refetch only on error to ensure consistency
       await fetchRequestedUsers(currentPage);
     } finally {
       setActionLoading(false);
@@ -115,6 +141,7 @@ const Requests: React.FC = () => {
     setIsConfirmModalOpen(false);
     setIsRejectModalOpen(false);
     setIsSuccessModalOpen(false);
+    setIsDetailsModalOpen(false);
     setSelectedUser(null);
   };
 
@@ -138,7 +165,9 @@ const Requests: React.FC = () => {
         className={`
           fixed lg:static
           inset-y-0 left-0
-          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          transform ${
+            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }
           lg:translate-x-0 transition-transform duration-300 ease-in-out
           z-50 lg:z-0
         `}
@@ -157,7 +186,7 @@ const Requests: React.FC = () => {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
               {error}
@@ -167,8 +196,8 @@ const Requests: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {requestedUsers && requestedUsers.length > 0 ? (
               requestedUsers.map((user) => (
-                <div 
-                  key={user._id} 
+                <div
+                  key={user._id}
                   className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden"
                 >
                   <div className="p-6">
@@ -185,11 +214,11 @@ const Requests: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
+
                     <h2 className="text-xl font-semibold text-center text-gray-800 mb-2">
                       {user.name}
                     </h2>
-                    
+
                     <div className="space-y-2 mb-4">
                       <p className="text-indigo-600 text-center font-medium">
                         {user.qualification || "No qualification specified"}
@@ -197,11 +226,6 @@ const Requests: React.FC = () => {
                       <p className="text-gray-500 text-center text-sm">
                         {user.email}
                       </p>
-                      <div className="h-12">
-                        <p className="text-gray-600 text-sm text-center line-clamp-2">
-                          {user.aboutMe || "No description available"}
-                        </p>
-                      </div>
                     </div>
 
                     {user.cv && (
@@ -218,28 +242,38 @@ const Requests: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex justify-center gap-4">
-                      <button 
-                        className="flex items-center gap-2 px-4 py-2 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => handleApproveClick(user)}
-                        disabled={actionLoading}
+                    <div className="flex flex-col items-center gap-4">
+                      <button
+                        className="flex items-center gap-2 px-4 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-md transition-all duration-300"
+                        onClick={() => handleViewDetailsClick(user)}
                       >
-                        <RiCheckLine className="w-5 h-5" /> Approve
+                        <RiEyeLine className="w-5 h-5" /> View Details
                       </button>
-                      <button 
-                        className="flex items-center gap-2 px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        onClick={() => handleRejectClick(user)}
-                        disabled={actionLoading}
-                      >
-                        <RiCloseLine className="w-5 h-5" /> Reject
-                      </button>
+                      <div className="flex justify-center gap-4">
+                        <button
+                          className="flex items-center gap-2 px-4 py-2 text-white bg-green-500 hover:bg-green-600 rounded-lg shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => handleApproveClick(user)}
+                          disabled={actionLoading}
+                        >
+                          <RiCheckLine className="w-5 h-5" /> Approve
+                        </button>
+                        <button
+                          className="flex items-center gap-2 px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg shadow-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => handleRejectClick(user)}
+                          disabled={actionLoading}
+                        >
+                          <RiCloseLine className="w-5 h-5" /> Reject
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
               <div className="col-span-3 text-center py-12">
-                <p className="text-gray-500 text-lg">No requested users found</p>
+                <p className="text-gray-500 text-lg">
+                  No requested users found
+                </p>
               </div>
             )}
           </div>
@@ -260,18 +294,21 @@ const Requests: React.FC = () => {
       {isConfirmModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirm Approval</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              Confirm Approval
+            </h3>
             <p className="text-gray-600">
-              Are you sure you want to approve {selectedUser?.name} as an instructor?
+              Are you sure you want to approve {selectedUser?.name} as an
+              instructor?
             </p>
             <div className="mt-6 flex justify-end gap-4">
-              <button 
+              <button
                 className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 onClick={() => setIsConfirmModalOpen(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="px-4 py-2 text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
                 onClick={handleConfirmApproval}
               >
@@ -286,18 +323,21 @@ const Requests: React.FC = () => {
       {isRejectModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Confirm Rejection</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              Confirm Rejection
+            </h3>
             <p className="text-gray-600">
-              Are you sure you want to reject {selectedUser?.name}'s instructor request?
+              Are you sure you want to reject {selectedUser?.name}'s instructor
+              request?
             </p>
             <div className="mt-6 flex justify-end gap-4">
-              <button 
+              <button
                 className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 onClick={() => setIsRejectModalOpen(false)}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
                 onClick={handleConfirmReject}
               >
@@ -316,15 +356,162 @@ const Requests: React.FC = () => {
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <RiCheckLine className="w-6 h-6 text-green-500" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Success!</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Success!
+              </h3>
               <p className="text-gray-600">
-                {selectedUser?.name}'s instructor request has been {selectedUser?.isApproved ? 'approved' : 'rejected'}.
+                {selectedUser?.name}'s instructor request has been{" "}
+                {selectedUser?.isApproved ? "approved" : "rejected"}.
               </p>
             </div>
             <div className="mt-6 flex justify-center">
-              <button 
+              <button
                 className="px-6 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
                 onClick={closeAllModals}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {isDetailsModalOpen && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">
+              Instructor Request Details
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                {selectedUser.profile?.profilePic ? (
+                  <img
+                    src={selectedUser.profile.profilePic}
+                    alt={`${selectedUser.name}'s profile`}
+                    className="w-16 h-16 rounded-full object-cover ring-2 ring-indigo-50"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center">
+                    <RiUserLine className="w-8 h-8 text-indigo-300" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-lg font-medium text-gray-800">
+                    {selectedUser.name}
+                  </p>
+                  <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Qualification
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedUser.qualification || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Phone</p>
+                  <p className="text-gray-600">
+                    {selectedUser.phone || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Date of Birth
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedUser.profile?.dob
+                      ? new Date(selectedUser.profile.dob).toLocaleDateString()
+                      : "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Gender</p>
+                  <p className="text-gray-600">
+                    {selectedUser.profile?.gender || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Address</p>
+                  <p className="text-gray-600">
+                    {selectedUser.profile?.address || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Experience
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedUser.experience || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">About Me</p>
+                  <p className="text-gray-600">
+                    {selectedUser.aboutMe || "Not provided"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">LinkedIn</p>
+                  <p className="text-gray-600">
+                    {selectedUser.socialMedia?.linkedin ? (
+                      <a
+                        href={selectedUser.socialMedia.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:underline"
+                      >
+                        {selectedUser.socialMedia.linkedin}
+                      </a>
+                    ) : (
+                      "Not provided"
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">GitHub</p>
+                  <p className="text-gray-600">
+                    {selectedUser.socialMedia?.github ? (
+                      <a
+                        href={selectedUser.socialMedia.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:underline"
+                      >
+                        {selectedUser.socialMedia.github}
+                      </a>
+                    ) : (
+                      "Not provided"
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-700">CV</p>
+                  <p className="text-gray-600">
+                    {selectedUser.cv ? (
+                      <a
+                        href={selectedUser.cv}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:underline"
+                      >
+                        Download CV
+                      </a>
+                    ) : (
+                      "Not uploaded"
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                className="px-6 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                onClick={() => setIsDetailsModalOpen(false)}
               >
                 Close
               </button>
