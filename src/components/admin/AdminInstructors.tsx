@@ -8,8 +8,10 @@ import {
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/admin/SearchBar";
+import { InstructorModal } from "./InstructorView"; 
+import { IUserdata } from "../../interface/user/IUserData";
 
-interface Instructor {
+interface Instructor extends IUserdata {
   _id: string;
   name: string;
   email: string;
@@ -29,6 +31,8 @@ export const AdminInstructors: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null); 
 
   const fetchInstructors = useCallback(
     async (page: number, search: string = "") => {
@@ -70,12 +74,17 @@ export const AdminInstructors: React.FC = () => {
       );
     } catch (error) {
       console.error("Failed to update instructor status:", error);
-      fetchInstructors(currentPage, searchTerm); // Use searchTerm directly
+      fetchInstructors(currentPage, searchTerm);
     }
   };
 
+  const handleViewDetails = (instructor: Instructor) => {
+    setSelectedInstructor(instructor);
+    setIsModalOpen(true);
+  };
+
   useEffect(() => {
-    fetchInstructors(currentPage, searchTerm); // Use searchTerm directly
+    fetchInstructors(currentPage, searchTerm);
   }, [fetchInstructors, currentPage, searchTerm]);
 
   const handlePageChange = (page: number) => {
@@ -86,7 +95,7 @@ export const AdminInstructors: React.FC = () => {
     const newSearchTerm = event.target.value;
     console.log("Search term changed to:", newSearchTerm);
     setSearchTerm(newSearchTerm);
-    setCurrentPage(1); // Reset to first page on search
+    setCurrentPage(1);
   };
 
   return (
@@ -120,7 +129,6 @@ export const AdminInstructors: React.FC = () => {
       <div className="flex-1 min-w-0 overflow-auto">
         <div className="p-4 lg:p-8">
           <div className="max-w-full mx-auto">
-            {/* Header with Title and Search Bar */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 lg:mb-10">
               <h1 className="text-2xl lg:text-3xl font-bold pl-12 lg:pl-0">
                 Instructors
@@ -152,6 +160,9 @@ export const AdminInstructors: React.FC = () => {
                     </th>
                     <th scope="col" className="px-4 lg:px-6 py-3">
                       Status
+                    </th>
+                    <th scope="col" className="px-4 lg:px-6 py-3">
+                      Details
                     </th>
                   </tr>
                 </thead>
@@ -191,11 +202,20 @@ export const AdminInstructors: React.FC = () => {
                             {instructor.isBlocked ? "Unblock" : "Block"}
                           </button>
                         </td>
+                        <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                          <button
+                            onClick={() => handleViewDetails(instructor)}
+                            className="text-blue-500 hover:text-blue-700"
+                            title="View Details"
+                          >
+                            👁️ {/* Unicode eye symbol */}
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-6 py-4 text-center">
+                      <td colSpan={5} className="px-6 py-4 text-center">
                         No instructors found
                       </td>
                     </tr>
@@ -214,6 +234,12 @@ export const AdminInstructors: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <InstructorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        instructor={selectedInstructor}
+      />
     </div>
   );
 };

@@ -8,8 +8,10 @@ import {
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/admin/SearchBar";
+import { StudentModal } from "./StudentView"; 
+import { IUserdata } from "../../interface/user/IUserData";
 
-interface Student {
+interface Student extends IUserdata {
   _id: string;
   name: string;
   email: string;
@@ -29,6 +31,8 @@ export const AdminStudents: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null); // Selected student
 
   const fetchStudents = useCallback(
     async (page: number, search: string = "") => {
@@ -73,6 +77,11 @@ export const AdminStudents: React.FC = () => {
       console.error("Failed to update user status:", error);
       fetchStudents(currentPage, searchTerm);
     }
+  };
+
+  const handleViewDetails = (student: Student) => {
+    setSelectedStudent(student);
+    setIsModalOpen(true);
   };
 
   useEffect(() => {
@@ -121,7 +130,6 @@ export const AdminStudents: React.FC = () => {
       <div className="flex-1 min-w-0 overflow-auto">
         <div className="p-4 lg:p-8">
           <div className="max-w-full mx-auto">
-            {/* Heading and Search Bar on the same line */}
             <div className="flex flex-col lg:flex-row justify-between items-center mb-6 lg:mb-10">
               <h1 className="text-2xl lg:text-3xl font-bold pl-12 lg:pl-0">
                 Students
@@ -153,6 +161,9 @@ export const AdminStudents: React.FC = () => {
                     </th>
                     <th scope="col" className="px-4 lg:px-6 py-3">
                       Status
+                    </th>
+                    <th scope="col" className="px-4 lg:px-6 py-3">
+                      Details
                     </th>
                   </tr>
                 </thead>
@@ -189,11 +200,20 @@ export const AdminStudents: React.FC = () => {
                             {student.isBlocked ? "Unblock" : "Block"}
                           </button>
                         </td>
+                        <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                          <button
+                            onClick={() => handleViewDetails(student)}
+                            className="text-blue-500 hover:text-blue-700"
+                            title="View Details"
+                          >
+                            👁️ {/* Unicode eye symbol */}
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-6 py-4 text-center">
+                      <td colSpan={5} className="px-6 py-4 text-center">
                         No students found
                       </td>
                     </tr>
@@ -212,6 +232,12 @@ export const AdminStudents: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <StudentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        student={selectedStudent}
+      />
     </div>
   );
 };
