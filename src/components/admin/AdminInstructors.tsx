@@ -7,6 +7,7 @@ import {
 } from "../../redux/actions/adminActions";
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
+import { SearchBar } from "../common/admin/SearchBar";
 
 interface Instructor {
   _id: string;
@@ -23,20 +24,23 @@ export const AdminInstructors: React.FC = () => {
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const instructorsPerPage = 10;
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const fetchInstructors = useCallback(
-    async (page: number) => {
+    async (page: number, search: string = "") => {
+      console.log("Fetching instructors with:", { page, limit: instructorsPerPage, search });
       setLoading(true);
       setError(null);
       try {
         const response = await dispatch(
           getAllInstructorsAction({
-            page: page,
+            page,
             limit: instructorsPerPage,
+            search: search || undefined,
           })
         ).unwrap();
         setInstructors(response?.data?.instructors || []);
@@ -57,27 +61,32 @@ export const AdminInstructors: React.FC = () => {
       ).unwrap();
       console.log("Instructor block/unblock status updated:", response);
 
-      // Update local state instead of refetching
       setInstructors((prevInstructors) =>
         prevInstructors.map((instructor) =>
           instructor._id === userId
-            ? { ...instructor, isBlocked: !isBlocked } // Toggle the isBlocked status
+            ? { ...instructor, isBlocked: !isBlocked }
             : instructor
         )
       );
     } catch (error) {
       console.error("Failed to update instructor status:", error);
-      // Refetch on error to ensure data consistency
-      fetchInstructors(currentPage);
+      fetchInstructors(currentPage, searchTerm); // Use searchTerm directly
     }
   };
 
   useEffect(() => {
-    fetchInstructors(currentPage);
-  }, [fetchInstructors, currentPage]);
+    fetchInstructors(currentPage, searchTerm); // Use searchTerm directly
+  }, [fetchInstructors, currentPage, searchTerm]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = event.target.value;
+    console.log("Search term changed to:", newSearchTerm);
+    setSearchTerm(newSearchTerm);
+    setCurrentPage(1); // Reset to first page on search
   };
 
   return (
@@ -98,12 +107,12 @@ export const AdminInstructors: React.FC = () => {
 
       <div
         className={`
-        fixed lg:static
-        inset-y-0 left-0
-        transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 transition-transform duration-300 ease-in-out
-        z-50 lg:z-0
-      `}
+          fixed lg:static
+          inset-y-0 left-0
+          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 transition-transform duration-300 ease-in-out
+          z-50 lg:z-0
+        `}
       >
         <Sidebar />
       </div>
@@ -111,9 +120,15 @@ export const AdminInstructors: React.FC = () => {
       <div className="flex-1 min-w-0 overflow-auto">
         <div className="p-4 lg:p-8">
           <div className="max-w-full mx-auto">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-6 lg:mb-10 pl-12 lg:pl-0">
-              Instructors
-            </h1>
+            {/* Header with Title and Search Bar */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 lg:mb-10">
+              <h1 className="text-2xl lg:text-3xl font-bold pl-12 lg:pl-0">
+                Instructors
+              </h1>
+              <div className="mt-4 lg:mt-0 lg:w-1/3">
+                <SearchBar onSearchChange={handleSearchChange} />
+              </div>
+            </div>
 
             {loading && (
               <p className="text-center text-lg font-semibold">

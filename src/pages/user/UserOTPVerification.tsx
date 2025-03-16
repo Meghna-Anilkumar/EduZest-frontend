@@ -20,7 +20,10 @@ const UserOTPVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { error, tempMail } = useSelector((state: RootState) => state.user);
+  const { error, tempMail,isAuthenticated } = useSelector((state: RootState) => state.user);
+  if(isAuthenticated){
+    navigate('/login')
+  }
   const userEmail = location.state?.email || tempMail?.email; 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,7 +129,7 @@ const UserOTPVerification: React.FC = () => {
       ).unwrap();
 
       console.log("OTP Verification Response:", response);
-
+      toast.success('otp verified successfully')
       if (response?.redirectURL) {
         navigate(response.redirectURL,{ state: { userEmail }});
       } else {

@@ -18,16 +18,16 @@ export interface UserEndpoints extends IEndPoints {
 }
 
 export interface AdminEndpoints extends IEndPoints {
-    getAllStudents: (page: number, limit: number) => string;
+    getAllStudents: (page: number, limit: number, search?: string) => string;
     blockUnblockUser: (userId: string) => string;
     fetchAllRequestedUsers: (page: number, limit: number) => string;
     approveInstructor: (userId: string) => string;
     rejectInstructor: (userId: string) => string;
     createCategory: string;
-    fetchAllCategories: string;
+    fetchAllCategories: (page: number, limit: number, search?: string) => string;
     editCategory: (categoryId: string) => string; 
     deleteCategory: (categoryId: string) => string; 
-    getAllInstructors:(page: number, limit: number)=>string;
+    getAllInstructors: (page: number, limit: number, search?: string)=>string;
     getInstructorRequestDetails: (userId: string) => string; 
 }
 

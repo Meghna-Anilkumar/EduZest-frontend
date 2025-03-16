@@ -3,23 +3,27 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { adminEndpoints } from "../../services/endPoints/endPoints";
 import { serverAdmin } from "../../services";
 import { AxiosError } from "axios";
-import { handleAxiosError } from "../../utils/customError";
 
 
 //fetch all students
 export const getAllStudentsAction = createAsyncThunk(
     "admin/getAllStudents",
-    async ({ page, limit }: { page: number, limit: number }, { rejectWithValue }) => {
-        try {
-            const response = await serverAdmin.get(adminEndpoints.getAllStudents(page, limit))
-            return response.data
-        } catch (error: any) {
-            console.log("Get students action Error: ", error);
-            const e: AxiosError = error as AxiosError;
-            return rejectWithValue(e.response?.data || e.message);
-        }
+    async (
+      { page, limit, search }: { page: number; limit: number; search?: string },
+      { rejectWithValue }
+    ) => {
+      try {
+        const url = adminEndpoints.getAllStudents(page, limit, search);
+        console.log("Fetching students with URL:", url); // Debug log
+        const response = await serverAdmin.get(url);
+        return response.data;
+      } catch (error: any) {
+        console.log("Get students action Error: ", error);
+        const e: AxiosError = error as AxiosError;
+        return rejectWithValue(e.response?.data || e.message);
+      }
     }
-)
+  );
 
 // Block/Unblock User Thunk
 export const blockUnblockUserAction = createAsyncThunk(
@@ -88,30 +92,20 @@ export const rejectInstructorAction = createAsyncThunk(
 // Fetch all instructors
 export const getAllInstructorsAction = createAsyncThunk(
     "admin/getAllInstructors",
-    async ({ page, limit }: { page: number; limit: number }, { rejectWithValue }) => {
-        try {
-            const response = await serverAdmin.get(adminEndpoints.getAllInstructors(page, limit));
-            console.log('Action response:', response.data);
-            return response.data;
-        } catch (error: any) {
-            console.error("Get instructors action Error: ", error);
-            const e: AxiosError = error as AxiosError;
-            return rejectWithValue(e.response?.data || e.message);
-        }
+    async (
+      { page, limit, search }: { page: number; limit: number; search?: string }, 
+      { rejectWithValue }
+    ) => {
+      try {
+        const response = await serverAdmin.get(
+          adminEndpoints.getAllInstructors(page, limit, search)
+        );
+        console.log("Action response:", response.data); // Debug log
+        return response.data;
+      } catch (error: any) {
+        console.error("Get instructors action Error: ", error);
+        const e: AxiosError = error as AxiosError;
+        return rejectWithValue(e.response?.data || e.message);
+      }
     }
-);
-
-
-//get instructor request details
-export const getInstructorRequestDetailsAction = createAsyncThunk(
-    "admin/getInstructorRequestDetails",
-    async ({ userId }: { userId: string }, { rejectWithValue }) => {
-        try {
-            const response = await serverAdmin.get(adminEndpoints.getInstructorRequestDetails(userId));
-            return response.data;
-        } catch (error) {
-            return rejectWithValue(handleAxiosError(error, "Failed to fetch instructor request details."));
-        }
-    }
-);
-
+  );

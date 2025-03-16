@@ -31,34 +31,37 @@ export const createCategoryAction = createAsyncThunk(
 );
 
 export const getAllCategoriesAction = createAsyncThunk(
-    "admin/getAllCategories",
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await serverAdmin.get<CategoryResponse>(adminEndpoints.fetchAllCategories);
-            console.log("API Response:", response.data);
+  "admin/getAllCategories",
+  async (
+    { page, limit, search }: { page: number; limit: number; search?: string }, // Add search parameter
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await serverAdmin.get<CategoryResponse>(
+        adminEndpoints.fetchAllCategories(page, limit, search) // Use endpoint function
+      );
+      console.log("API Response:", response.data);
 
-            const { categories } = response.data.data;
+      const { categories } = response.data.data;
 
-            if (!Array.isArray(categories)) {
-                console.error("Categories is not an array:", categories);
-                return rejectWithValue("Invalid data format received from server");
-            }
+      if (!Array.isArray(categories)) {
+        console.error("Categories is not an array:", categories);
+        return rejectWithValue("Invalid data format received from server");
+      }
 
-            return {
-                categories,
-                currentPage: response.data.data.currentPage,
-                totalPages: response.data.data.totalPages,
-                totalCategories: response.data.data.totalCategories
-            };
-        } catch (error) {
-            const err = error as AxiosError;
-            console.error("Fetch categories error:", err);
-            return rejectWithValue(err.response?.data || "Failed to fetch categories");
-        }
+      return {
+        categories,
+        currentPage: response.data.data.currentPage,
+        totalPages: response.data.data.totalPages,
+        totalCategories: response.data.data.totalCategories,
+      };
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error("Fetch categories error:", err);
+      return rejectWithValue(err.response?.data || "Failed to fetch categories");
     }
-
+  }
 );
-
 
 export const editCategoryAction = createAsyncThunk(
     "admin/editCategory",

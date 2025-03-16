@@ -7,6 +7,7 @@ import {
 } from "../../redux/actions/adminActions";
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
+import { SearchBar } from "../common/admin/SearchBar";
 
 interface Student {
   _id: string;
@@ -23,25 +24,30 @@ export const AdminStudents: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const studentsPerPage = 10;
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const fetchStudents = useCallback(
-    async (page: number) => {
+    async (page: number, search: string = "") => {
+      console.log("Fetching students with:", { page, limit: studentsPerPage, search });
       setLoading(true);
       setError(null);
       try {
         const response = await dispatch(
           getAllStudentsAction({
-            page: page,
+            page,
             limit: studentsPerPage,
+            search: search || undefined,
           })
         ).unwrap();
+        console.log("Fetch students response:", response);
         setStudents(response?.data?.students || []);
         setTotalPages(response?.data?.totalPages || 1);
       } catch (error: any) {
+        console.error("Fetch students error:", error);
         setError(error.response?.data?.message || "Failed to fetch students");
       } finally {
         setLoading(false);
@@ -56,33 +62,36 @@ export const AdminStudents: React.FC = () => {
         blockUnblockUserAction({ userId, isBlocked })
       ).unwrap();
       console.log("User block/unblock status updated:", response);
-
-      // Update local state instead of refetching
       setStudents((prevStudents) =>
         prevStudents.map((student) =>
           student._id === userId
-            ? { ...student, isBlocked: !isBlocked } // Toggle the isBlocked status
+            ? { ...student, isBlocked: !isBlocked }
             : student
         )
       );
     } catch (error) {
       console.error("Failed to update user status:", error);
-      // Optionally refetch on error to ensure data consistency
-      fetchStudents(currentPage);
+      fetchStudents(currentPage, searchTerm);
     }
   };
 
   useEffect(() => {
-    fetchStudents(currentPage);
-  }, [fetchStudents, currentPage]);
+    fetchStudents(currentPage, searchTerm);
+  }, [fetchStudents, currentPage, searchTerm]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearchTerm = event.target.value;
+    console.log("Search term changed to:", newSearchTerm);
+    setSearchTerm(newSearchTerm);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Mobile Sidebar Toggle */}
       <button
         className="fixed top-4 left-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-md"
         onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -90,7 +99,6 @@ export const AdminStudents: React.FC = () => {
         <RiMenuLine size={24} />
       </button>
 
-      {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -98,28 +106,31 @@ export const AdminStudents: React.FC = () => {
         />
       )}
 
-      {/* Sidebar */}
       <div
         className={`
-        fixed lg:static
-        inset-y-0 left-0
-        transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 transition-transform duration-300 ease-in-out
-        z-50 lg:z-0
-      `}
+          fixed lg:static
+          inset-y-0 left-0
+          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 transition-transform duration-300 ease-in-out
+          z-50 lg:z-0
+        `}
       >
         <Sidebar />
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 min-w-0 overflow-auto">
         <div className="p-4 lg:p-8">
           <div className="max-w-full mx-auto">
-            <h1 className="text-2xl lg:text-3xl font-bold mb-6 lg:mb-10 pl-12 lg:pl-0">
-              Students
-            </h1>
+            {/* Heading and Search Bar on the same line */}
+            <div className="flex flex-col lg:flex-row justify-between items-center mb-6 lg:mb-10">
+              <h1 className="text-2xl lg:text-3xl font-bold pl-12 lg:pl-0">
+                Students
+              </h1>
+              <div className="w-full lg:w-64 mt-4 lg:mt-0">
+                <SearchBar onSearchChange={handleSearchChange} />
+              </div>
+            </div>
 
-            {/* Loading & Error Handling */}
             {loading && (
               <p className="text-center text-lg font-semibold">
                 Loading students...
@@ -127,7 +138,6 @@ export const AdminStudents: React.FC = () => {
             )}
             {error && <p className="text-center text-red-500">{error}</p>}
 
-            {/* Table */}
             <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
               <table className="w-full text-sm text-left text-gray-500">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-300">
@@ -192,7 +202,6 @@ export const AdminStudents: React.FC = () => {
               </table>
             </div>
 
-            {/* Pagination Controls */}
             <div className="flex justify-center mt-6">
               <Pagination
                 currentPage={currentPage}

@@ -81,8 +81,8 @@ const userSlice = createSlice({
         if (action.payload.success) {
           state.otpVerified = true;
           state.tempMail = null;
-          state.userData = action.payload.userData as IUserdata;
-          state.isAuthenticated = !!state.userData;
+          // state.userData = action.payload.userData as IUserdata;
+          // state.isAuthenticated = !!state.userData;
         }
       })
       .addCase(verifyOTP.rejected, (state, action: PayloadAction<any>) => {

@@ -16,9 +16,7 @@ import {
   RiEyeLine,
 } from "react-icons/ri";
 
-const Sidebar = lazy(
-  () => import("../../components/common/admin/AdminSidebar")
-);
+const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 const Requests: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -44,13 +42,23 @@ const Requests: React.FC = () => {
         const response = await dispatch(
           getAllRequestedUsersAction({ page, limit: usersPerPage })
         ).unwrap();
+        console.log("Fetched response:", response);
+        if (!response.data || typeof response.data.totalPages !== "number") {
+          console.warn("Invalid response structure:", response);
+          throw new Error("Invalid response structure from server");
+        }
         setRequestedUsers(response.data.requestedUsers || []);
-        setTotalPages(response.data.totalPages || 1);
+        setTotalPages(response.data.totalPages);
+        // Adjust current page if it exceeds total pages after fetching
+        if (page > response.data.totalPages) {
+          setCurrentPage(response.data.totalPages || 1);
+        }
       } catch (error: any) {
         setError(
           error.response?.data?.message || "Failed to fetch requested users"
         );
         console.error("Error details:", error);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
@@ -62,89 +70,82 @@ const Requests: React.FC = () => {
     fetchRequestedUsers(currentPage);
   }, [fetchRequestedUsers, currentPage]);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-  };
+  }, []);
 
-  const handleApproveClick = (user: any) => {
+  const handleApproveClick = useCallback((user: any) => {
     setSelectedUser(user);
     setIsConfirmModalOpen(true);
-  };
+  }, []);
 
-  const handleRejectClick = (user: any) => {
+  const handleRejectClick = useCallback((user: any) => {
     setSelectedUser(user);
     setIsRejectModalOpen(true);
-  };
+  }, []);
 
-  const handleViewDetailsClick = (user: any) => {
+  const handleViewDetailsClick = useCallback((user: any) => {
     setSelectedUser(user);
     setIsDetailsModalOpen(true);
-  };
+  }, []);
 
-  const handleConfirmApproval = async () => {
-    if (!selectedUser) return;
+  const handleConfirmApproval = useCallback(
+    async () => {
+      if (!selectedUser) return;
+      setActionLoading(true);
+      setIsConfirmModalOpen(false);
+      try {
+        await dispatch(
+          approveInstructorAction({ userId: selectedUser._id })
+        ).unwrap();
+        // Refetch data after successful approval
+        await fetchRequestedUsers(currentPage);
+        setSelectedUser((prev) => ({ ...prev, isApproved: true }));
+        setIsSuccessModalOpen(true);
+      } catch (error: any) {
+        setError(error.response?.data?.message || "Failed to approve instructor");
+        console.error("Approval failed:", error);
+        await fetchRequestedUsers(currentPage); // Still refetch on error to sync
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [dispatch, selectedUser, currentPage, fetchRequestedUsers]
+  );
 
-    setIsConfirmModalOpen(false);
-    setActionLoading(true);
-    try {
-      await dispatch(
-        approveInstructorAction({ userId: selectedUser._id })
-      ).unwrap();
-      setRequestedUsers((prevUsers) =>
-        prevUsers
-          .map((user) =>
-            user._id === selectedUser._id ? { ...user, isApproved: true } : user
-          )
-          .filter((user) => !user.isApproved)
-      );
-      setSelectedUser({ ...selectedUser, isApproved: true });
-      setIsSuccessModalOpen(true);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to approve instructor");
-      console.error("Approval failed:", error);
-      await fetchRequestedUsers(currentPage);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  const handleConfirmReject = useCallback(
+    async () => {
+      if (!selectedUser) return;
+      setActionLoading(true);
+      setIsRejectModalOpen(false);
+      try {
+        await dispatch(
+          rejectInstructorAction({ userId: selectedUser._id })
+        ).unwrap();
+        // Refetch data after successful rejection
+        await fetchRequestedUsers(currentPage);
+        setSelectedUser((prev) => ({ ...prev, isApproved: false }));
+        setIsSuccessModalOpen(true);
+      } catch (error: any) {
+        setError(error.response?.data?.message || "Failed to reject instructor");
+        console.error("Rejection failed:", error);
+        await fetchRequestedUsers(currentPage); // Still refetch on error to sync
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [dispatch, selectedUser, currentPage, fetchRequestedUsers]
+  );
 
-  const handleConfirmReject = async () => {
-    if (!selectedUser) return;
-
-    setIsRejectModalOpen(false);
-    setActionLoading(true);
-    try {
-      await dispatch(
-        rejectInstructorAction({ userId: selectedUser._id })
-      ).unwrap();
-      setRequestedUsers((prevUsers) =>
-        prevUsers
-          .map((user) =>
-            user._id === selectedUser._id
-              ? { ...user, isApproved: false }
-              : user
-          )
-          .filter((user) => !user.isApproved)
-      );
-      setSelectedUser({ ...selectedUser, isApproved: false });
-      setIsSuccessModalOpen(true);
-    } catch (error: any) {
-      setError(error.response?.data?.message || "Failed to reject instructor");
-      console.error("Rejection failed:", error);
-      await fetchRequestedUsers(currentPage);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const closeAllModals = () => {
+  const closeAllModals = useCallback(() => {
     setIsConfirmModalOpen(false);
     setIsRejectModalOpen(false);
     setIsSuccessModalOpen(false);
     setIsDetailsModalOpen(false);
     setSelectedUser(null);
-  };
+  }, []);
 
+  // The rest of the JSX remains unchanged
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <button
@@ -165,9 +166,7 @@ const Requests: React.FC = () => {
         className={`
           fixed lg:static
           inset-y-0 left-0
-          transform ${
-            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }
+          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
           lg:translate-x-0 transition-transform duration-300 ease-in-out
           z-50 lg:z-0
         `}
@@ -194,7 +193,7 @@ const Requests: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {requestedUsers && requestedUsers.length > 0 ? (
+            {requestedUsers.length > 0 ? (
               requestedUsers.map((user) => (
                 <div
                   key={user._id}
@@ -271,14 +270,12 @@ const Requests: React.FC = () => {
               ))
             ) : (
               <div className="col-span-3 text-center py-12">
-                <p className="text-gray-500 text-lg">
-                  No requested users found
-                </p>
+                <p className="text-gray-500 text-lg">No requested users found</p>
               </div>
             )}
           </div>
 
-          {totalPages > 1 && (
+          {(requestedUsers.length > 0 || totalPages > 0) && (
             <div className="flex justify-center mt-8">
               <Pagination
                 currentPage={currentPage}
@@ -298,8 +295,7 @@ const Requests: React.FC = () => {
               Confirm Approval
             </h3>
             <p className="text-gray-600">
-              Are you sure you want to approve {selectedUser?.name} as an
-              instructor?
+              Are you sure you want to approve {selectedUser?.name} as an instructor?
             </p>
             <div className="mt-6 flex justify-end gap-4">
               <button
@@ -309,10 +305,11 @@ const Requests: React.FC = () => {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors"
+                className="px-4 py-2 text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleConfirmApproval}
+                disabled={actionLoading}
               >
-                Confirm
+                {actionLoading ? "Approving..." : "Confirm"}
               </button>
             </div>
           </div>
@@ -327,8 +324,7 @@ const Requests: React.FC = () => {
               Confirm Rejection
             </h3>
             <p className="text-gray-600">
-              Are you sure you want to reject {selectedUser?.name}'s instructor
-              request?
+              Are you sure you want to reject {selectedUser?.name}'s instructor request?
             </p>
             <div className="mt-6 flex justify-end gap-4">
               <button
@@ -338,10 +334,11 @@ const Requests: React.FC = () => {
                 Cancel
               </button>
               <button
-                className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleConfirmReject}
+                disabled={actionLoading}
               >
-                Confirm
+                {actionLoading ? "Rejecting..." : "Confirm"}
               </button>
             </div>
           </div>
@@ -406,9 +403,7 @@ const Requests: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">
-                    Qualification
-                  </p>
+                  <p className="text-sm font-medium text-gray-700">Qualification</p>
                   <p className="text-gray-600">
                     {selectedUser.qualification || "Not specified"}
                   </p>
@@ -420,9 +415,7 @@ const Requests: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">
-                    Date of Birth
-                  </p>
+                  <p className="text-sm font-medium text-gray-700">Date of Birth</p>
                   <p className="text-gray-600">
                     {selectedUser.profile?.dob
                       ? new Date(selectedUser.profile.dob).toLocaleDateString()
@@ -442,9 +435,7 @@ const Requests: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-700">
-                    Experience
-                  </p>
+                  <p className="text-sm font-medium text-gray-700">Experience</p>
                   <p className="text-gray-600">
                     {selectedUser.experience || "Not specified"}
                   </p>
@@ -467,9 +458,7 @@ const Requests: React.FC = () => {
                       >
                         {selectedUser.socialMedia.linkedin}
                       </a>
-                    ) : (
-                      "Not provided"
-                    )}
+                    ) : "Not provided"}
                   </p>
                 </div>
                 <div>
@@ -484,9 +473,7 @@ const Requests: React.FC = () => {
                       >
                         {selectedUser.socialMedia.github}
                       </a>
-                    ) : (
-                      "Not provided"
-                    )}
+                    ) : "Not provided"}
                   </p>
                 </div>
                 <div>
@@ -501,9 +488,7 @@ const Requests: React.FC = () => {
                       >
                         Download CV
                       </a>
-                    ) : (
-                      "Not uploaded"
-                    )}
+                    ) : "Not uploaded"}
                   </p>
                 </div>
               </div>
