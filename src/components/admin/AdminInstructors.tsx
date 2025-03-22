@@ -8,8 +8,18 @@ import {
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/admin/SearchBar";
-import { InstructorModal } from "./InstructorView"; 
+import { InstructorModal } from "./InstructorView";
 import { IUserdata } from "../../interface/user/IUserData";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from "@mui/material";
+
+const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 interface Instructor extends IUserdata {
   _id: string;
@@ -18,8 +28,6 @@ interface Instructor extends IUserdata {
   status: string;
   isBlocked: boolean;
 }
-
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 export const AdminInstructors: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -32,7 +40,12 @@ export const AdminInstructors: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
-  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null); 
+  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false); // Confirmation dialog state
+  const [instructorToToggle, setInstructorToToggle] = useState<{
+    id: string;
+    isBlocked: boolean;
+  } | null>(null); // Instructor to block/unblock
 
   const fetchInstructors = useCallback(
     async (page: number, search: string = "") => {
@@ -58,17 +71,25 @@ export const AdminInstructors: React.FC = () => {
     [dispatch, instructorsPerPage]
   );
 
-  const handleBlockUnblock = async (userId: string, isBlocked: boolean) => {
+  const handleBlockUnblockClick = (userId: string, isBlocked: boolean) => {
+    setInstructorToToggle({ id: userId, isBlocked });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmBlockUnblock = async () => {
+    if (!instructorToToggle) return;
     try {
       const response = await dispatch(
-        blockUnblockUserAction({ userId, isBlocked })
+        blockUnblockUserAction({
+          userId: instructorToToggle.id,
+          isBlocked: instructorToToggle.isBlocked,
+        })
       ).unwrap();
       console.log("Instructor block/unblock status updated:", response);
-
       setInstructors((prevInstructors) =>
         prevInstructors.map((instructor) =>
-          instructor._id === userId
-            ? { ...instructor, isBlocked: !isBlocked }
+          instructor._id === instructorToToggle.id
+            ? { ...instructor, isBlocked: !instructorToToggle.isBlocked }
             : instructor
         )
       );
@@ -76,6 +97,13 @@ export const AdminInstructors: React.FC = () => {
       console.error("Failed to update instructor status:", error);
       fetchInstructors(currentPage, searchTerm);
     }
+    setConfirmDialogOpen(false);
+    setInstructorToToggle(null);
+  };
+
+  const handleCancelBlockUnblock = () => {
+    setConfirmDialogOpen(false);
+    setInstructorToToggle(null);
   };
 
   const handleViewDetails = (instructor: Instructor) => {
@@ -188,7 +216,7 @@ export const AdminInstructors: React.FC = () => {
                         <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           <button
                             onClick={() =>
-                              handleBlockUnblock(
+                              handleBlockUnblockClick(
                                 instructor._id,
                                 instructor.isBlocked ?? false
                               )
@@ -240,6 +268,35 @@ export const AdminInstructors: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         instructor={selectedInstructor}
       />
+
+      {/* Confirmation Dialog for Blocking/Unblocking */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCancelBlockUnblock}
+        aria-labelledby="confirm-block-unblock-dialog-title"
+        aria-describedby="confirm-block-unblock-dialog-description"
+      >
+        <DialogTitle id="confirm-block-unblock-dialog-title">
+          {instructorToToggle?.isBlocked ? "Unblock Instructor" : "Block Instructor"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-block-unblock-dialog-description">
+            Are you sure you want to{" "}
+            {instructorToToggle?.isBlocked ? "unblock" : "block"} this instructor?{" "}
+            {instructorToToggle?.isBlocked
+              ? "Unblocking this instructor will restore their access to the platform."
+              : "Blocking this instructor will prevent them from accessing the platform and may affect their courses."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelBlockUnblock} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmBlockUnblock} color="error" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

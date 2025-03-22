@@ -129,13 +129,13 @@ export const InstructorModal: React.FC<InstructorModalProps> = ({ instructor, is
               </div>
             )}
 
-            <div className="border-t pt-4">
+            {/* <div className="border-t pt-4">
               <h4 className="font-semibold mb-2">Account Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-4">
-                {/* <div>
+                <div>
                   <span className="text-gray-500">Account Type:</span>
                   <p>{instructor.isGoogleAuth ? 'Google Account' : 'Email Account'}</p>
-                </div> */}
+                </div>
                 <div>
                   <span className="text-gray-500">Joined:</span>
                   <p>{instructor.createdAt ? new Date(instructor.createdAt).toLocaleDateString() : 'Unknown'}</p>
@@ -149,7 +149,7 @@ export const InstructorModal: React.FC<InstructorModalProps> = ({ instructor, is
                   <p>{instructor.isVerified ? 'Yes' : 'No'}</p>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

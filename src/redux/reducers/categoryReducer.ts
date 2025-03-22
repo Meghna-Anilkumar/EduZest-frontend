@@ -9,7 +9,7 @@ interface Category {
 
 interface CategoryState {
   loading: boolean;
-  data: Category[];
+  data: Category[]; // This is the correct property name
   currentPage: number;
   totalPages: number;
   totalCategories: number;
@@ -30,7 +30,7 @@ const categorySlice = createSlice({
   initialState,
   reducers: {
     storeCategoryData: (state, action: PayloadAction<Category>) => {
-      state.data.push(action.payload);
+      state.data.push(action.payload); // Correct: using state.data
     },
   },
   extraReducers: (builder) => {
@@ -41,7 +41,7 @@ const categorySlice = createSlice({
       })
       .addCase(getAllCategoriesAction.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = action.payload.categories;
+        state.data = action.payload.categories; // Correct: assigning to state.data
         state.currentPage = action.payload.currentPage;
         state.totalPages = action.payload.totalPages;
         state.totalCategories = action.payload.totalCategories;

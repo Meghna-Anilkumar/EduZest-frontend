@@ -13,7 +13,11 @@ export const userEndPoints: UserEndpoints = {
     updateInstructorProfile: '/instructor-profile',
     changePassword: '/change-password',
     googleAuth: '/google-auth',
-    applyInstructor: '/instructor-apply'
+    applyInstructor: '/instructor-apply',
+
+    //course related
+    createCourse: '/instructor/create-course'
+   
 }
 
 export const adminEndpoints: AdminEndpoints = {

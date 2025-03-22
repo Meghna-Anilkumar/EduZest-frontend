@@ -8,8 +8,18 @@ import {
 import Pagination from "../common/admin/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/admin/SearchBar";
-import { StudentModal } from "./StudentView"; 
+import { StudentModal } from "./StudentView";
 import { IUserdata } from "../../interface/user/IUserData";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from "@mui/material";
+
+const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 interface Student extends IUserdata {
   _id: string;
@@ -18,8 +28,6 @@ interface Student extends IUserdata {
   status: string;
   isBlocked: boolean;
 }
-
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
 
 export const AdminStudents: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,6 +41,11 @@ export const AdminStudents: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null); // Selected student
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false); // Confirmation dialog state
+  const [studentToToggle, setStudentToToggle] = useState<{
+    id: string;
+    isBlocked: boolean;
+  } | null>(null); // Student to block/unblock
 
   const fetchStudents = useCallback(
     async (page: number, search: string = "") => {
@@ -60,16 +73,25 @@ export const AdminStudents: React.FC = () => {
     [dispatch, studentsPerPage]
   );
 
-  const handleBlockUnblock = async (userId: string, isBlocked: boolean) => {
+  const handleBlockUnblockClick = (userId: string, isBlocked: boolean) => {
+    setStudentToToggle({ id: userId, isBlocked });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmBlockUnblock = async () => {
+    if (!studentToToggle) return;
     try {
       const response = await dispatch(
-        blockUnblockUserAction({ userId, isBlocked })
+        blockUnblockUserAction({
+          userId: studentToToggle.id,
+          isBlocked: studentToToggle.isBlocked,
+        })
       ).unwrap();
       console.log("User block/unblock status updated:", response);
       setStudents((prevStudents) =>
         prevStudents.map((student) =>
-          student._id === userId
-            ? { ...student, isBlocked: !isBlocked }
+          student._id === studentToToggle.id
+            ? { ...student, isBlocked: !studentToToggle.isBlocked }
             : student
         )
       );
@@ -77,6 +99,13 @@ export const AdminStudents: React.FC = () => {
       console.error("Failed to update user status:", error);
       fetchStudents(currentPage, searchTerm);
     }
+    setConfirmDialogOpen(false);
+    setStudentToToggle(null);
+  };
+
+  const handleCancelBlockUnblock = () => {
+    setConfirmDialogOpen(false);
+    setStudentToToggle(null);
   };
 
   const handleViewDetails = (student: Student) => {
@@ -189,7 +218,7 @@ export const AdminStudents: React.FC = () => {
                         <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           <button
                             onClick={() =>
-                              handleBlockUnblock(student._id, student.isBlocked ?? false)
+                              handleBlockUnblockClick(student._id, student.isBlocked ?? false)
                             }
                             className={`px-3 py-1 rounded-md text-sm font-medium text-white ${
                               student.isBlocked
@@ -238,6 +267,35 @@ export const AdminStudents: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         student={selectedStudent}
       />
+
+      {/* Confirmation Dialog for Blocking/Unblocking */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCancelBlockUnblock}
+        aria-labelledby="confirm-block-unblock-dialog-title"
+        aria-describedby="confirm-block-unblock-dialog-description"
+      >
+        <DialogTitle id="confirm-block-unblock-dialog-title">
+          {studentToToggle?.isBlocked ? "Unblock Student" : "Block Student"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-block-unblock-dialog-description">
+            Are you sure you want to{" "}
+            {studentToToggle?.isBlocked ? "unblock" : "block"} this student?{" "}
+            {studentToToggle?.isBlocked
+              ? "Unblocking this student will restore their access to the platform."
+              : "Blocking this student will prevent them from accessing the platform."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelBlockUnblock} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmBlockUnblock} color="error" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

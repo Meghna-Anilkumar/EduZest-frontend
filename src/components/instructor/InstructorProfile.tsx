@@ -4,6 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { AppDispatch, RootState } from "../../redux/store";
 import { updateInstructorProfileThunk } from "../../redux/actions/userActions";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
 const Header = lazy(() => import("../../components/common/users/Header"));
 
 const InstructorProfilePage = () => {
@@ -12,83 +14,76 @@ const InstructorProfilePage = () => {
   const userData = useSelector((state: RootState) => state.user.userData);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("Profile");
+  const [isSaved, setIsSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const [profileFile, setProfileFile] = useState<File | undefined>(undefined);
 
-  interface ProfileState {
-    username: string;
-    email: string;
-    dob: string;
-    gender: string;
-    qualification: string;
-    profilePic: string | null;
-    file?: File;
-  }
+  const getMinDate = () => {
+    const today = new Date();
+    return new Date(today.getFullYear() - 16, today.getMonth(), today.getDate()).toISOString().split("T")[0];
+  };
 
-  const [profile, setProfile] = useState<ProfileState>({
+  
+  const validationSchema = Yup.object({
+    username: Yup.string().required("Username is required"),
+    email: Yup.string().email("Invalid email format").required("Email is required"),
+    dob: Yup.date()
+      .nullable()
+      .max(getMinDate(), "You must be at least 16 years old")
+      .transform((curr, orig) => (orig === "" ? null : curr)),
+    gender: Yup.string().oneOf(["Male", "Female", "Other", ""], "Invalid gender selection"),
+    qualification: Yup.string()
+  });
+
+
+  const [initialValues, setInitialValues] = useState({
     username: "",
     email: "",
     dob: "",
     gender: "",
-    qualification: "",
-    profilePic: null,
-    file: undefined,
+    qualification: ""
   });
-
-  const [activeTab, setActiveTab] = useState("Profile");
-  const [isSaved, setIsSaved] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     console.log("User Data from Redux:", userData);
     if (userData) {
-      setProfile({
+      setInitialValues({
         username: userData.name || "",
         email: userData.email || "",
         dob: userData.profile?.dob
           ? new Date(userData.profile.dob).toISOString().split("T")[0]
           : "",
         gender: userData.profile?.gender || "",
-        qualification: userData.qualification?.toString() || "",
-        profilePic: userData.profile?.profilePic || null,
-        file: undefined,
+        qualification: userData.qualification?.toString() || ""
       });
+      setProfilePic(userData.profile?.profilePic || null);
     }
   }, [userData]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfile((prev) => ({
-          ...prev,
-          profilePic: reader.result as string,
-          file,
-        }));
+        setProfilePic(reader.result as string);
+        setProfileFile(file);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (values: typeof initialValues) => {
     try {
       const formData = new FormData();
-      formData.append("email", profile.email);
-      formData.append("username", profile.username);
-      formData.append("dob", profile.dob || "");
-      formData.append("gender", profile.gender || "");
-      formData.append("qualification", profile.qualification || "");
-      if (profile.file) {
-        formData.append("profilePic", profile.file);
+      formData.append("email", values.email);
+      formData.append("username", values.username);
+      formData.append("dob", values.dob || "");
+      formData.append("gender", values.gender || "");
+      formData.append("qualification", values.qualification || "");
+      if (profileFile) {
+        formData.append("profilePic", profileFile);
       }
 
       for (const [key, value] of formData.entries()) {
@@ -199,8 +194,8 @@ const InstructorProfilePage = () => {
                 <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
-                      {profile.profilePic ? (
-                        <img src={profile.profilePic} alt="Profile" className="w-full h-full object-cover" />
+                      {profilePic ? (
+                        <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
                       ) : (
                         <User className="w-12 h-12 text-gray-400" />
                       )}
@@ -231,88 +226,100 @@ const InstructorProfilePage = () => {
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={profile.username}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter username"
-                  />
-                </div>
+              <Formik
+                enableReinitialize
+                initialValues={initialValues}
+                validationSchema={validationSchema}
+                onSubmit={handleSubmit}
+              >
+                {({ isSubmitting }) => (
+                  <Form className="space-y-6">
+                    <div>
+                      <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                      <Field
+                        type="text"
+                        id="username"
+                        name="username"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter username"
+                      />
+                      <ErrorMessage name="username" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={profile.email}
-                    readOnly
-                    className="w-full px-4 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
-                  />
-                </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
+                      <Field
+                        type="email"
+                        id="email"
+                        name="email"
+                        readOnly
+                        className="w-full px-4 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
+                      />
+                      <ErrorMessage name="email" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={profile.dob || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                    <div>
+                      <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                      <Field
+                        type="date"
+                        id="dob"
+                        name="dob"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <ErrorMessage name="dob" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                  <select
-                    name="gender"
-                    value={profile.gender || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+                    <div>
+                      <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                      <Field
+                        as="select"
+                        id="gender"
+                        name="gender"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </Field>
+                      <ErrorMessage name="gender" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications</label>
-                  <input
-                    type="text"
-                    name="qualification"
-                    value={profile.qualification || ""}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your qualifications"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 mb-2">Qualifications</label>
+                      <Field
+                        type="text"
+                        id="qualification"
+                        name="qualification"
+                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter your qualifications"
+                      />
+                      <ErrorMessage name="qualification" component="div" className="mt-1 text-sm text-red-600" />
+                    </div>
 
-              <div className="mt-6">
-                <button
-                  onClick={handleChangePassword}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
-                >
-                  <Lock className="w-4 h-4" />
-                  <span>Change Password</span>
-                </button>
-              </div>
+                    <div className="mt-6">
+                      <button
+                        type="button"
+                        onClick={handleChangePassword}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
+                      >
+                        <Lock className="w-4 h-4" />
+                        <span>Change Password</span>
+                      </button>
+                    </div>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
-                <button
-                  onClick={handleSave}
-                  disabled={isSaved}
-                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 w-full sm:w-auto"
-                >
-                  {isSaved ? "Saved!" : "Save changes"}
-                </button>
-              </div>
+                    <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || isSaved}
+                        className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 disabled:bg-blue-300 w-full sm:w-auto"
+                      >
+                        {isSaved ? "Saved!" : isSubmitting ? "Saving..." : "Save changes"}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
             </div>
           </div>
         </div>

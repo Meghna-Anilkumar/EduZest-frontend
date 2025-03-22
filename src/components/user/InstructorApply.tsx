@@ -8,6 +8,8 @@ import { toast } from "react-toastify";
 import { fetchUserData } from "../../redux/actions/auth/fetchUserdataAction";
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
 import * as Yup from "yup";
+import { Loader } from "../Loader"; 
+
 const Header = lazy(() => import("../common/users/Header"));
 
 interface FormValues {
@@ -39,6 +41,7 @@ const InstructorApplicationForm = () => {
     error: null as string | null,
     success: false,
   });
+  const [isLoading, setIsLoading] = useState(false); 
 
   const fieldNameMapping: Record<string, string> = {
     mobileNumber: "phone",
@@ -56,13 +59,24 @@ const InstructorApplicationForm = () => {
     "socialMedia.github": "githubUrl",
   };
 
+  // Fetch user data only once on mount
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
-    } else if (!userData) {
-      dispatch(fetchUserData());
+    } else {
+      const fetchData = async () => {
+        setIsLoading(true); 
+        try {
+          await dispatch(fetchUserData()).unwrap();
+        } catch (error) {
+          toast.error("Failed to fetch user data. Please try again.");
+        } finally {
+          setIsLoading(false); 
+        }
+      };
+      fetchData();
     }
-  }, [dispatch, isAuthenticated, userData, navigate]);
+  }, [dispatch, isAuthenticated, navigate]);
 
   useEffect(() => {
     if (userData?.profile?.profilePic) {
@@ -138,7 +152,6 @@ const InstructorApplicationForm = () => {
       "profilePicRequired",
       "Profile picture is required",
       function (value) {
-        // If there's a profile preview (from existing pic) or a new file, it's valid
         return !!value || !!profilePreview;
       }
     ),
@@ -151,8 +164,8 @@ const InstructorApplicationForm = () => {
     setFieldTouched: (field: string, isTouched?: boolean) => void,
     validateField: (field: string) => void
   ) => {
-    setFieldTouched("profilePic", true); // Set touched immediately
-    
+    setFieldTouched("profilePic", true);
+
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
@@ -177,7 +190,6 @@ const InstructorApplicationForm = () => {
       reader.onloadend = () => setProfilePreview(reader.result as string);
       reader.readAsDataURL(file);
     } else {
-      // Handle case when no file is selected
       setFieldValue("profilePic", undefined);
       validateField("profilePic");
     }
@@ -189,12 +201,11 @@ const InstructorApplicationForm = () => {
     setFieldTouched: (field: string, isTouched?: boolean) => void,
     validateField: (field: string) => void
   ) => {
-    setFieldTouched("cv", true); // Set touched immediately
-    
+    setFieldTouched("cv", true);
+
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
 
-      // Add validation for CV file type
       const acceptedTypes = [".pdf", ".doc", ".docx"];
       const fileExtension = file.name
         .substring(file.name.lastIndexOf("."))
@@ -207,7 +218,6 @@ const InstructorApplicationForm = () => {
         return;
       }
 
-      // Check file size (limit to 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast.error("CV file size should be less than 10MB");
         setFieldValue("cv", undefined);
@@ -218,7 +228,6 @@ const InstructorApplicationForm = () => {
       setFieldValue("cv", file);
       validateField("cv");
     } else {
-      // Handle case when no file is selected
       setFieldValue("cv", undefined);
       validateField("cv");
     }
@@ -230,7 +239,6 @@ const InstructorApplicationForm = () => {
   ) => {
     setSubmitStatus({ loading: true, error: null, success: false });
 
-    // Validate required files
     if (!values.profilePic && !userData?.profile?.profilePic) {
       setErrors({ profilePic: "Profile picture is required" });
       setSubmitStatus({
@@ -252,7 +260,6 @@ const InstructorApplicationForm = () => {
     }
 
     const data = new FormData();
-    // Add text fields
     Object.entries(values).forEach(([key, value]) => {
       if (
         value &&
@@ -267,28 +274,23 @@ const InstructorApplicationForm = () => {
       }
     });
 
-    // Add profile picture
     if (values.profilePic) {
       data.append("profilePic", values.profilePic);
     } else if (userData?.profile?.profilePic) {
       data.append("profilePic", userData.profile.profilePic);
     }
 
-    // Add CV
     if (values.cv) {
       data.append("cv", values.cv);
     }
 
-    // Create socialMedia object
     const socialMedia = {
       linkedin: values.linkedinUrl || "",
       github: values.githubUrl || "",
     };
 
-    // Append socialMedia as JSON
     data.append("socialMedia", JSON.stringify(socialMedia));
 
-    // Add profile data
     const profile = {
       gender: values.gender,
       dob: values.dob,
@@ -303,7 +305,7 @@ const InstructorApplicationForm = () => {
       const result = await dispatch(applyForInstructorThunk(data)).unwrap();
       if (result.success) {
         if (userData?.email) {
-          await dispatch(fetchUserData());
+          await dispatch(fetchUserData()); 
         }
         setSubmitStatus({ loading: false, error: null, success: true });
         toast.success(result.message || "Application submitted successfully");
@@ -341,10 +343,14 @@ const InstructorApplicationForm = () => {
     }
   };
 
+  if (isLoading) {
+    return <Loader />;
+  }
+
   if (!userData) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
-        Loading user data...
+        User data not available. Please try again later.
       </div>
     );
   }
@@ -376,14 +382,37 @@ const InstructorApplicationForm = () => {
       <Header />
       <div className="flex justify-center bg-gray-50 px-4 pt-24 pb-8">
         {userData.isRequested ? (
-          <div className="w-full max-w-3xl bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-6 rounded relative mx-6 mt-6 text-center">
-              <h2 className="text-xl font-semibold mb-2">
-                Application Submitted Successfully
+          <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden mx-6 mt-6 p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                <svg
+                  className="w-10 h-10 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+               Success
               </h2>
-              <p>
+              <p className="text-gray-600 mb-6">
+                You have successfully submitted your instructor application.
                 Please wait for our response while we review your application.
               </p>
+              {/* <button
+                onClick={() => navigate("/dashboard")} // Replace with your desired route
+                className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              >
+                Continue
+              </button> */}
             </div>
           </div>
         ) : (
@@ -624,7 +653,6 @@ const InstructorApplicationForm = () => {
                     </div>
                   </div>
 
-                  {/* New Experience and Address Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <label
@@ -680,7 +708,6 @@ const InstructorApplicationForm = () => {
                     </div>
                   </div>
 
-                  {/* Social Media Links */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                       <label
@@ -737,7 +764,7 @@ const InstructorApplicationForm = () => {
                       htmlFor="aboutMe"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      About Me:Describe yourself briefly*{" "}
+                      About Me: Describe yourself briefly*{" "}
                       <span className="text-xs text-gray-500">
                         (min 20 chars)
                       </span>

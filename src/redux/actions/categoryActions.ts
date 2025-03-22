@@ -33,12 +33,12 @@ export const createCategoryAction = createAsyncThunk(
 export const getAllCategoriesAction = createAsyncThunk(
   "admin/getAllCategories",
   async (
-    { page, limit, search }: { page: number; limit: number; search?: string }, // Add search parameter
+    { page, limit, search }: { page: number; limit: number; search?: string },
     { rejectWithValue }
   ) => {
     try {
       const response = await serverAdmin.get<CategoryResponse>(
-        adminEndpoints.fetchAllCategories(page, limit, search) // Use endpoint function
+        adminEndpoints.fetchAllCategories(page, limit, search)
       );
       console.log("API Response:", response.data);
 
@@ -50,7 +50,7 @@ export const getAllCategoriesAction = createAsyncThunk(
       }
 
       return {
-        categories,
+        categories, // This matches the Category[] type expected by state.data
         currentPage: response.data.data.currentPage,
         totalPages: response.data.data.totalPages,
         totalCategories: response.data.data.totalCategories,

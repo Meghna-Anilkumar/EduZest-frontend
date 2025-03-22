@@ -27,6 +27,11 @@ import {
   Alert,
   useMediaQuery,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
@@ -37,15 +42,15 @@ import Sidebar from "../common/admin/AdminSidebar";
 const CategoryManagement = () => {
   const dispatch = useDispatch<AppDispatch>();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
-  const { 
-    data: categories = [], 
-    loading = false, 
-    error = null, 
-    currentPage = 1, 
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const {
+    data: categories = [],
+    loading = false,
+    error = null,
+    currentPage = 1,
     totalPages = 1,
-    totalCategories = 0 
+    totalCategories = 0,
   } = useSelector((state: RootState) => state.category);
 
   const [categoryName, setCategoryName] = useState("");
@@ -57,10 +62,15 @@ const CategoryManagement = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [categoryToToggle, setCategoryToToggle] = useState<{
+    id: string;
+    isActive: boolean;
+  } | null>(null);
   const limit = 5;
 
   useEffect(() => {
-    console.log('Fetching categories for page:', page, 'search:', searchTerm);
+    console.log("Fetching categories for page:", page, "search:", searchTerm);
     dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
   }, [dispatch, page, searchTerm]);
 
@@ -69,7 +79,7 @@ const CategoryManagement = () => {
       setErrorMessage("Category name is required.");
       return;
     }
-    
+
     try {
       await dispatch(createCategoryAction({ categoryName })).unwrap();
       setCategoryName("");
@@ -81,10 +91,13 @@ const CategoryManagement = () => {
     }
   };
 
-  const handleEditClick = useCallback((categoryId: string, categoryName: string) => {
-    setSelectedCategory({ id: categoryId, name: categoryName });
-    setEditModalOpen(true);
-  }, []);
+  const handleEditClick = useCallback(
+    (categoryId: string, categoryName: string) => {
+      setSelectedCategory({ id: categoryId, name: categoryName });
+      setEditModalOpen(true);
+    },
+    []
+  );
 
   const handleConfirmEdit = async (updatedName: string) => {
     if (!selectedCategory) return;
@@ -104,27 +117,44 @@ const CategoryManagement = () => {
     setEditModalOpen(false);
   };
 
-  const handleToggleBlockClick = async (categoryId: string) => {
+  const handleToggleBlockClick = (categoryId: string, isActive: boolean) => {
+    setCategoryToToggle({ id: categoryId, isActive });
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!categoryToToggle) return;
     try {
-      await dispatch(deleteCategoryAction(categoryId)).unwrap();
+      await dispatch(deleteCategoryAction(categoryToToggle.id)).unwrap();
       setErrorMessage(null);
       dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
     } catch (error: any) {
       setErrorMessage(error.message || "Failed to toggle category status");
       setTimeout(() => setErrorMessage(null), 5000);
     }
+    setConfirmDialogOpen(false);
+    setCategoryToToggle(null);
+  };
+
+  const handleCancelToggle = () => {
+    setConfirmDialogOpen(false);
+    setCategoryToToggle(null);
   };
 
   const handlePageChange = useCallback((newPage: number) => {
     setPage(newPage);
   }, []);
 
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    setPage(1); // Reset to first page when search changes
-  }, []);
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchTerm(e.target.value);
+      setPage(1);
+    },
+    []
+  );
 
-  // Calculate sidebar width based on screen size
+  const startSerialNumber = (currentPage - 1) * limit + 1;
+
   const sidebarWidth = isMobile ? 0 : 240;
 
   return (
@@ -138,7 +168,7 @@ const CategoryManagement = () => {
           position: "fixed",
           height: "100vh",
           zIndex: 1200,
-          display: { xs: isMobile ? 'none' : 'block', sm: 'block' },
+          display: { xs: isMobile ? "none" : "block", sm: "block" },
         }}
       >
         <Sidebar />
@@ -157,27 +187,31 @@ const CategoryManagement = () => {
         }}
       >
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 } }}>
-          <Box sx={{ 
-            display: "flex", 
-            flexDirection: { xs: 'column', sm: 'row' }, 
-            justifyContent: "space-between",
-            alignItems: { xs: 'stretch', sm: 'center' },
-            mb: 3
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              justifyContent: "space-between",
+              alignItems: { xs: "stretch", sm: "center" },
+              mb: 3,
+            }}
+          >
             <Typography variant="h5">
               Categories ({totalCategories} total)
             </Typography>
-            <Box sx={{ width: { xs: '100%', sm: '250px' }, mt: { xs: 2, sm: 0 } }}>
+            <Box
+              sx={{ width: { xs: "100%", sm: "250px" }, mt: { xs: 2, sm: 0 } }}
+            >
               <SearchBar onSearchChange={handleSearchChange} />
             </Box>
           </Box>
 
-          <Box 
-            sx={{ 
-              display: "flex", 
-              flexDirection: { xs: 'column', sm: 'row' }, 
-              gap: 2, 
-              mb: 4 
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              gap: 2,
+              mb: 4,
             }}
           >
             <TextField
@@ -190,9 +224,9 @@ const CategoryManagement = () => {
               variant="contained"
               onClick={handleAddCategory}
               disabled={loading}
-              sx={{ 
-                whiteSpace: 'nowrap',
-                minWidth: { xs: '100%', sm: 'auto' } 
+              sx={{
+                whiteSpace: "nowrap",
+                minWidth: { xs: "100%", sm: "auto" },
               }}
             >
               <AddIcon sx={{ mr: 1 }} />
@@ -205,17 +239,20 @@ const CategoryManagement = () => {
               {errorMessage}
             </Alert>
           )}
-          {loading && <CircularProgress sx={{ display: "block", mx: "auto", mb: 2 }} />}
+          {loading && (
+            <CircularProgress sx={{ display: "block", mx: "auto", mb: 2 }} />
+          )}
           {error && !errorMessage && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
 
-          <TableContainer sx={{ overflow: 'auto' }}>
+          <TableContainer sx={{ overflow: "auto" }}>
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell>Sl. No.</TableCell>
                   <TableCell>Name</TableCell>
                   <TableCell>Active</TableCell>
                   <TableCell align="right">Actions</TableCell>
@@ -223,8 +260,9 @@ const CategoryManagement = () => {
               </TableHead>
               <TableBody>
                 {categories.length > 0 ? (
-                  categories.map((category) => (
+                  categories.map((category, index) => (
                     <TableRow key={category._id}>
+                      <TableCell>{startSerialNumber + index}</TableCell>
                       <TableCell>{category.categoryName}</TableCell>
                       <TableCell>{category.isActive ? "Yes" : "No"}</TableCell>
                       <TableCell align="right">
@@ -238,7 +276,12 @@ const CategoryManagement = () => {
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => handleToggleBlockClick(category._id)}
+                          onClick={() =>
+                            handleToggleBlockClick(
+                              category._id,
+                              category.isActive
+                            )
+                          }
                         >
                           {category.isActive ? <BlockIcon /> : <LockOpenIcon />}
                         </IconButton>
@@ -247,7 +290,7 @@ const CategoryManagement = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3}>No categories found</TableCell>
+                    <TableCell colSpan={4}>No categories found</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -274,6 +317,35 @@ const CategoryManagement = () => {
           onConfirm={handleConfirmEdit}
         />
       )}
+
+      {/* Confirmation Dialog for Blocking/Unblocking */}
+      <Dialog
+        open={confirmDialogOpen}
+        onClose={handleCancelToggle}
+        aria-labelledby="confirm-toggle-dialog-title"
+        aria-describedby="confirm-toggle-dialog-description"
+      >
+        <DialogTitle id="confirm-toggle-dialog-title">
+          {categoryToToggle?.isActive ? "Block Category" : "Unblock Category"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-toggle-dialog-description">
+            Are you sure you want to{" "}
+            {categoryToToggle?.isActive ? "block" : "unblock"} this category?
+            {categoryToToggle?.isActive
+              ? " Blocking this category may affect associated courses or content."
+              : " Unblocking this category will make it active again."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelToggle} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmToggle} color="error" autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
