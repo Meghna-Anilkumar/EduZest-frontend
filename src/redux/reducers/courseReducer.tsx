@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { createCourseAction } from "../actions/courseActions";
+import { createCourseAction, getAllCoursesAction } from "../actions/courseActions";
 
 interface Course {
   _id: string;
@@ -59,6 +59,7 @@ const courseSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // Create Course
       .addCase(createCourseAction.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -71,21 +72,22 @@ const courseSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
-    //   .addCase(getAllCoursesAction.pending, (state) => {
-    //     state.loading = true;
-    //     state.error = null;
-    //   })
-    //   .addCase(getAllCoursesAction.fulfilled, (state, action) => {
-    //     state.loading = false;
-    //     state.data = action.payload.courses;
-    //     state.currentPage = action.payload.currentPage;
-    //     state.totalPages = action.payload.totalPages;
-    //     state.totalCourses = action.payload.totalCourses;
-    //   })
-    //   .addCase(getAllCoursesAction.rejected, (state, action) => {
-    //     state.loading = false;
-    //     state.error = action.payload as string;
-    //   });
+      // Get All Courses
+      .addCase(getAllCoursesAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAllCoursesAction.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = action.payload.courses;
+        state.currentPage = action.payload.currentPage;
+        state.totalPages = action.payload.totalPages;
+        state.totalCourses = action.payload.totalCourses;
+      })
+      .addCase(getAllCoursesAction.rejected, (state) => {
+        state.loading = false;
+        state.error =  "Failed to fetch courses";
+      });
   },
 });
 

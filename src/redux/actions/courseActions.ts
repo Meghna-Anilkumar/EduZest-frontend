@@ -3,44 +3,6 @@ import { userEndPoints } from "../../services/endPoints/endPoints";
 import { serverUser } from "../../services"; 
 import { AxiosError } from "axios";
 
-interface CourseResponse {
-  data: {
-    courses: Array<{
-      _id: string;
-      title: string;
-      description: string;
-      instructorRef: string;
-      categoryRef: string;
-      language: string;
-      level: string;
-      pricing: { type: "free" | "paid"; amount: number };
-      thumbnail: string;
-      modules: Array<{
-        moduleTitle: string;
-        lessons: Array<{
-          lessonNumber: number;
-          title: string;
-          description: string;
-          objectives: string[];
-          video: string;
-          duration: string;
-        }>;
-      }>;
-      isRequested: boolean;
-      isBlocked: boolean;
-      studentsEnrolled: number;
-      isPublished: boolean;
-      isRejected: boolean;
-      createdAt: string;
-      updatedAt: string;
-    }>;
-    currentPage: number;
-    totalCourses: number;
-    totalPages: number;
-  };
-  message: string;
-  success: boolean;
-}
 
 export const createCourseAction = createAsyncThunk(
   "instructor/createCourse",
@@ -50,6 +12,24 @@ export const createCourseAction = createAsyncThunk(
         headers: { "Content-Type": "multipart/form-data" },
       });
       return response.data.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+export const getAllCoursesAction = createAsyncThunk(
+  "instructor/getAllCourses",
+  async (
+    { page, limit, search }: { page: number; limit: number; search?: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await serverUser.get(userEndPoints.getAllCourses, {
+        params: { page, limit, search },
+      });
+      return response.data.data; 
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });

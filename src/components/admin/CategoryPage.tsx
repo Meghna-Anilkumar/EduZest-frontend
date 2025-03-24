@@ -8,8 +8,8 @@ import {
   deleteCategoryAction,
 } from "../../redux/actions/categoryActions";
 import EditCategoryModal from "./EditCategoryModal";
-import Pagination from "../common/admin/Pagination";
-import { SearchBar } from "../common/admin/SearchBar";
+import Pagination from "../common/Pagination";
+import { SearchBar } from "../common/SearchBar";
 import {
   Paper,
   Box,

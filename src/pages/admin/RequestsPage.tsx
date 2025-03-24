@@ -6,7 +6,7 @@ import {
   approveInstructorAction,
   rejectInstructorAction,
 } from "../../redux/actions/adminActions";
-import Pagination from "../../components/common/admin/Pagination";
+import Pagination from "../../components/common/Pagination";
 import {
   RiMenuLine,
   RiDownloadLine,

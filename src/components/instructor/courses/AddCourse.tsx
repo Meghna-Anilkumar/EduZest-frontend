@@ -5,8 +5,10 @@ import * as Yup from "yup";
 import Sidebar from "../InstructorSidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCategoriesAction } from "../../../redux/actions/categoryActions";
+import { fetchUserData } from "../../../redux/actions/auth/fetchUserdataAction"; 
 import { AppDispatch, RootState } from "../../../redux/store";
 import { useCourseForm } from "../../context/CourseFormContext";
+import InstructorNavbar from "../InstructorNavbar"; 
 
 // Validation schema
 const CourseSchema = Yup.object().shape({
@@ -49,8 +51,11 @@ const AddCoursePage: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Fetch categories from Redux store
-  const { data: categories, error } = useSelector((state: RootState) => state.category);
+  // Fetch categories and user data from Redux store
+  const { data: categories, error: categoryError } = useSelector((state: RootState) => state.category);
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Use the course form context
   const { formData, updateFormData, resetFormData } = useCourseForm();
@@ -61,6 +66,23 @@ const AddCoursePage: React.FC = () => {
   useEffect(() => {
     // Fetch categories when the component mounts
     dispatch(getAllCategoriesAction({ page: 1, limit: 100 }));
+
+    // Fetch user data
+    const fetchData = async () => {
+      if (!isAuthenticated) {
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        await dispatch(fetchUserData()).unwrap();
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch user data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
 
     // Restore form data if navigating back with courseData
     if (courseDataFromNavigation) {
@@ -77,7 +99,7 @@ const AddCoursePage: React.FC = () => {
         isSubmitted: false,
       });
     }
-  }, [dispatch, courseDataFromNavigation, updateFormData]);
+  }, [dispatch, courseDataFromNavigation, updateFormData, isAuthenticated]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
     const file = event.currentTarget.files?.[0];
@@ -110,13 +132,14 @@ const AddCoursePage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <h1 className="text-2xl font-semibold text-gray-900">Create New Course</h1>
+              <InstructorNavbar loading={loading} error={error} /> {/* Add InstructorNavbar */}
             </div>
           </div>
         </header>
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="bg-white shadow-md rounded-lg px-8 py-6">
-            {error && <div className="mb-4 text-red-600">{error}</div>}
+            {categoryError && <div className="mb-4 text-red-600">{categoryError}</div>}
             <Formik
               initialValues={{
                 title: formData.title || "",
@@ -128,7 +151,7 @@ const AddCoursePage: React.FC = () => {
                 thumbnail: formData.thumbnail || null,
               }}
               validationSchema={CourseSchema}
-              validateOnMount={false} // Disable validateOnMount to improve UX
+              validateOnMount={false}
               validateOnChange={true}
               validateOnBlur={true}
               onSubmit={(values, { setErrors }) => {
@@ -147,7 +170,6 @@ const AddCoursePage: React.FC = () => {
                   thumbnailPreview: formData.thumbnailPreview,
                 };
 
-                // Update the context with the submitted data and set isSubmitted to true
                 console.log("Updating formData in context:", courseData);
                 updateFormData({
                   ...courseData,
@@ -155,7 +177,6 @@ const AddCoursePage: React.FC = () => {
                   isSubmitted: true,
                 });
 
-                // Use absolute path for navigation
                 const navigationPath = "/instructor/courses/addLesson";
                 console.log("Navigating to:", navigationPath);
                 console.log("Passing courseData in navigation state:", courseData);
@@ -167,7 +188,6 @@ const AddCoursePage: React.FC = () => {
                   className="space-y-6"
                   onChange={() => {
                     console.log("Form values changed:", values);
-                    // Update context whenever the form values change
                     updateFormData({
                       title: values.title,
                       description: values.description,
@@ -235,11 +255,13 @@ const AddCoursePage: React.FC = () => {
                             }`}
                           >
                             <option value="">Select a category</option>
-                            {categories?.map((category: Category) => (
-                              <option key={category._id} value={category._id}>
-                                {category.categoryName}
-                              </option>
-                            ))}
+                            {categories
+                              ?.filter((category: Category) => category.isActive)
+                              .map((category: Category) => (
+                                <option key={category._id} value={category._id}>
+                                  {category.categoryName}
+                                </option>
+                              ))}
                           </Field>
                           <ErrorMessage name="categoryRef" component="div" className="mt-1 text-sm text-red-600" />
                         </div>

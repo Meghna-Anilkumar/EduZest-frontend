@@ -5,9 +5,9 @@ import {
   getAllInstructorsAction,
   blockUnblockUserAction,
 } from "../../redux/actions/adminActions";
-import Pagination from "../common/admin/Pagination";
+import Pagination from "../common/Pagination";
 import { RiMenuLine } from "react-icons/ri";
-import { SearchBar } from "../common/admin/SearchBar";
+import { SearchBar } from "../common/SearchBar";
 import { InstructorModal } from "./InstructorView";
 import { IUserdata } from "../../interface/user/IUserData";
 import {

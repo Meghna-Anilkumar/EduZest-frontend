@@ -14,9 +14,11 @@ export const userEndPoints: UserEndpoints = {
     changePassword: '/change-password',
     googleAuth: '/google-auth',
     applyInstructor: '/instructor-apply',
+    refreshSignedUrl: '/refresh-signed-url',
 
     //course related
-    createCourse: '/instructor/create-course'
+    createCourse: '/instructor/create-course',
+    getAllCourses:'/instructor/courses'
    
 }
 

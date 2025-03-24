@@ -8,7 +8,7 @@ import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
 import * as Yup from "yup";
 const Header = lazy(() => import("../../components/common/users/Header"));
 
-// Validation schema using Yup
+
 const ProfileValidationSchema = Yup.object().shape({
   username: Yup.string()
     .required("Username is required")
@@ -34,7 +34,7 @@ const ProfileValidationSchema = Yup.object().shape({
   dob: Yup.date()
     .nullable()
     .test("dob", "You must be at least 16 years old", function(value) {
-      if (!value) return true; // Allow empty value
+      if (!value) return true; 
       
       const cutoff = new Date();
       cutoff.setFullYear(cutoff.getFullYear() - 16);

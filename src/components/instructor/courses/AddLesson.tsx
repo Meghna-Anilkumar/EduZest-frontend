@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux'; // Add useSelector
 import { createCourseAction } from '../../../redux/actions/courseActions';
+import { fetchUserData } from '../../../redux/actions/auth/fetchUserdataAction'; // Import fetchUserData
 import Sidebar from '../InstructorSidebar';
-import { AppDispatch } from '../../../redux/store';
+import { AppDispatch, RootState } from '../../../redux/store'; // Import RootState
 import { useCourseForm } from "../../context/CourseFormContext";
 import { toast } from 'react-toastify';
+import InstructorNavbar from '../InstructorNavbar'; // Import InstructorNavbar
 
 const AddIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -204,6 +206,9 @@ const AddLessonsPage: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { resetFormData } = useCourseForm();
+  const { isAuthenticated } = useSelector((state: RootState) => state.user); // Add useSelector for user state
+  const [loading, setLoading] = useState(false); // Add loading state
+  const [error, setError] = useState<string | null>(null); // Add error state
 
   const courseDataFromState = location.state?.courseData;
   const [courseData, setCourseData] = useState<any>(null);
@@ -212,6 +217,24 @@ const AddLessonsPage: React.FC = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
+    // Fetch user data
+    const fetchData = async () => {
+      if (!isAuthenticated) {
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        await dispatch(fetchUserData()).unwrap();
+      } catch (err: any) {
+        setError(err.message || "Failed to fetch user data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+
+    // Load course data
     if (courseDataFromState) {
       const { thumbnail, thumbnailPreview: previewFromState, ...dataToPersist } = courseDataFromState;
       localStorage.setItem("addLessonsCourseData", JSON.stringify({
@@ -230,7 +253,7 @@ const AddLessonsPage: React.FC = () => {
       }
     }
     setIsDataLoaded(true);
-  }, [courseDataFromState]);
+  }, [courseDataFromState, dispatch, isAuthenticated]);
 
   useEffect(() => {
     if (isDataLoaded && !courseData) {
@@ -265,26 +288,6 @@ const AddLessonsPage: React.FC = () => {
     modules: initialModules,
   };
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setThumbnailFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        const preview = reader.result as string;
-        setThumbnailPreview(preview);
-        const savedData = localStorage.getItem("addLessonsCourseData");
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          localStorage.setItem("addLessonsCourseData", JSON.stringify({
-            ...parsedData,
-            thumbnailPreview: preview,
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -300,80 +303,33 @@ const AddLessonsPage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <h1 className="text-2xl font-semibold text-gray-900">Add Lessons</h1>
-              <button
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to go back? Your lesson data will be lost.")) {
-                    navigate('/instructor/courses/create', {
-                      state: {
-                        courseData: {
-                          ...courseData,
-                          thumbnail: thumbnailFile,
-                          thumbnailPreview,
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to go back? Your lesson data will be lost.")) {
+                      navigate('/instructor/courses/create', {
+                        state: {
+                          courseData: {
+                            ...courseData,
+                            thumbnail: thumbnailFile,
+                            thumbnailPreview,
+                          },
                         },
-                      },
-                    });
-                  }
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-              >
-                Back to Courses
-              </button>
+                      });
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900"
+                >
+                  Back to Courses
+                </button>
+                <InstructorNavbar loading={loading} error={error} /> {/* Add InstructorNavbar */}
+              </div>
             </div>
           </div>
         </header>
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="mb-6">
-            <h2 className="text-lg font-medium text-gray-900">Course Thumbnail</h2>
-            <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-              {thumbnailPreview ? (
-                <div className="space-y-3">
-                  <img
-                    src={thumbnailPreview}
-                    alt="Course thumbnail"
-                    className="mx-auto h-40 w-full object-cover rounded"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setThumbnailFile(null);
-                      setThumbnailPreview(null);
-                      const savedData = localStorage.getItem("addLessonsCourseData");
-                      if (savedData) {
-                        const parsedData = JSON.parse(savedData);
-                        localStorage.setItem("addLessonsCourseData", JSON.stringify({
-                          ...parsedData,
-                          thumbnailPreview: null,
-                        }));
-                      }
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Remove Thumbnail
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h18M3 16h18" />
-                  </svg>
-                  <div className="flex text-sm justify-center">
-                    <label className="relative cursor-pointer bg-white rounded-md font-medium text-teal-500 hover:text-teal-600">
-                      <span>Upload a thumbnail</span>
-                      <input
-                        type="file"
-                        className="sr-only"
-                        accept="image/*"
-                        onChange={handleThumbnailUpload}
-                      />
-                    </label>
-                    <p className="pl-1 text-gray-600">or drag and drop</p>
-                  </div>
-                  <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
-                </div>
-              )}
-            </div>
-          </div>
+       
 
           <Formik
             initialValues={initialValues}

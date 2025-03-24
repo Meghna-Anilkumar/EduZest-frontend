@@ -170,3 +170,26 @@ export const applyForInstructorThunk = createAsyncThunk(
   }
 );
 
+
+interface RefreshSignedUrlResponse extends ResponseData {
+  signedUrl: string;
+}
+
+// Thunk to refresh a signed URL
+export const refreshSignedUrlThunk = createAsyncThunk<
+  RefreshSignedUrlResponse,
+  { key: string },
+  { rejectValue: string }
+>(
+  "auth/refreshSignedUrl",
+  async ({ key }, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.post(userEndPoints.refreshSignedUrl, { key });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error refreshing signed URL:", error.response?.data);
+      return rejectWithValue(error.response?.data?.message || "Failed to refresh signed URL");
+    }
+  }
+);
+
