@@ -15,11 +15,14 @@ export interface UserEndpoints extends IEndPoints {
     changePassword: string;
     googleAuth: string;
     applyInstructor: string;
+    refreshToken:string;
     refreshSignedUrl:string
 
     //course related
     createCourse: string;
-    getAllCourses:string;
+    getAllCoursesByInstructor:string;
+    getAllActiveCourses:string;
+    getCourseById: string;
 }
 
 export interface AdminEndpoints extends IEndPoints {

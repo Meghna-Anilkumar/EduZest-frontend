@@ -7,6 +7,7 @@ import InstructorCoursesPage from "../components/instructor/InstructorCoursePage
 import AddCoursePage from "../components/instructor/courses/AddCourse";
 import AddLessonsPage from "../components/instructor/courses/AddLesson";
 import InstructorDashboard from "../components/instructor/InstructorDashboard";
+import CourseDetailsPage from "../components/instructor/courses/CourseDetails";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -19,6 +20,7 @@ const InstructorRoutes: React.FC = () => {
           <Route path="/courses" element={<InstructorCoursesPage />} />
           <Route path="/courses/create" element={<AddCoursePage />} />
           <Route path="/courses/addLesson" element={<AddLessonsPage/>}/>
+          <Route path="/courseDetails" element={<CourseDetailsPage/>}/>
         </Route>
 
         {/* 404 Page */}

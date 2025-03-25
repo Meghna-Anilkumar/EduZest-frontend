@@ -98,7 +98,7 @@ const handleError = async (error: any) => {
             isRefreshing = true;
 
             try {
-                const refreshResponse = await serverUser.post('/refresh-token');
+                const refreshResponse = await serverUser.post('users/refresh-token');
 
                 if (refreshResponse.data.success) {
                     isRefreshing = false;

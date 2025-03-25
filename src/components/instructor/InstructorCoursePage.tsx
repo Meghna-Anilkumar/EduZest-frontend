@@ -1,8 +1,9 @@
+// components/InstructorCoursesPage.tsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserData } from "../../redux/actions/auth/fetchUserdataAction";
-import { getAllCoursesAction } from "../../redux/actions/courseActions";
+import { getAllCoursesByInstructorAction } from "../../redux/actions/courseActions";
 import { AppDispatch, RootState } from "../../redux/store";
 import InstructorSidebar from "./InstructorSidebar";
 import InstructorNavbar from "./InstructorNavbar";
@@ -10,9 +11,9 @@ import { SearchBar } from "../common/SearchBar";
 import Pagination from "../common/Pagination";
 
 interface Course {
-  id: string; 
+  id: string;
   title: string;
-  thumbnail: string; 
+  thumbnail: string;
   modulesCount: number;
 }
 
@@ -26,14 +27,13 @@ const InstructorCoursesPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
- 
+
   const courses: Course[] = reduxCourses.map((course: any) => ({
     id: course._id,
     title: course.title,
     thumbnail: course.thumbnail,
     modulesCount: course.modules.length,
   }));
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,15 +47,14 @@ const InstructorCoursesPage: React.FC = () => {
     fetchData();
   }, [dispatch]);
 
-
   useEffect(() => {
     console.log("isAuthenticated:", isAuthenticated);
     if (!isAuthenticated) {
-      console.log("Skipping getAllCoursesAction due to missing authentication");
+      console.log("Skipping getAllCoursesByInstructorAction due to missing authentication");
       return;
     }
-    console.log("Dispatching getAllCoursesAction with page:", page, "search:", searchQuery);
-    dispatch(getAllCoursesAction({ page, limit: 6, search: searchQuery })) 
+    console.log("Dispatching getAllCoursesByInstructorAction with page:", page, "search:", searchQuery);
+    dispatch(getAllCoursesByInstructorAction({ page, limit: 6, search: searchQuery }))
       .unwrap()
       .then((result) => {
         console.log("Courses fetched:", result);
@@ -65,16 +64,14 @@ const InstructorCoursesPage: React.FC = () => {
       });
   }, [dispatch, isAuthenticated, page, searchQuery]);
 
-
   useEffect(() => {
     console.log("Redux state:", { reduxCourses, currentPage, totalPages, totalCourses });
   }, [reduxCourses, currentPage, totalPages, totalCourses]);
 
-
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
     setSearchQuery(query);
-    setPage(1); 
+    setPage(1);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -173,7 +170,7 @@ const InstructorCoursesPage: React.FC = () => {
             ))}
           </div>
           {/* Updated Pagination Condition */}
-          {courses.length > 0 && !loading && (
+          {courses.length > 0 && !loading && totalPages > 0 && (
             <div className="mt-6">
               <Pagination
                 currentPage={page}

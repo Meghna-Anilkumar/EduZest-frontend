@@ -1,27 +1,35 @@
+// slices/courseSlice.ts
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { createCourseAction, getAllCoursesAction } from "../actions/courseActions";
+import {
+  createCourseAction,
+  getAllCoursesByInstructorAction,
+  getAllActiveCoursesAction,
+} from "../actions/courseActions";
 
+// Define the Course interface based on your ICourse schema
 interface Course {
   _id: string;
   title: string;
   description: string;
-  instructorRef: string;
-  categoryRef: string;
+  instructorRef: { _id: string; name: string; profile: { profilePic: string } };
+  categoryRef: { _id: string; categoryName: string };
   language: string;
-  level: string;
+  level: "beginner" | "intermediate" | "advanced";
   pricing: { type: "free" | "paid"; amount: number };
   thumbnail: string;
   modules: Array<{
     moduleTitle: string;
     lessons: Array<{
-      lessonNumber: number;
+      lessonNumber: string;
       title: string;
       description: string;
-      objectives: string[];
+      objectives?: string[];
       video: string;
-      duration: string;
+      duration?: string;
     }>;
   }>;
+  trial: { video?: string };
+  attachments?: { title?: string; url?: string };
   isRequested: boolean;
   isBlocked: boolean;
   studentsEnrolled: number;
@@ -33,19 +41,31 @@ interface Course {
 
 interface CourseState {
   loading: boolean;
-  data: Course[];
-  currentPage: number;
-  totalPages: number;
-  totalCourses: number;
+  data: Course[]; // For instructor's courses (getAllCoursesByInstructor)
+  currentPage: number; // For instructor's courses pagination
+  totalPages: number; // For instructor's courses pagination
+  totalCourses: number; // For instructor's courses pagination
+  activeCourses: {
+    courses: Course[]; // For active courses (getAllActiveCourses)
+    currentPage: number;
+    totalPages: number;
+    totalCourses: number;
+  };
   error: string | null;
 }
 
 const initialState: CourseState = {
   loading: false,
-  data: [],
-  currentPage: 1,
-  totalPages: 1,
-  totalCourses: 0,
+  data: [], // For instructor's courses
+  currentPage: 1, // For instructor's courses
+  totalPages: 1, // For instructor's courses
+  totalCourses: 0, // For instructor's courses
+  activeCourses: {
+    courses: [], // For active courses
+    currentPage: 1,
+    totalPages: 1,
+    totalCourses: 0,
+  },
   error: null,
 };
 
@@ -55,6 +75,9 @@ const courseSlice = createSlice({
   reducers: {
     storeCourseData: (state, action: PayloadAction<Course>) => {
       state.data.push(action.payload);
+    },
+    clearError: (state) => {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -70,26 +93,42 @@ const courseSlice = createSlice({
       })
       .addCase(createCourseAction.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as { message: string })?.message || "Failed to create course";
       })
-      // Get All Courses
-      .addCase(getAllCoursesAction.pending, (state) => {
+      // Get All Courses By Instructor
+      .addCase(getAllCoursesByInstructorAction.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(getAllCoursesAction.fulfilled, (state, action) => {
+      .addCase(getAllCoursesByInstructorAction.fulfilled, (state, action) => {
         state.loading = false;
         state.data = action.payload.courses;
-        state.currentPage = action.payload.currentPage;
-        state.totalPages = action.payload.totalPages;
-        state.totalCourses = action.payload.totalCourses;
+        state.currentPage = action.payload.currentPage; // Update top-level pagination
+        state.totalPages = action.payload.totalPages; // Update top-level pagination
+        state.totalCourses = action.payload.totalCourses; // Update top-level pagination
       })
-      .addCase(getAllCoursesAction.rejected, (state) => {
+      .addCase(getAllCoursesByInstructorAction.rejected, (state) => {
         state.loading = false;
-        state.error =  "Failed to fetch courses";
+        state.error = "Failed to fetch courses";
+      })
+      // Get All Active Courses
+      .addCase(getAllActiveCoursesAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getAllActiveCoursesAction.fulfilled, (state, action) => {
+        state.loading = false;
+        state.activeCourses.courses = action.payload.courses;
+        state.activeCourses.currentPage = action.payload.currentPage;
+        state.activeCourses.totalPages = action.payload.totalPages;
+        state.activeCourses.totalCourses = action.payload.totalCourses;
+      })
+      .addCase(getAllActiveCoursesAction.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as { message: string })?.message || "Failed to fetch active courses";
       });
   },
 });
 
-export const { storeCourseData } = courseSlice.actions;
+export const { storeCourseData, clearError } = courseSlice.actions;
 export default courseSlice.reducer;

@@ -11,6 +11,8 @@ import InstructorApplicationForm from "../components/user/InstructorApply";
 import { useSelector } from "react-redux";
 import { RootState } from "../redux/store";
 import InstructorDashboard from "../components/instructor/InstructorDashboard";
+import CourseListing from "../components/user/ExploreAllCourses";
+import CourseDetailsPage from "../components/user/ExploreCourseDetails";
 
 
 const Home = lazy(() => import("../pages/user/Home"));
@@ -39,6 +41,8 @@ const UserRoutes: React.FC = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="/teach" element={<InstructorApplicationForm />} />
+        <Route path="/all-courses" element={<CourseListing/>}/>
+        <Route path="/course-details/:id" element={<CourseDetailsPage/>}/>
         <Route path="/teach">
           {userRole === "Instructor" ? (
             <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
