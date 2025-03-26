@@ -2,7 +2,7 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom"; // Import Link for navigation
+import { Link } from "react-router-dom";
 import { clearError } from "../../redux/reducers/courseReducer";
 import { AppDispatch, RootState } from "../../redux/store";
 import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
@@ -10,10 +10,8 @@ import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
 import { SearchBar } from "../common/SearchBar";
 import Pagination from "../common/Pagination";
 
-// Lazy load Header
 const Header = lazy(() => import("../common/users/Header"));
 
-// Define the Course type for the component (simplified for display)
 interface DisplayCourse {
   id: string;
   title: string;
@@ -21,7 +19,6 @@ interface DisplayCourse {
   rating: number;
   reviewCount: number;
   originalPrice: number;
-  discountedPrice: number;
   tags?: string[];
   imageUrl: string;
 }
@@ -32,7 +29,6 @@ const CourseListing: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Fetch active courses when the component mounts or when searchTerm/currentPage changes
   useEffect(() => {
     dispatch(
       getAllActiveCoursesAction({
@@ -42,34 +38,29 @@ const CourseListing: React.FC = () => {
       })
     );
 
-    // Cleanup: Clear error on unmount
     return () => {
       dispatch(clearError());
     };
   }, [dispatch, currentPage, searchTerm]);
 
-  // Handle search input change
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setCurrentPage(1); // Reset to first page on new search
+    setCurrentPage(1);
   };
 
-  // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  // Map the fetched courses to the component's expected format
   const courses: DisplayCourse[] = activeCourses.courses.map((course: any) => ({
     id: course._id,
     title: course.title,
     instructor: course.instructorRef?.name || "Unknown Instructor",
-    rating: 4.5, // Static for now; replace with actual rating if available
-    reviewCount: 1000, // Static for now; replace with actual review count if available
+    rating: 4.5,
+    reviewCount: 1000,
     originalPrice: course.pricing?.amount || 799,
-    discountedPrice: course.pricing?.amount * 0.7 || 499, // Example discount
     tags: [
-      ...(course.isPublished ? ["Premium"] : []),
+      ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
       ...(course.studentsEnrolled > 1000 ? ["Bestseller"] : []),
     ],
     imageUrl: course.thumbnail || "/api/placeholder/300/200",
@@ -77,24 +68,21 @@ const CourseListing: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Fixed Header */}
       <Suspense fallback={<div>Loading...</div>}>
         <Header className="fixed top-0 left-0 right-0 z-50" />
       </Suspense>
 
-      {/* Main Content with Top Padding to Account for Fixed Header */}
-      <div className="bg-gray-100 flex-grow pt-20 p-4 md:p-8">
+      {/* Main Content with Adjusted Padding */}
+      <div className="bg-gray-100 flex-grow pt-[80px] md:pt-[100px] p-4 md:p-8">
         <div className="container mx-auto">
           <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Courses to get you started</h1>
           <p className="text-gray-600 mb-6 md:mb-8">Explore courses from experienced, real-world experts</p>
 
-          {/* Search Bar */}
           <div className="mb-6">
             <SearchBar onSearchChange={handleSearchChange} />
           </div>
 
-          {/* Responsive Navigation Buttons */}
-          <div className="flex space-x-2 md:space-x-4 mb-6 md:mb-8 overflow-x-auto">
+          <div class="flex space-x-2 md:space-x-4 mb-6 md:mb-8 overflow-x-auto">
             <button className="px-3 py-1 md:px-4 md:py-2 bg-black text-white rounded-full text-sm md:text-base whitespace-nowrap">
               Most popular
             </button>
@@ -106,7 +94,6 @@ const CourseListing: React.FC = () => {
             </button>
           </div>
 
-          {/* Loading/Error States */}
           {loading ? (
             <div className="text-center">Loading courses...</div>
           ) : error ? (
@@ -115,11 +102,10 @@ const CourseListing: React.FC = () => {
             <div className="text-center text-gray-500">No courses found.</div>
           ) : (
             <>
-              {/* Responsive Grid Layout */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
                 {courses.map((course) => (
                   <Link
-                    to={`/course-details/${course.id}`} // Navigate to /course-details/:id
+                    to={`/course-details/${course.id}`}
                     key={course.id}
                     className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
                   >
@@ -157,11 +143,8 @@ const CourseListing: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="flex items-center mb-2 md:mb-4">
-                        <span className="text-base md:text-xl font-bold mr-1 md:mr-2">
-                          ₹{course.discountedPrice}
-                        </span>
-                        <span className="text-gray-500 line-through text-xs md:text-sm">
+                      <div className="mb-2 md:mb-4">
+                        <span className="text-base md:text-xl font-bold">
                           ₹{course.originalPrice}
                         </span>
                       </div>
@@ -173,8 +156,10 @@ const CourseListing: React.FC = () => {
                             className={`
                               px-1 py-0.5 md:px-2 md:py-1 rounded-full text-[10px] md:text-xs font-semibold
                               ${
-                                tag === "Premium"
+                                tag === "Paid"
                                   ? "bg-purple-100 text-purple-800"
+                                  : tag === "Free"
+                                  ? "bg-blue-100 text-blue-800"
                                   : "bg-green-100 text-green-800"
                               }
                             `}
@@ -188,7 +173,6 @@ const CourseListing: React.FC = () => {
                 ))}
               </div>
 
-              {/* Pagination */}
               <div className="mt-8">
                 <Pagination
                   currentPage={activeCourses.currentPage}

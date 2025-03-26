@@ -19,9 +19,10 @@ interface Module {
 interface ModuleViewModalProps {
   module: Module;
   onClose: () => void;
-  onSaveLesson?: (updatedLesson: Lesson) => void;
-  onSaveModule?: (updatedModule: Module) => void;
-  isAddingNewModule?: boolean; 
+  onSaveLesson?: (updatedLesson: Lesson, videoFile?: File) => void; // Updated to include videoFile
+  onSaveModule?: (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => void; // Updated to include videoFile
+  onRemoveModule?: (moduleTitle: string) => void;
+  isAddingNewModule?: boolean;
 }
 
 const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
@@ -29,6 +30,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
   onClose,
   onSaveLesson,
   onSaveModule,
+  onRemoveModule,
   isAddingNewModule = false,
 }) => {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
@@ -45,7 +47,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     duration: '',
   });
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [isAddingModule, setIsAddingModule] = useState(isAddingNewModule); 
+  const [isAddingModule, setIsAddingModule] = useState(isAddingNewModule);
   const [newModuleTitle, setNewModuleTitle] = useState('');
 
   useEffect(() => {
@@ -99,37 +101,28 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
 
   const handleSaveLesson = () => {
     if (editedLesson && onSaveLesson) {
-      if (videoFile) {
-        const videoUrl = URL.createObjectURL(videoFile);
-        editedLesson.video = videoUrl;
-        setVideoFile(null);
-      }
-      onSaveLesson(editedLesson);
+      onSaveLesson(editedLesson, videoFile);
+      setVideoFile(null);
       setSelectedLesson(editedLesson);
+      setIsEditingLesson(false);
     }
-    setIsEditingLesson(false);
   };
 
   const handleSaveModule = () => {
     if (onSaveModule) {
       const updatedModule = { ...module, moduleTitle: editedModuleTitle };
-      onSaveModule(updatedModule);
+      onSaveModule(updatedModule, module.moduleTitle);
+      setIsEditingModule(false);
     }
-    setIsEditingModule(false);
   };
 
   const handleAddLesson = () => {
     if (onSaveModule && newLesson.title && newLesson.description) {
-      if (videoFile) {
-        const videoUrl = URL.createObjectURL(videoFile);
-        newLesson.video = videoUrl;
-        setVideoFile(null);
-      }
       const updatedModule = {
         ...module,
         lessons: [...module.lessons, { ...newLesson }],
       };
-      onSaveModule(updatedModule);
+      onSaveModule(updatedModule, undefined, videoFile);
       setNewLesson({
         lessonNumber: (module.lessons.length + 2).toString(),
         title: '',
@@ -137,6 +130,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
         video: '',
         duration: '',
       });
+      setVideoFile(null);
       setIsAddingLesson(false);
     }
   };
@@ -153,8 +147,8 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
   };
 
   const handleRemoveModule = () => {
-    if (onSaveModule) {
-      onSaveModule({ ...module, lessons: [] });
+    if (onRemoveModule) {
+      onRemoveModule(module.moduleTitle);
       onClose();
     }
   };
@@ -326,15 +320,6 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-2">Duration (hours)</label>
-          <input
-            type="text"
-            value={newLesson.duration || ''}
-            onChange={(e) => handleNewLessonChange('duration', e.target.value)}
-            className="w-full border rounded-md px-3 py-2"
-          />
-        </div>
-        <div>
           <label className="block text-gray-700 font-medium mb-2">Upload Video</label>
           <input
             type="file"
@@ -381,7 +366,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
           <button
             onClick={() => {
               setIsAddingModule(false);
-              onClose(); // Close the modal if canceled
+              onClose();
             }}
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
           >
@@ -404,58 +389,66 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
       <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl p-6 m-4 overflow-auto">
         <div className="flex justify-between items-center border-b pb-4 mb-4">
           {isEditingModule ? (
-            <input
-              type="text"
-              value={editedModuleTitle}
-              onChange={(e) => handleModuleTitleChange(e.target.value)}
-              className="text-xl font-bold text-gray-800 border rounded-md px-2 py-1 w-full"
-            />
-          ) : (
-            <h2 className="text-xl font-bold text-gray-800">{isAddingModule ? 'New Module' : module.moduleTitle}</h2>
-          )}
-          <div className="flex space-x-2">
-            {!isAddingModule && !isEditingModule && (
-              <>
-                <button
-                  onClick={handleEditModule}
-                  className="text-[#49BBBD] hover:bg-[#49BBBD] hover:text-white border border-[#49BBBD] px-3 py-1 rounded-md transition-colors"
-                >
-                  Edit Module
-                </button>
-                <button
-                  onClick={handleRemoveModule}
-                  className="text-red-500 hover:bg-red-500 hover:text-white border border-red-500 px-3 py-1 rounded-md transition-colors"
-                >
-                  Remove Module
-                </button>
-                <button
-                  onClick={() => setIsAddingLesson(true)}
-                  className="text-green-500 hover:bg-green-500 hover:text-white border border-green-500 px-3 py-1 rounded-md transition-colors"
-                >
-                  Add Lesson
-                </button>
-                <button
-                  onClick={handleAddModule}
-                  className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
-                >
-                  Add Module
-                </button>
-              </>
-            )}
-            {isEditingModule && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={editedModuleTitle}
+                onChange={(e) => handleModuleTitleChange(e.target.value)}
+                className="text-xl font-bold text-gray-800 border rounded-md px-2 py-1 w-full"
+              />
               <button
                 onClick={handleSaveModule}
                 className="px-3 py-1 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c]"
               >
                 Save Module
               </button>
-            )}
-            <button onClick={onClose} className="text-gray-600 hover:text-gray-900 focus:outline-none">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              <button
+                onClick={() => setIsEditingModule(false)}
+                className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <h2 className="text-xl font-bold text-gray-800">{isAddingModule ? 'New Module' : module.moduleTitle}</h2>
+          )}
+          {!isEditingModule && (
+            <div className="flex space-x-2">
+              {!isAddingModule && (
+                <>
+                  <button
+                    onClick={handleEditModule}
+                    className="text-[#49BBBD] hover:bg-[#49BBBD] hover:text-white border border-[#49BBBD] px-3 py-1 rounded-md transition-colors"
+                  >
+                    Edit Module
+                  </button>
+                  <button
+                    onClick={handleRemoveModule}
+                    className="text-red-500 hover:bg-red-500 hover:text-white border border-red-500 px-3 py-1 rounded-md transition-colors"
+                  >
+                    Remove Module
+                  </button>
+                  <button
+                    onClick={() => setIsAddingLesson(true)}
+                    className="text-green-500 hover:bg-green-500 hover:text-white border border-green-500 px-3 py-1 rounded-md transition-colors"
+                  >
+                    Add Lesson
+                  </button>
+                  <button
+                    onClick={handleAddModule}
+                    className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
+                  >
+                    Add Module
+                  </button>
+                </>
+              )}
+              <button onClick={onClose} className="text-gray-600 hover:text-gray-900 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-1 bg-gray-50 rounded-lg p-4 max-h-[70vh] overflow-y-auto">

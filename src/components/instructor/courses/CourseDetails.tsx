@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../redux/store';
-import { getCourseByIdAction, editCourseAction } from '../../../redux/actions/courseActions';
+import { getCourseByIdAction, editCourseAction} from '../../../redux/actions/courseActions';
 import Sidebar from '../InstructorSidebar';
 import InstructorNavbar from '../InstructorNavbar';
 import ModuleViewModal from './CourseModal';
@@ -27,7 +27,8 @@ const CourseDetailsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
   const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
-  const [isAddingNewModule, setIsAddingNewModule] = useState(false); 
+  const [isAddingNewModule, setIsAddingNewModule] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { courseId } = useParams<{ courseId: string }>();
@@ -35,6 +36,7 @@ const CourseDetailsPage: React.FC = () => {
   const { data: courses, loading, error } = useSelector((state: RootState) => state.course);
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
 
+  // Find the course in the Redux store
   const courseDetails = courses.find((course: ICourse) => course._id === courseId) as ICourse | undefined;
 
   useEffect(() => {
@@ -43,66 +45,142 @@ const CourseDetailsPage: React.FC = () => {
       return;
     }
 
-    if (courseId) {
-      dispatch(getCourseByIdAction(courseId));
-    }
-  }, [dispatch, courseId, isAuthenticated, navigate]);
+    const fetchCourseData = async () => {
+      if (!courseId) return;
 
-  const handleSaveLesson = (updatedLesson: Lesson) => {
+      // If the course is not in the Redux store, fetch it
+      if (!courseDetails) {
+        try {
+          // Fetch the course by ID
+          const response = await dispatch(getCourseByIdAction(courseId)).unwrap();
+          if (response) {
+            // Manually add the fetched course to the data array since the reducer doesn't handle getCourseByIdAction
+            dispatch({ type: 'course/storeCourseData', payload: response });
+          }
+        } catch (err) {
+          console.error('Error fetching course by ID:', err);
+        }
+      }
+    };
+
+    fetchCourseData();
+  }, [dispatch, courseId, isAuthenticated, navigate, courseDetails]);
+
+  const handleSaveLesson = async (updatedLesson: Lesson, videoFile?: File) => {
     if (!courseDetails || !selectedModule) return;
 
-    const updatedModules = courseDetails.modules.map((module) =>
-      module.moduleTitle === selectedModule.moduleTitle
-        ? {
-            ...module,
-            lessons: module.lessons.map((lesson) =>
-              lesson.lessonNumber === updatedLesson.lessonNumber ? updatedLesson : lesson
-            ),
-          }
-        : module
-    );
+    setIsUploading(true);
+    try {
+      const updatedModules = courseDetails.modules.map((module) =>
+        module.moduleTitle === selectedModule.moduleTitle
+          ? {
+              ...module,
+              lessons: module.lessons.map((lesson) =>
+                lesson.lessonNumber === updatedLesson.lessonNumber ? updatedLesson : lesson
+              ),
+            }
+          : module
+      );
 
-    dispatch(
-      editCourseAction({ courseId: courseDetails._id, formData: { ...courseDetails, modules: updatedModules } })
-    ).then(() => {
+      const formData = new FormData();
+      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: updatedModules }));
+      if (videoFile) {
+        formData.append('videos', videoFile);
+      }
+
+      await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
       setSelectedModule(null);
-    });
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      alert('Failed to update lesson. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const handleSaveModule = (updatedModule: Module) => {
+  const handleSaveModule = async (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => {
     if (!courseDetails) return;
 
-    let updatedModules: Module[];
-    const existingModuleIndex = courseDetails.modules.findIndex(
-      (module) => module.moduleTitle === updatedModule.moduleTitle
-    );
+    setIsUploading(true);
+    try {
+      let updatedModules: Module[];
+      const moduleIndex = originalModuleTitle
+        ? courseDetails.modules.findIndex((module) => module.moduleTitle === originalModuleTitle)
+        : courseDetails.modules.findIndex((module) => module.moduleTitle === updatedModule.moduleTitle);
 
-    if (existingModuleIndex !== -1) {
-      updatedModules = [...courseDetails.modules];
-      updatedModules[existingModuleIndex] = updatedModule;
-    } else {
-      updatedModules = [...courseDetails.modules, updatedModule];
-    }
+      if (moduleIndex !== -1) {
+        updatedModules = [...courseDetails.modules];
+        updatedModules[moduleIndex] = updatedModule;
+      } else {
+        updatedModules = [...courseDetails.modules, updatedModule];
+      }
 
-    dispatch(
-      editCourseAction({ courseId: courseDetails._id, formData: { ...courseDetails, modules: updatedModules } })
-    ).then(() => {
+      const formData = new FormData();
+      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: updatedModules }));
+      if (videoFile) {
+        formData.append('videos', videoFile);
+      }
+
+      await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
       setSelectedModule(null);
-      setIsAddingNewModule(false); 
-    });
+      setIsAddingNewModule(false);
+    } catch (error) {
+      console.error('Error updating module:', error);
+      alert('Failed to update module. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
-  const handleSaveCourse = (updatedCourse: ICourse) => {
-    dispatch(editCourseAction({ courseId: updatedCourse._id, formData: updatedCourse })).then(() =>
-      setIsEditCourseModalOpen(false)
-    );
+  const handleRemoveModule = async (moduleTitle: string) => {
+    if (!courseDetails) return;
+
+    setIsUploading(true);
+    try {
+      const updatedModules = courseDetails.modules.filter((module) => module.moduleTitle !== moduleTitle);
+
+      const formData = new FormData();
+      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: updatedModules }));
+
+      await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
+      setSelectedModule(null);
+    } catch (error) {
+      console.error('Error removing module:', error);
+      alert('Failed to remove module. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSaveCourse = async (updatedCourse: ICourse) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      // Ensure all fields are included in the courseData
+      const courseData = {
+        ...updatedCourse,
+        // Ensure modules are included if they exist
+        modules: updatedCourse.modules || courseDetails?.modules || [],
+      };
+      formData.append('courseData', JSON.stringify(courseData));
+
+      const response = await dispatch(editCourseAction({ courseId: updatedCourse._id, formData })).unwrap();
+      if (response) {
+        setIsEditCourseModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Error updating course:', error);
+      alert('Failed to update course. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleAddModule = () => {
-    setIsAddingNewModule(true); 
+    setIsAddingNewModule(true);
   };
 
-  if (loading || !courseId) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-[#49BBBD]">Loading course details...</div>
@@ -180,7 +258,6 @@ const CourseDetailsPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <p className="text-gray-700">{courseDetails.description}</p>
               </div>
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -189,6 +266,7 @@ const CourseDetailsPage: React.FC = () => {
                     <button
                       onClick={handleAddModule}
                       className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
+                      disabled={isUploading}
                     >
                       Add Module
                     </button>
@@ -210,7 +288,7 @@ const CourseDetailsPage: React.FC = () => {
                             h
                           </p>
                         </div>
-                        <button onClick={() => setSelectedModule(module)} className="text-[#49BBBD] hover:text-[#3a9a9c]">
+                        <button onClick={() => setSelectedModule(module)} className="text-[#49BBBD] hover:text-[#3a9a9c]" disabled={isUploading}>
                           View Module
                         </button>
                       </div>
@@ -270,6 +348,7 @@ const CourseDetailsPage: React.FC = () => {
                   <button
                     onClick={() => setIsEditCourseModalOpen(true)}
                     className="w-full bg-[#49BBBD] text-white py-2 rounded-md hover:bg-[#3a9a9c] transition-colors"
+                    disabled={isUploading}
                   >
                     Edit Course
                   </button>
@@ -279,6 +358,7 @@ const CourseDetailsPage: React.FC = () => {
                         ? 'border-red-500 text-red-500 hover:bg-red-500'
                         : 'border-green-500 text-green-500 hover:bg-green-500'
                     } py-2 rounded-md hover:text-white transition-colors`}
+                    disabled={isUploading}
                   >
                     {courseDetails.isPublished ? 'Unpublish Course' : 'Publish Course'}
                   </button>
@@ -289,14 +369,15 @@ const CourseDetailsPage: React.FC = () => {
         </main>
         {(selectedModule || isAddingNewModule) && (
           <ModuleViewModal
-            module={selectedModule || { moduleTitle: '', lessons: [] }} 
+            module={selectedModule || { moduleTitle: '', lessons: [] }}
             onClose={() => {
               setSelectedModule(null);
               setIsAddingNewModule(false);
             }}
             onSaveLesson={handleSaveLesson}
             onSaveModule={handleSaveModule}
-            isAddingNewModule={isAddingNewModule} 
+            onRemoveModule={handleRemoveModule}
+            isAddingNewModule={isAddingNewModule}
           />
         )}
         {isEditCourseModalOpen && (

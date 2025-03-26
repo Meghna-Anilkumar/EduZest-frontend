@@ -287,32 +287,32 @@ const CourseDetailsPage = () => {
                   </span>
                   {course.pricing.type === "paid" && (
                     <>
-                      <span className="line-through ml-2 text-gray-500">
+                      {/* <span className="line-through ml-2 text-gray-500">
                         ₹{course.pricing.amount * 6}
-                      </span>
-                      <span className="bg-red-500 text-white px-2 py-1 rounded ml-2">
+                      </span> */}
+                      {/* <span className="bg-red-500 text-white px-2 py-1 rounded ml-2">
                         {Math.round(
                           100 -
                             (course.pricing.amount / (course.pricing.amount * 6)) * 100
                         )}
                         % off
-                      </span>
+                      </span> */}
                     </>
                   )}
                 </div>
-                {course.pricing.type === "paid" && (
+                {/* {course.pricing.type === "paid" && (
                   <span className="text-red-500 text-sm">2 days left at this price!</span>
-                )}
+                )} */}
               </div>
               <div className="space-y-2 mb-4">
                 <button className="w-full bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c]">
-                  Add to cart
+                 Enroll Now
                 </button>
-                <button className="w-full border border-[#49BBBD] text-[#49BBBD] py-2 rounded hover:bg-[#49BBBD] hover:text-white">
+                {/* <button className="w-full border border-[#49BBBD] text-[#49BBBD] py-2 rounded hover:bg-[#49BBBD] hover:text-white">
                   Buy now
-                </button>
+                </button> */}
               </div>
-              <p className="text-center text-gray-600 text-sm">30-Day Money-Back Guarantee</p>
+              {/* <p className="text-center text-gray-600 text-sm">30-Day Money-Back Guarantee</p> */}
             </div>
           </div>
         </div>
