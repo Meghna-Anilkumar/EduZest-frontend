@@ -78,6 +78,11 @@ const InstructorCoursesPage: React.FC = () => {
     setPage(newPage);
   };
 
+  // Navigate to course details page when thumbnail is clicked
+  const handleThumbnailClick = (courseId: string) => {
+    navigate(`/instructor/courseDetails/${courseId}`);
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       <InstructorSidebar
@@ -133,13 +138,14 @@ const InstructorCoursesPage: React.FC = () => {
             {courses.map((course) => (
               <div
                 key={course.id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="relative h-48 overflow-hidden">
                   <img
                     src={course.thumbnail}
                     alt={`${course.title} thumbnail`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => handleThumbnailClick(course.id)} // Navigate on click
                   />
                 </div>
                 <div className="p-5">
@@ -158,14 +164,7 @@ const InstructorCoursesPage: React.FC = () => {
                     <span>{course.modulesCount} Modules</span>
                   </div>
                 </div>
-                <div className="px-5 py-3 bg-gray-50 flex justify-between items-center border-t border-gray-100">
-                  <button className="text-[#49BBBD] hover:text-[#3a9a9c] font-medium">
-                    Edit
-                  </button>
-                  <button className="text-[#49BBBD] hover:text-[#3a9a9c] font-medium">
-                    View Details
-                  </button>
-                </div>
+                {/* Removed the footer with Edit and View Details buttons */}
               </div>
             ))}
           </div>

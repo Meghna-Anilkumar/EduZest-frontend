@@ -21,7 +21,8 @@ export const userEndPoints: UserEndpoints = {
     createCourse: '/instructor/create-course',
     getAllCoursesByInstructor:'/instructor/courses',
     getAllActiveCourses: '/active-courses',
-    getCourseById: '/courses'
+    getCourseById: '/courses',
+    editCourse: '/instructor/courses/:id',
    
 }
 

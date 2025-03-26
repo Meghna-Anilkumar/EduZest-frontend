@@ -39,13 +39,13 @@ export const AdminStudents: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false); // Modal state
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null); // Selected student
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false); // Confirmation dialog state
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [studentToToggle, setStudentToToggle] = useState<{
     id: string;
     isBlocked: boolean;
-  } | null>(null); // Student to block/unblock
+  } | null>(null);
 
   const fetchStudents = useCallback(
     async (page: number, search: string = "") => {

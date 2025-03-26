@@ -1,4 +1,3 @@
-// components/CourseDetailsPage.tsx
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
@@ -7,10 +6,8 @@ import { AppDispatch, RootState } from "../../redux/store";
 import { getCourseByIdAction } from "../../redux/actions/courseActions";
 import { clearError } from "../../redux/reducers/courseReducer";
 
-// Lazy load the Header component
 const Header = lazy(() => import("../common/users/Header"));
 
-// Define the Course interface (copied from courseSlice.ts for local use)
 interface Course {
   _id: string;
   title: string;
@@ -44,19 +41,18 @@ interface Course {
 }
 
 const CourseDetailsPage = () => {
-  const { id } = useParams<{ id: string }>(); // Get the course ID from the URL
+  const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.course);
-  const [course, setCourse] = useState<Course | null>(null); // Local state for the course
-  const [activeSections, setActiveSections] = useState<number[]>([]); // Track expanded sections
-  const [expandAll, setExpandAll] = useState(false); // Track expand all state
+  const [course, setCourse] = useState<Course | null>(null);
+  const [activeSections, setActiveSections] = useState<number[]>([]);
+  const [expandAll, setExpandAll] = useState(false);
 
-  // Fetch the course data when the component mounts or when the ID changes
   useEffect(() => {
     if (id) {
       dispatch(getCourseByIdAction(id)).then((action) => {
         if (getCourseByIdAction.fulfilled.match(action)) {
-          setCourse(action.payload); // Store the fetched course in local state
+          setCourse(action.payload); 
         }
       });
     }

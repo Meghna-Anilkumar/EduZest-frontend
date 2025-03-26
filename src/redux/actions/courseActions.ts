@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userEndPoints } from "../../services/endPoints/endPoints"; 
 import { serverUser } from "../../services"; 
 import { AxiosError } from "axios";
+import { ICourse } from "../../interface/ICourse";
 
 
 export const createCourseAction = createAsyncThunk(
@@ -61,9 +62,9 @@ export const getCourseByIdAction = createAsyncThunk(
   async (courseId: string, { rejectWithValue }) => {
     try {
       const response = await serverUser.get(`${userEndPoints.getCourseById}/${courseId}`, {
-        withCredentials: true, // Include cookies (e.g., userJWT token) for authentication
+        withCredentials: true, 
       });
-      return response.data.data; // Return the course data
+      return response.data.data; 
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });
@@ -71,3 +72,34 @@ export const getCourseByIdAction = createAsyncThunk(
   }
 );
 
+export const editCourseAction = createAsyncThunk<
+  ICourse, // Return type
+  { courseId: string; formData: FormData | Partial<ICourse> }, // Argument type
+  { rejectValue: { message: string } } // ThunkAPI reject value type
+>(
+  "course/editCourse",
+  async (
+    { courseId, formData }: { courseId: string; formData: FormData | Partial<ICourse> },
+    { rejectWithValue }
+  ) => {
+    try {
+      const isFormData = formData instanceof FormData;
+      const headers = isFormData
+        ? { "Content-Type": "multipart/form-data" }
+        : { "Content-Type": "application/json" };
+
+      const response = await serverUser.put(
+        `${userEndPoints.editCourse.replace(":id", courseId)}`,
+        formData,
+        {
+          headers,
+          withCredentials: true,
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);

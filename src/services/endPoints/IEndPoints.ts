@@ -23,6 +23,7 @@ export interface UserEndpoints extends IEndPoints {
     getAllCoursesByInstructor:string;
     getAllActiveCourses:string;
     getCourseById: string;
+    editCourse:string;
 }
 
 export interface AdminEndpoints extends IEndPoints {

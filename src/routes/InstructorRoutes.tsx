@@ -16,11 +16,12 @@ const InstructorRoutes: React.FC = () => {
     <Suspense fallback={<Loader />}>
       <Routes>
         <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
-          <Route path="/dashboard" element={<InstructorDashboard/>}/>
+          <Route path="/dashboard" element={<InstructorDashboard />} />
           <Route path="/courses" element={<InstructorCoursesPage />} />
           <Route path="/courses/create" element={<AddCoursePage />} />
-          <Route path="/courses/addLesson" element={<AddLessonsPage/>}/>
-          <Route path="/courseDetails" element={<CourseDetailsPage/>}/>
+          <Route path="/courses/addLesson" element={<AddLessonsPage />} />
+          <Route path="/courseDetails/:courseId" element={<CourseDetailsPage />}
+          />
         </Route>
 
         {/* 404 Page */}

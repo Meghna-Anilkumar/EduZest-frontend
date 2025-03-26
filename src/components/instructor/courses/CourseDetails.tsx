@@ -1,15 +1,21 @@
-import React, { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import Sidebar from "../InstructorSidebar";
-import InstructorNavbar from "../InstructorNavbar";
-import ModuleViewModal from "./CourseModal"; // Import the new modal component
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../../redux/store';
+import { getCourseByIdAction, editCourseAction } from '../../../redux/actions/courseActions';
+import Sidebar from '../InstructorSidebar';
+import InstructorNavbar from '../InstructorNavbar';
+import ModuleViewModal from './CourseModal';
+import EditCourseModal from './EditCourseModal';
+import { ICourse } from '../../../interface/ICourse';
 
-// Sample data interfaces
 interface Lesson {
-  lessonNumber: number;
+  lessonNumber: string;
   title: string;
-  duration: string;
   description: string;
+  objectives?: string[];
+  video: string;
+  duration?: string;
 }
 
 interface Module {
@@ -20,67 +26,134 @@ interface Module {
 const CourseDetailsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
+  const [isEditCourseModalOpen, setIsEditCourseModalOpen] = useState(false);
+  const [isAddingNewModule, setIsAddingNewModule] = useState(false); 
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const { courseId } = useParams<{ courseId: string }>();
 
-  // Sample modules data (replace with actual data)
-  const modulesData: Module[] = [
-    {
-      moduleTitle: "Introduction to Web Development",
-      lessons: [
-        {
-          lessonNumber: 1,
-          title: "Understanding Web Development Basics",
-          duration: "0.5",
-          description: "Learn the fundamental concepts of web development and the technologies involved."
-        },
-        {
-          lessonNumber: 2,
-          title: "HTML5 Fundamentals",
-          duration: "1",
-          description: "Deep dive into HTML5 structure, semantic elements, and best practices."
-        }
-      ]
-    },
-    {
-      moduleTitle: "CSS and Styling",
-      lessons: [
-        {
-          lessonNumber: 1,
-          title: "CSS Selectors and Specificity",
-          duration: "0.75",
-          description: "Master CSS selectors, cascading, and how to write efficient stylesheets."
-        }
-      ]
+  const { data: courses, loading, error } = useSelector((state: RootState) => state.course);
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+
+  const courseDetails = courses.find((course: ICourse) => course._id === courseId) as ICourse | undefined;
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
     }
-  ];
+
+    if (courseId) {
+      dispatch(getCourseByIdAction(courseId));
+    }
+  }, [dispatch, courseId, isAuthenticated, navigate]);
+
+  const handleSaveLesson = (updatedLesson: Lesson) => {
+    if (!courseDetails || !selectedModule) return;
+
+    const updatedModules = courseDetails.modules.map((module) =>
+      module.moduleTitle === selectedModule.moduleTitle
+        ? {
+            ...module,
+            lessons: module.lessons.map((lesson) =>
+              lesson.lessonNumber === updatedLesson.lessonNumber ? updatedLesson : lesson
+            ),
+          }
+        : module
+    );
+
+    dispatch(
+      editCourseAction({ courseId: courseDetails._id, formData: { ...courseDetails, modules: updatedModules } })
+    ).then(() => {
+      setSelectedModule(null);
+    });
+  };
+
+  const handleSaveModule = (updatedModule: Module) => {
+    if (!courseDetails) return;
+
+    let updatedModules: Module[];
+    const existingModuleIndex = courseDetails.modules.findIndex(
+      (module) => module.moduleTitle === updatedModule.moduleTitle
+    );
+
+    if (existingModuleIndex !== -1) {
+      updatedModules = [...courseDetails.modules];
+      updatedModules[existingModuleIndex] = updatedModule;
+    } else {
+      updatedModules = [...courseDetails.modules, updatedModule];
+    }
+
+    dispatch(
+      editCourseAction({ courseId: courseDetails._id, formData: { ...courseDetails, modules: updatedModules } })
+    ).then(() => {
+      setSelectedModule(null);
+      setIsAddingNewModule(false); 
+    });
+  };
+
+  const handleSaveCourse = (updatedCourse: ICourse) => {
+    dispatch(editCourseAction({ courseId: updatedCourse._id, formData: updatedCourse })).then(() =>
+      setIsEditCourseModalOpen(false)
+    );
+  };
+
+  const handleAddModule = () => {
+    setIsAddingNewModule(true); 
+  };
+
+  if (loading || !courseId) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-[#49BBBD]">Loading course details...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-red-500">Error loading course: {error}</div>
+      </div>
+    );
+  }
+
+  if (!courseDetails) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-gray-500">Course not found</div>
+      </div>
+    );
+  }
+
+  const totalLessons = courseDetails.modules.reduce((total, module) => total + module.lessons.length, 0);
+  const totalDuration = courseDetails.modules.reduce(
+    (total, module) =>
+      total + module.lessons.reduce((lessonTotal, lesson) => lessonTotal + (parseFloat(lesson.duration || '0') || 0), 0),
+    0
+  );
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
       <Sidebar
         open={sidebarOpen}
         currentPage="courses"
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
         setCurrentPage={() => {}}
       />
-
-      {/* Main Content Area */}
-      <div
-        className={`flex-1 transition-all duration-300 overflow-auto ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        }`}
-      >
-        {/* Header */}
+      <div className={`flex-1 transition-all duration-300 overflow-auto ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
               <div className="flex items-center">
-                <button 
-                  onClick={() => navigate("/instructor/courses")}
-                  className="text-gray-600 hover:text-gray-800 mr-4"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button onClick={() => navigate('/instructor/courses')} className="text-gray-600 hover:text-gray-800 mr-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </button>
@@ -90,69 +163,95 @@ const CourseDetailsPage: React.FC = () => {
             </div>
           </div>
         </header>
-
-        {/* Main Content */}
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Course Overview */}
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center space-x-4 mb-6">
-                  <img 
-                    src="/api/placeholder/200/150" 
-                    alt="Course Thumbnail" 
-                    className="w-48 h-36 object-cover rounded-lg"
-                  />
+                  <img src={courseDetails.thumbnail} alt="Course Thumbnail" className="w-48 h-36 object-cover rounded-lg" />
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800">Web Development Masterclass</h2>
-                    <p className="text-gray-600">Learn Full Stack Web Development from Scratch</p>
+                    <h2 className="text-xl font-bold text-gray-800">{courseDetails.title}</h2>
+                    <p className="text-gray-600">{courseDetails.description}</p>
                     <div className="flex items-center space-x-2 mt-2">
-                      <span className="bg-[#49BBBD] text-white text-xs px-2 py-1 rounded">Intermediate</span>
-                      <span className="text-gray-500 text-sm">12 Modules • 45 Lessons</span>
+                      <span className="bg-[#49BBBD] text-white text-xs px-2 py-1 rounded">{courseDetails.level}</span>
+                      <span className="text-gray-500 text-sm">
+                        {courseDetails.modules.length} Modules • {totalLessons} Lessons
+                      </span>
                     </div>
                   </div>
                 </div>
-                <p className="text-gray-700">
-                  A comprehensive course covering front-end and back-end technologies. 
-                  Learn modern web development practices with hands-on projects.
-                </p>
+                <p className="text-gray-700">{courseDetails.description}</p>
               </div>
-
-              {/* Modules Section */}
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-4">Course Modules</h3>
-                {modulesData.map((module, index) => (
-                  <div key={index} className="border-b last:border-b-0 py-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-medium text-gray-800">{module.moduleTitle}</h4>
-                        <p className="text-gray-600 text-sm">
-                          {module.lessons.length} Lessons • {module.lessons.reduce((total, lesson) => total + parseFloat(lesson.duration), 0).toFixed(1)}h
-                        </p>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Course Modules</h3>
+                  {courseDetails.modules.length === 0 && (
+                    <button
+                      onClick={handleAddModule}
+                      className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
+                    >
+                      Add Module
+                    </button>
+                  )}
+                </div>
+                {courseDetails.modules.length === 0 ? (
+                  <div className="text-center text-gray-500 py-4">No modules available. Add a module to get started.</div>
+                ) : (
+                  courseDetails.modules.map((module, index) => (
+                    <div key={module.moduleTitle + index} className="border-b last:border-b-0 py-4">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h4 className="font-medium text-gray-800">{module.moduleTitle}</h4>
+                          <p className="text-gray-600 text-sm">
+                            {module.lessons.length} Lessons •{' '}
+                            {module.lessons
+                              .reduce((total, lesson) => total + (parseFloat(lesson.duration || '0') || 0), 0)
+                              .toFixed(1)}
+                            h
+                          </p>
+                        </div>
+                        <button onClick={() => setSelectedModule(module)} className="text-[#49BBBD] hover:text-[#3a9a9c]">
+                          View Module
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => setSelectedModule(module)}
-                        className="text-[#49BBBD] hover:text-[#3a9a9c]"
-                      >
-                        View Module
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
-
-            {/* Right Sidebar Details */}
             <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">Course Details</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Instructor</span>
+                    <span className="font-medium">{courseDetails.instructorRef.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Category</span>
+                    <span className="font-medium">{courseDetails.categoryRef.categoryName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Language</span>
+                    <span className="font-medium">{courseDetails.language}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pricing</span>
+                    <span className="font-medium">
+                      {courseDetails.pricing.type === 'free' ? 'Free' : `₹${courseDetails.pricing.amount}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">Course Statistics</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#49BBBD]">45</div>
+                    <div className="text-2xl font-bold text-[#49BBBD]">{totalLessons}</div>
                     <div className="text-gray-600 text-sm">Total Lessons</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#49BBBD]">250</div>
+                    <div className="text-2xl font-bold text-[#49BBBD]">{courseDetails.studentsEnrolled}</div>
                     <div className="text-gray-600 text-sm">Enrolled Students</div>
                   </div>
                   <div className="text-center">
@@ -160,35 +259,51 @@ const CourseDetailsPage: React.FC = () => {
                     <div className="text-gray-600 text-sm">Average Rating</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#49BBBD]">12h</div>
+                    <div className="text-2xl font-bold text-[#49BBBD]">{totalDuration.toFixed(1)}h</div>
                     <div className="text-gray-600 text-sm">Total Duration</div>
                   </div>
                 </div>
               </div>
-
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full bg-[#49BBBD] text-white py-2 rounded-md hover:bg-[#3a9a9c] transition-colors">
+                  <button
+                    onClick={() => setIsEditCourseModalOpen(true)}
+                    className="w-full bg-[#49BBBD] text-white py-2 rounded-md hover:bg-[#3a9a9c] transition-colors"
+                  >
                     Edit Course
                   </button>
-                  <button className="w-full border border-[#49BBBD] text-[#49BBBD] py-2 rounded-md hover:bg-[#49BBBD] hover:text-white transition-colors">
-                    Add Module
-                  </button>
-                  <button className="w-full border border-red-500 text-red-500 py-2 rounded-md hover:bg-red-500 hover:text-white transition-colors">
-                    Unpublish Course
+                  <button
+                    className={`w-full border ${
+                      courseDetails.isPublished
+                        ? 'border-red-500 text-red-500 hover:bg-red-500'
+                        : 'border-green-500 text-green-500 hover:bg-green-500'
+                    } py-2 rounded-md hover:text-white transition-colors`}
+                  >
+                    {courseDetails.isPublished ? 'Unpublish Course' : 'Publish Course'}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         </main>
-
-        {/* Module View Modal */}
-        {selectedModule && (
-          <ModuleViewModal 
-            module={selectedModule} 
-            onClose={() => setSelectedModule(null)} 
+        {(selectedModule || isAddingNewModule) && (
+          <ModuleViewModal
+            module={selectedModule || { moduleTitle: '', lessons: [] }} 
+            onClose={() => {
+              setSelectedModule(null);
+              setIsAddingNewModule(false);
+            }}
+            onSaveLesson={handleSaveLesson}
+            onSaveModule={handleSaveModule}
+            isAddingNewModule={isAddingNewModule} 
+          />
+        )}
+        {isEditCourseModalOpen && (
+          <EditCourseModal
+            course={courseDetails}
+            onClose={() => setIsEditCourseModalOpen(false)}
+            onSave={handleSaveCourse}
           />
         )}
       </div>
