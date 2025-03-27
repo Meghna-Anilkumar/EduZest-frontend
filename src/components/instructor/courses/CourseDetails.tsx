@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '../../../redux/store';
-import { getCourseByIdAction, editCourseAction } from '../../../redux/actions/courseActions';
+import { getCourseByIdAction, editCourseAction} from '../../../redux/actions/courseActions';
 import Sidebar from '../InstructorSidebar';
 import InstructorNavbar from '../InstructorNavbar';
-import ModuleViewModal from './CourseModal';
+import ModuleViewModal from './ModuleModal';
 import EditCourseModal from './EditCourseModal';
 import { ICourse } from '../../../interface/ICourse';
-import { Loader } from '../../Loader'; // Ensure the Loader component is imported
 
 interface Lesson {
   lessonNumber: string;
@@ -213,10 +212,7 @@ const CourseDetailsPage: React.FC = () => {
   );
 
   return (
-    <div className="relative flex h-screen bg-gray-100">
-      {/* Loader for upload/save operations */}
-      {isUploading && <Loader />}
-      
+    <div className="flex h-screen bg-gray-100">
       <Sidebar
         open={sidebarOpen}
         currentPage="courses"

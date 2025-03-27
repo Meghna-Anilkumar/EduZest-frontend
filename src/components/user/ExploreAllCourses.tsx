@@ -72,7 +72,6 @@ const CourseListing: React.FC = () => {
         <Header className="fixed top-0 left-0 right-0 z-50" />
       </Suspense>
 
-      {/* Main Content with Adjusted Padding */}
       <div className="bg-gray-100 flex-grow pt-[80px] md:pt-[100px] p-4 md:p-8">
         <div className="container mx-auto">
           <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Courses to get you started</h1>

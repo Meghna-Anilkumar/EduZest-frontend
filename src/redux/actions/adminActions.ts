@@ -76,9 +76,9 @@ export const approveInstructorAction = createAsyncThunk(
 // Reject Instructor Thunk
 export const rejectInstructorAction = createAsyncThunk(
     "admin/rejectInstructor",
-    async ({ userId }: { userId: string }, { rejectWithValue }) => {
+    async ({ userId, message }: { userId: string; message: string }, { rejectWithValue }) => {
         try {
-            const response = await serverAdmin.patch(adminEndpoints.rejectInstructor(userId));
+            const response = await serverAdmin.patch(adminEndpoints.rejectInstructor(userId), { message });
             return response.data;
         } catch (error: any) {
             console.error("Reject instructor action Error: ", error);

@@ -57,13 +57,12 @@ const CourseDetailsPage = () => {
       });
     }
 
-    // Cleanup: Clear error on unmount
     return () => {
       dispatch(clearError());
     };
   }, [dispatch, id]);
 
-  // Handle loading and error states
+
   if (loading) return <div className="text-center py-10">Loading...</div>;
   if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
   if (!course) return <div className="text-center py-10 text-gray-500">Course not found.</div>;
@@ -105,9 +104,9 @@ const CourseDetailsPage = () => {
   // Toggle all sections
   const toggleAllSections = () => {
     if (expandAll) {
-      setActiveSections([]); // Collapse all
+      setActiveSections([]); 
     } else {
-      setActiveSections(course.modules.map((_, index) => index)); // Expand all
+      setActiveSections(course.modules.map((_, index) => index));
     }
     setExpandAll(!expandAll);
   };

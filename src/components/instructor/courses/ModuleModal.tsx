@@ -111,10 +111,21 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
 
   const handleRemoveLesson = (lessonNumber: string) => {
     if (onSaveModule) {
+      // Filter out the lesson to be removed
+      const filteredLessons = module.lessons.filter((lesson) => lesson.lessonNumber !== lessonNumber);
+
+      // Renumber the remaining lessons sequentially starting from 1
+      const updatedLessons = filteredLessons.map((lesson, index) => ({
+        ...lesson,
+        lessonNumber: (index + 1).toString(),
+      }));
+
+      // Create the updated module with renumbered lessons
       const updatedModule = {
         ...module,
-        lessons: module.lessons.filter((lesson) => lesson.lessonNumber !== lessonNumber),
+        lessons: updatedLessons,
       };
+
       onSaveModule(updatedModule);
       setSelectedLesson(null);
     }

@@ -33,6 +33,7 @@ const Requests: React.FC = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [rejectionMessage, setRejectionMessage] = useState<string>(""); // New state for rejection message
 
   const fetchRequestedUsers = useCallback(
     async (page: number) => {
@@ -81,6 +82,7 @@ const Requests: React.FC = () => {
 
   const handleRejectClick = useCallback((user: any) => {
     setSelectedUser(user);
+    setRejectionMessage(""); // Reset message when opening modal
     setIsRejectModalOpen(true);
   }, []);
 
@@ -115,12 +117,15 @@ const Requests: React.FC = () => {
 
   const handleConfirmReject = useCallback(
     async () => {
-      if (!selectedUser) return;
+      if (!selectedUser || !rejectionMessage.trim()) return;
       setActionLoading(true);
       setIsRejectModalOpen(false);
       try {
         await dispatch(
-          rejectInstructorAction({ userId: selectedUser._id })
+          rejectInstructorAction({
+            userId: selectedUser._id,
+            message: rejectionMessage, // Pass the rejection message
+          })
         ).unwrap();
         // Refetch data after successful rejection
         await fetchRequestedUsers(currentPage);
@@ -134,7 +139,7 @@ const Requests: React.FC = () => {
         setActionLoading(false);
       }
     },
-    [dispatch, selectedUser, currentPage, fetchRequestedUsers]
+    [dispatch, selectedUser, currentPage, fetchRequestedUsers, rejectionMessage]
   );
 
   const closeAllModals = useCallback(() => {
@@ -143,9 +148,9 @@ const Requests: React.FC = () => {
     setIsSuccessModalOpen(false);
     setIsDetailsModalOpen(false);
     setSelectedUser(null);
+    setRejectionMessage(""); // Reset rejection message
   }, []);
 
-  // The rest of the JSX remains unchanged
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <button
@@ -316,16 +321,29 @@ const Requests: React.FC = () => {
         </div>
       )}
 
-      {/* Reject Confirmation Modal */}
+      {/* Reject Confirmation Modal with Message Input */}
       {isRejectModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
             <h3 className="text-xl font-semibold text-gray-800 mb-4">
               Confirm Rejection
             </h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               Are you sure you want to reject {selectedUser?.name}'s instructor request?
             </p>
+            <div className="mb-4">
+              <label htmlFor="rejectionMessage" className="block text-sm font-medium text-gray-700 mb-1">
+                Rejection Reason (required)
+              </label>
+              <textarea
+                id="rejectionMessage"
+                value={rejectionMessage}
+                onChange={(e) => setRejectionMessage(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                rows={4}
+                placeholder="Enter the reason for rejection..."
+              />
+            </div>
             <div className="mt-6 flex justify-end gap-4">
               <button
                 className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
@@ -336,7 +354,7 @@ const Requests: React.FC = () => {
               <button
                 className="px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleConfirmReject}
-                disabled={actionLoading}
+                disabled={actionLoading || !rejectionMessage.trim()}
               >
                 {actionLoading ? "Rejecting..." : "Confirm"}
               </button>
@@ -458,7 +476,9 @@ const Requests: React.FC = () => {
                       >
                         {selectedUser.socialMedia.linkedin}
                       </a>
-                    ) : "Not provided"}
+                    ) : (
+                      "Not provided"
+                    )}
                   </p>
                 </div>
                 <div>
@@ -473,7 +493,9 @@ const Requests: React.FC = () => {
                       >
                         {selectedUser.socialMedia.github}
                       </a>
-                    ) : "Not provided"}
+                    ) : (
+                      "Not provided"
+                    )}
                   </p>
                 </div>
                 <div>
@@ -488,7 +510,9 @@ const Requests: React.FC = () => {
                       >
                         Download CV
                       </a>
-                    ) : "Not uploaded"}
+                    ) : (
+                      "Not uploaded"
+                    )}
                   </p>
                 </div>
               </div>
