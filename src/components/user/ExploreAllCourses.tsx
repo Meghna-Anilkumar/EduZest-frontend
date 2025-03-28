@@ -58,7 +58,7 @@ const CourseListing: React.FC = () => {
     instructor: course.instructorRef?.name || "Unknown Instructor",
     rating: 4.5,
     reviewCount: 1000,
-    originalPrice: course.pricing?.amount || 799,
+    originalPrice: course.pricing?.amount || 0,
     tags: [
       ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
       ...(course.studentsEnrolled > 1000 ? ["Bestseller"] : []),

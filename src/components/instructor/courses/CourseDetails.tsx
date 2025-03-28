@@ -36,7 +36,6 @@ const CourseDetailsPage: React.FC = () => {
   const { data: courses, loading, error } = useSelector((state: RootState) => state.course);
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
 
-  // Find the course in the Redux store
   const courseDetails = courses.find((course: ICourse) => course._id === courseId) as ICourse | undefined;
 
   useEffect(() => {
@@ -48,13 +47,11 @@ const CourseDetailsPage: React.FC = () => {
     const fetchCourseData = async () => {
       if (!courseId) return;
 
-      // If the course is not in the Redux store, fetch it
       if (!courseDetails) {
         try {
-          // Fetch the course by ID
+       
           const response = await dispatch(getCourseByIdAction(courseId)).unwrap();
           if (response) {
-            // Manually add the fetched course to the data array since the reducer doesn't handle getCourseByIdAction
             dispatch({ type: 'course/storeCourseData', payload: response });
           }
         } catch (err) {
@@ -156,10 +153,8 @@ const CourseDetailsPage: React.FC = () => {
     setIsUploading(true);
     try {
       const formData = new FormData();
-      // Ensure all fields are included in the courseData
       const courseData = {
         ...updatedCourse,
-        // Ensure modules are included if they exist
         modules: updatedCourse.modules || courseDetails?.modules || [],
       };
       formData.append('courseData', JSON.stringify(courseData));
@@ -352,7 +347,7 @@ const CourseDetailsPage: React.FC = () => {
                   >
                     Edit Course
                   </button>
-                  <button
+                  {/* <button
                     className={`w-full border ${
                       courseDetails.isPublished
                         ? 'border-red-500 text-red-500 hover:bg-red-500'
@@ -361,7 +356,7 @@ const CourseDetailsPage: React.FC = () => {
                     disabled={isUploading}
                   >
                     {courseDetails.isPublished ? 'Unpublish Course' : 'Publish Course'}
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </div>

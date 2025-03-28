@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
-import { Book, Clock, Star, PlayCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Book, Clock, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { AppDispatch, RootState } from "../../redux/store";
 import { getCourseByIdAction } from "../../redux/actions/courseActions";
 import { clearError } from "../../redux/reducers/courseReducer";
@@ -191,11 +191,11 @@ const CourseDetailsPage = () => {
                   className="w-full rounded-lg shadow-lg"
                 />
                 <button className="absolute inset-0 flex items-center justify-center">
-                  <PlayCircle className="w-16 h-16 text-white opacity-80 hover:opacity-100" />
+                  {/* <PlayCircle className="w-16 h-16 text-white opacity-80 hover:opacity-100" /> */}
                 </button>
-                <span className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
+                {/* <span className="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
                   Preview this course
-                </span>
+                </span> */}
               </div>
             </div>
           </div>

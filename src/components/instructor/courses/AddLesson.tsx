@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Formik, Form, Field, FieldArray, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux'; // Add useSelector
+import { useDispatch, useSelector } from 'react-redux';
 import { createCourseAction } from '../../../redux/actions/courseActions';
-import { fetchUserData } from '../../../redux/actions/auth/fetchUserdataAction'; // Import fetchUserData
+import { fetchUserData } from '../../../redux/actions/auth/fetchUserdataAction';
 import Sidebar from '../InstructorSidebar';
-import { AppDispatch, RootState } from '../../../redux/store'; // Import RootState
+import { AppDispatch, RootState } from '../../../redux/store';
 import { useCourseForm } from "../../context/CourseFormContext";
 import { toast } from 'react-toastify';
-import InstructorNavbar from '../InstructorNavbar'; // Import InstructorNavbar
+import InstructorNavbar from '../InstructorNavbar';
 
 const AddIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -52,7 +52,13 @@ const LessonSchema = Yup.object().shape({
                 .of(Yup.string())
                 .min(1, 'At least one objective is required')
                 .required('Objectives are required'),
-              video: Yup.mixed().required('Video file is required'),
+              video: Yup.mixed()
+                .required('Video file is required')
+                .test('fileType', 'Only video files are allowed (e.g., MP4, WebM, Ogg)', (value) => {
+                  if (!value) return false;
+                  const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg'];
+                  return value instanceof File && validVideoTypes.includes(value.type);
+                }),
               duration: Yup.string().required('Duration is required'),
             })
           )
@@ -114,10 +120,21 @@ const VideoFileInput: React.FC<VideoFileInputProps> = ({
     initialValue.file ? URL.createObjectURL(initialValue.file) : null
   );
   const [duration, setDuration] = useState<number>(initialValue.duration);
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const validVideoTypes = ['video/mp4', 'video/webm', 'video/ogg'];
+      if (!validVideoTypes.includes(file.type)) {
+        setError('Only video files are allowed (e.g., MP4, WebM, Ogg)');
+        setPreview(null);
+        setDuration(0);
+        onChange(null);
+        return;
+      }
+
+      setError(null);
       const fileUrl = URL.createObjectURL(file);
       const video = document.createElement('video');
       video.src = fileUrl;
@@ -153,6 +170,7 @@ const VideoFileInput: React.FC<VideoFileInputProps> = ({
                 onClick={() => {
                   setPreview(null);
                   setDuration(0);
+                  setError(null);
                   onChange(null);
                 }}
                 className="text-red-500 hover:text-red-700"
@@ -169,7 +187,12 @@ const VideoFileInput: React.FC<VideoFileInputProps> = ({
             <div className="flex text-sm justify-center">
               <label className="relative cursor-pointer bg-white rounded-md font-medium text-teal-500 hover:text-teal-600">
                 <span>Upload a video</span>
-                <input type="file" className="sr-only" accept="video/*" onChange={handleFileChange} />
+                <input
+                  type="file"
+                  className="sr-only"
+                  accept="video/mp4,video/webm,video/ogg" // Restrict to video types
+                  onChange={handleFileChange}
+                />
               </label>
               <p className="pl-1 text-gray-600">or drag and drop</p>
             </div>
@@ -177,6 +200,7 @@ const VideoFileInput: React.FC<VideoFileInputProps> = ({
           </div>
         )}
       </div>
+      {error && <div className="text-red-600 text-xs">{error}</div>}
     </div>
   );
 };
@@ -206,9 +230,9 @@ const AddLessonsPage: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { resetFormData } = useCourseForm();
-  const { isAuthenticated } = useSelector((state: RootState) => state.user); // Add useSelector for user state
-  const [loading, setLoading] = useState(false); // Add loading state
-  const [error, setError] = useState<string | null>(null); // Add error state
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const courseDataFromState = location.state?.courseData;
   const [courseData, setCourseData] = useState<any>(null);
@@ -217,7 +241,6 @@ const AddLessonsPage: React.FC = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
-    // Fetch user data
     const fetchData = async () => {
       if (!isAuthenticated) {
         return;
@@ -234,7 +257,6 @@ const AddLessonsPage: React.FC = () => {
     };
     fetchData();
 
-    // Load course data
     if (courseDataFromState) {
       const { thumbnail, thumbnailPreview: previewFromState, ...dataToPersist } = courseDataFromState;
       localStorage.setItem("addLessonsCourseData", JSON.stringify({
@@ -288,7 +310,6 @@ const AddLessonsPage: React.FC = () => {
     modules: initialModules,
   };
 
-
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar
@@ -322,15 +343,13 @@ const AddLessonsPage: React.FC = () => {
                 >
                   Back to Courses
                 </button>
-                <InstructorNavbar loading={loading} error={error} /> {/* Add InstructorNavbar */}
+                <InstructorNavbar loading={loading} error={error} />
               </div>
             </div>
           </div>
         </header>
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-       
-
           <Formik
             initialValues={initialValues}
             validationSchema={LessonSchema}
