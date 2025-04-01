@@ -1,14 +1,13 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { Book, Clock, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { AppDispatch, RootState } from "../../redux/store";
-import { getCourseByIdAction } from "../../redux/actions/courseActions";
+import { getCourseByIdAction, enrollCourseAction } from "../../redux/actions/courseActions"; 
 import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
-
 
 const Header = lazy(() => import("../common/users/Header"));
 
@@ -49,11 +48,14 @@ interface Course {
 const CourseDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.course);
   const [course, setCourse] = useState<Course | null>(null);
   const [activeSections, setActiveSections] = useState<number[]>([]);
   const [expandAll, setExpandAll] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -70,42 +72,27 @@ const CourseDetailsPage = () => {
   }, [dispatch, id]);
 
   if (loading) return <div className="text-center py-10">Loading...</div>;
-  if (error)
-    return <div className="text-center py-10 text-red-500">{error}</div>;
-  if (!course)
-    return (
-      <div className="text-center py-10 text-gray-500">Course not found.</div>
-    );
+  if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
+  if (!course) return <div className="text-center py-10 text-gray-500">Course not found.</div>;
 
-
-  const totalLessons = course.modules.reduce(
-    (acc, module) => acc + module.lessons.length,
-    0
-  );
+  const totalLessons = course.modules.reduce((acc, module) => acc + module.lessons.length, 0);
   const totalDuration = course.modules.reduce((acc, module) => {
     const moduleDuration = module.lessons.reduce((lessonAcc, lesson) => {
       if (!lesson.duration) return lessonAcc;
-      const [hours, minutes] = lesson.duration
-        .match(/(\d+)hr(\d+)min/)
-        ?.slice(1) || ["0", "0"];
+      const [hours, minutes] = lesson.duration.match(/(\d+)hr(\d+)min/)?.slice(1) || ["0", "0"];
       const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
       return lessonAcc + lessonMinutes;
     }, 0);
     return acc + moduleDuration;
   }, 0);
-  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${
-    totalDuration % 60
-  }m`;
-
+  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m`;
 
   const totalModules = course.modules.length;
 
   const formatModuleDuration = (lessons: Course["modules"][0]["lessons"]) => {
     const moduleDuration = lessons.reduce((acc, lesson) => {
       if (!lesson.duration) return acc;
-      const [hours, minutes] = lesson.duration
-        .match(/(\d+)hr(\d+)min/)
-        ?.slice(1) || ["0", "0"];
+      const [hours, minutes] = lesson.duration.match(/(\d+)hr(\d+)min/)?.slice(1) || ["0", "0"];
       const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
       return acc + lessonMinutes;
     }, 0);
@@ -118,7 +105,6 @@ const CourseDetailsPage = () => {
     );
   };
 
-
   const toggleAllSections = () => {
     if (expandAll) {
       setActiveSections([]);
@@ -128,21 +114,69 @@ const CourseDetailsPage = () => {
     setExpandAll(!expandAll);
   };
 
+  // Handle "Enroll Now" button click
+  const handleEnrollClick = () => {
+    setShowModal(true);
+  };
+
+  // Handle modal confirmation
+  const confirmEnrollment = async () => {
+    setShowModal(false);
+    setEnrollmentError(null);
+
+    if (course.pricing.type === "free") {
+      // Dispatch the enrollCourseAction for free courses
+      try {
+        const result = await dispatch(enrollCourseAction(course._id)).unwrap();
+        if (result.success) {
+          navigate("/student/enrollment-success");
+        } else {
+          setEnrollmentError(result.message || "Failed to enroll in the free course");
+        }
+      } catch (err) {
+        setEnrollmentError(
+          err instanceof Error ? err.message : "An error occurred during enrollment"
+        );
+        console.error("Enrollment error:", err);
+      }
+    } else {
+      // Show payment form for paid courses
+      setShowPaymentForm(true);
+    }
+  };
+
   // Handle payment success
   const handlePaymentSuccess = () => {
-    setPaymentSuccess(true);
-    // Optionally refresh course data to reflect updated enrollment
-    if (id) {
-      dispatch(getCourseByIdAction(id)).then((action) => {
-        if (getCourseByIdAction.fulfilled.match(action)) {
-          setCourse(action.payload);
-        }
-      });
-    }
+    setShowPaymentForm(false);
+    navigate("/student/enrollment-success");
   };
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Confirmation Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-semibold mb-4">Confirm Enrollment</h2>
+            <p className="mb-6">Are you sure you want to enroll in this course?</p>
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmEnrollment}
+                className="px-4 py-2 bg-[#49BBBD] text-white rounded hover:bg-[#3a9a9c]"
+              >
+                Yes, Enroll
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fixed Header */}
       <Suspense fallback={<div>Loading...</div>}>
         <Header className="fixed top-0 left-0 right-0 z-50" />
@@ -162,9 +196,7 @@ const CourseDetailsPage = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {course.title}
-              </h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
               <p className="text-lg text-gray-300 mb-4">{course.description}</p>
 
               <div className="flex items-center mb-4">
@@ -173,9 +205,7 @@ const CourseDetailsPage = () => {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`w-5 h-5 ${
-                        i < 4.7 ? "fill-yellow-400" : "fill-none"
-                      }`}
+                      className={`w-5 h-5 ${i < 4.7 ? "fill-yellow-400" : "fill-none"}`}
                     />
                   ))}
                 </div>
@@ -195,9 +225,7 @@ const CourseDetailsPage = () => {
               </p>
               <div className="flex items-center text-gray-400 mb-4">
                 <Clock className="w-4 h-4 mr-2" />
-                <span>
-                  Last updated {new Date(course.updatedAt).toLocaleDateString()}
-                </span>
+                <span>Last updated {new Date(course.updatedAt).toLocaleDateString()}</span>
                 <span className="ml-4 flex items-center">
                   <svg
                     className="w-4 h-4 mr-2"
@@ -241,10 +269,7 @@ const CourseDetailsPage = () => {
                 {course.modules.flatMap((module) =>
                   module.lessons.flatMap((lesson) =>
                     (lesson.objectives || []).map((obj, index) => (
-                      <li
-                        key={`${lesson.lessonNumber}-${index}`}
-                        className="flex items-start"
-                      >
+                      <li key={`${lesson.lessonNumber}-${index}`} className="flex items-start">
                         <Book className="w-5 h-5 mr-2 mt-1 text-[#49BBBD]" />
                         <span>{obj}</span>
                       </li>
@@ -265,8 +290,7 @@ const CourseDetailsPage = () => {
                 </button>
               </div>
               <div className="text-gray-600 text-sm mb-4">
-                {totalModules} sections • {totalLessons} lectures •{" "}
-                {formattedDuration} total length
+                {totalModules} sections • {totalLessons} lectures • {formattedDuration} total length
               </div>
               <div className="border rounded-lg">
                 {course.modules.map((module, index) => (
@@ -281,13 +305,10 @@ const CourseDetailsPage = () => {
                         ) : (
                           <ChevronDown className="w-5 h-5 mr-2 text-gray-600" />
                         )}
-                        <span className="font-medium text-gray-800">
-                          {module.moduleTitle}
-                        </span>
+                        <span className="font-medium text-gray-800">{module.moduleTitle}</span>
                       </div>
                       <div className="text-gray-500 text-sm">
-                        {module.lessons.length} lectures •{" "}
-                        {formatModuleDuration(module.lessons)}
+                        {module.lessons.length} lectures • {formatModuleDuration(module.lessons)}
                       </div>
                     </button>
                     {activeSections.includes(index) && (
@@ -297,9 +318,7 @@ const CourseDetailsPage = () => {
                             key={lessonIndex}
                             className="flex justify-between items-center py-2 border-t first:border-t-0"
                           >
-                            <span className="text-gray-700">
-                              {lesson.title}
-                            </span>
+                            <span className="text-gray-700">{lesson.title}</span>
                             <span className="text-gray-500 text-sm">
                               {lesson.duration || "N/A"}
                             </span>
@@ -318,26 +337,23 @@ const CourseDetailsPage = () => {
             <div className="border rounded-lg p-4 shadow-lg bg-white -mt-32 lg:sticky lg:top-24">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-2xl font-bold text-[#49BBBD]">
-                  {course.pricing.type === "free"
-                    ? "Free"
-                    : `₹${course.pricing.amount}`}
+                  {course.pricing.type === "free" ? "Free" : `₹${course.pricing.amount}`}
                 </span>
               </div>
-              {paymentSuccess ? (
-                <div className="text-green-500 text-center py-2">
-                  Payment Successful! You are enrolled.
-                </div>
-              ) : course.pricing.type === "free" ? (
-                <button className="w-full bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c]">
+              {enrollmentError && (
+                <div className="text-red-500 text-sm mb-4">{enrollmentError}</div>
+              )}
+              {showPaymentForm ? (
+                <Elements stripe={stripePromise}>
+                  <CheckoutForm course={course} onSuccess={handlePaymentSuccess} />
+                </Elements>
+              ) : (
+                <button
+                  onClick={handleEnrollClick}
+                  className="w-full bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c]"
+                >
                   Enroll Now
                 </button>
-              ) : (
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm
-                    course={course}
-                    onSuccess={handlePaymentSuccess}
-                  />
-                </Elements>
               )}
             </div>
           </div>

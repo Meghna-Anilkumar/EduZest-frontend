@@ -144,3 +144,20 @@ export const confirmPaymentAction = createAsyncThunk(
     }
   }
 );
+
+export const enrollCourseAction = createAsyncThunk(
+  "enrollment/enrollCourse",
+  async (courseId: string, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.post(
+        userEndPoints.enrollCourse,
+        { courseId },
+        { withCredentials: true } // Include cookies for authentication
+      );
+      return response.data; // { success, message, data }
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);

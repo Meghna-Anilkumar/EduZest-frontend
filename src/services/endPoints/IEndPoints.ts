@@ -26,6 +26,7 @@ export interface UserEndpoints extends IEndPoints {
     editCourse: string;
     createPaymentIntent: string
     confirmPayment: string
+    enrollCourse: string
 }
 
 export interface AdminEndpoints extends IEndPoints {

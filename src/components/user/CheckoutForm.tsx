@@ -12,7 +12,6 @@ interface Course {
   _id: string;
   title: string;
   pricing: { type: "free" | "paid"; amount: number };
-  // Add other necessary fields as needed
 }
 
 interface CheckoutFormProps {
