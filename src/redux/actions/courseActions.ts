@@ -103,3 +103,44 @@ export const editCourseAction = createAsyncThunk<
     }
   }
 );
+
+export const createPaymentIntentAction = createAsyncThunk(
+  "payment/createPaymentIntent",
+  async (
+    {
+      courseId,
+      amount,
+      paymentType,
+    }: { courseId: string; amount: number; paymentType: "debit" | "credit" },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await serverUser.post(
+        userEndPoints.createPaymentIntent,
+        { courseId, amount, paymentType },
+        { withCredentials: true } // Include cookies for authentication
+      );
+      return response.data; // { success, message, data: { clientSecret, paymentId } }
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+export const confirmPaymentAction = createAsyncThunk(
+  "payment/confirmPayment",
+  async (paymentId: string, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.post(
+        userEndPoints.confirmPayment,
+        { paymentId },
+        { withCredentials: true } // Include cookies for authentication
+      );
+      return response.data; // { success, message, data }
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);

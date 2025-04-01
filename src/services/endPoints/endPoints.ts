@@ -23,6 +23,8 @@ export const userEndPoints: UserEndpoints = {
     getAllActiveCourses: '/active-courses',
     getCourseById: '/courses',
     editCourse: '/instructor/courses/:id',
+    createPaymentIntent: '/create-payment-intent',
+  confirmPayment: '/confirm-payment',
    
 }
 
