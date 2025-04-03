@@ -47,9 +47,9 @@ export const getAllActiveCoursesAction = createAsyncThunk(
     try {
       const response = await serverUser.get(userEndPoints.getAllActiveCourses, {
         params: { page, limit, search },
-        withCredentials: true, // Include cookies (e.g., userJWT token) for authentication
+        withCredentials: true,
       });
-      return response.data.data; // Return the courses data
+      return response.data.data; 
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });
@@ -104,60 +104,4 @@ export const editCourseAction = createAsyncThunk<
   }
 );
 
-export const createPaymentIntentAction = createAsyncThunk(
-  "payment/createPaymentIntent",
-  async (
-    {
-      courseId,
-      amount,
-      paymentType,
-    }: { courseId: string; amount: number; paymentType: "debit" | "credit" },
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await serverUser.post(
-        userEndPoints.createPaymentIntent,
-        { courseId, amount, paymentType },
-        { withCredentials: true } // Include cookies for authentication
-      );
-      return response.data; // { success, message, data: { clientSecret, paymentId } }
-    } catch (error) {
-      const err = error as AxiosError;
-      return rejectWithValue(err.response?.data || { message: err.message });
-    }
-  }
-);
 
-export const confirmPaymentAction = createAsyncThunk(
-  "payment/confirmPayment",
-  async (paymentId: string, { rejectWithValue }) => {
-    try {
-      const response = await serverUser.post(
-        userEndPoints.confirmPayment,
-        { paymentId },
-        { withCredentials: true } // Include cookies for authentication
-      );
-      return response.data; // { success, message, data }
-    } catch (error) {
-      const err = error as AxiosError;
-      return rejectWithValue(err.response?.data || { message: err.message });
-    }
-  }
-);
-
-export const enrollCourseAction = createAsyncThunk(
-  "enrollment/enrollCourse",
-  async (courseId: string, { rejectWithValue }) => {
-    try {
-      const response = await serverUser.post(
-        userEndPoints.enrollCourse,
-        { courseId },
-        { withCredentials: true } // Include cookies for authentication
-      );
-      return response.data; // { success, message, data }
-    } catch (error) {
-      const err = error as AxiosError;
-      return rejectWithValue(err.response?.data || { message: err.message });
-    }
-  }
-);

@@ -7,7 +7,7 @@ import { updateStudentProfileThunk } from "../../redux/actions/userActions";
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
 import * as Yup from "yup";
 const Header = lazy(() => import("../../components/common/users/Header"));
-
+import StudentSidebar from "../../components/student/StudentSidebar";
 
 const ProfileValidationSchema = Yup.object().shape({
   username: Yup.string()
@@ -148,6 +148,10 @@ const StudentProfilePage = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Suspense
@@ -186,38 +190,18 @@ const StudentProfilePage = () => {
             </button>
           </div>
 
+          {/* Mobile Sidebar */}
           <div className={`md:hidden ${mobileMenuOpen ? "block" : "hidden"} border-b`}>
-            <div className="p-4 space-y-1">
-              {["Profile", "Account", "Notifications"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => {
-                    setActiveTab(tab);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-4 py-2 rounded-lg font-medium ${
-                    activeTab === tab ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <StudentSidebar 
+              activeTab={activeTab} 
+              setActiveTab={setActiveTab} 
+              isMobile={true} 
+              closeMobileMenu={closeMobileMenu}
+            />
           </div>
 
-          <div className="hidden md:block w-64 border-r p-4 space-y-1">
-            {["Profile", "My Courses", "Assessments"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium ${
-                  activeTab === tab ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+          {/* Desktop Sidebar */}
+          <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
           <div className="flex-1 p-4 md:p-6">
             <div className="max-w-2xl mx-auto md:mx-0">

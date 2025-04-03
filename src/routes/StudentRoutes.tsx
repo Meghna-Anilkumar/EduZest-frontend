@@ -2,7 +2,8 @@ import React, { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Loader } from "../components/Loader";
 import ProtectedRoute from "./ProtectedRoute";
-import EnrollmentSuccessPage from "../components/user/Success";
+import EnrollmentSuccessPage from "../components/user/EnrollmentSuccess";
+import MyCourses from "../components/student/StudentEnrollments";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -17,6 +18,7 @@ const StudentRoutes: React.FC = () => {
           />
 
           <Route path="/payment-success" element={<EnrollmentSuccessPage />} />
+          <Route path='/my-enrollments' element={<MyCourses/>}/>
         </Route>
 
         {/* 404 Page */}

@@ -23,9 +23,11 @@ export const userEndPoints: UserEndpoints = {
   getAllActiveCourses: '/active-courses',
   getCourseById: '/courses',
   editCourse: '/instructor/courses/:id',
-  createPaymentIntent: '/create-payment-intent',
-  confirmPayment: '/confirm-payment',
-  enrollCourse: '/enroll-course',
+  createPaymentIntent: 'student/create-payment-intent',
+  confirmPayment: 'student/confirm-payment',
+  enrollCourse: 'student/enroll-course',
+  checkEnrollment: 'student/check-enrollment',
+  enrollments: '/student/enrollments',
 }
 
 export const adminEndpoints: AdminEndpoints = {

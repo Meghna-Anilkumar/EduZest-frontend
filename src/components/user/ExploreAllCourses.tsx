@@ -1,4 +1,3 @@
-// components/CourseListing.tsx
 import React, { lazy, Suspense, useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -6,7 +5,6 @@ import { Link } from "react-router-dom";
 import { clearError } from "../../redux/reducers/courseReducer";
 import { AppDispatch, RootState } from "../../redux/store";
 import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
-
 import { SearchBar } from "../common/SearchBar";
 import Pagination from "../common/Pagination";
 

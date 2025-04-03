@@ -5,7 +5,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { Book, Clock, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { AppDispatch, RootState } from "../../redux/store";
-import { getCourseByIdAction, enrollCourseAction } from "../../redux/actions/courseActions"; 
+import { getCourseByIdAction } from "../../redux/actions/courseActions";
+import {enrollCourseAction, checkEnrollmentAction} from "../../redux/actions/enrollmentActions"
 import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
 
@@ -50,26 +51,46 @@ const CourseDetailsPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.course);
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
   const [course, setCourse] = useState<Course | null>(null);
   const [activeSections, setActiveSections] = useState<number[]>([]);
   const [expandAll, setExpandAll] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
+  const [isEnrolled, setIsEnrolled] = useState<boolean>(false); // Track enrollment status
+  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true); // Track loading state for enrollment check
 
   useEffect(() => {
     if (id) {
+      // Fetch course details
       dispatch(getCourseByIdAction(id)).then((action) => {
         if (getCourseByIdAction.fulfilled.match(action)) {
           setCourse(action.payload);
         }
       });
+
+      // Check if the user is enrolled in the course
+      if (isAuthenticated) {
+        setIsCheckingEnrollment(true);
+        dispatch(checkEnrollmentAction(id)).then((action) => {
+          if (checkEnrollmentAction.fulfilled.match(action)) {
+            const { data } = action.payload;
+            setIsEnrolled(data.isEnrolled);
+          }
+          setIsCheckingEnrollment(false);
+        }).catch(() => {
+          setIsCheckingEnrollment(false);
+        });
+      } else {
+        setIsCheckingEnrollment(false);
+      }
     }
 
     return () => {
       dispatch(clearError());
     };
-  }, [dispatch, id]);
+  }, [dispatch, id, isAuthenticated]);
 
   if (loading) return <div className="text-center py-10">Loading...</div>;
   if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
@@ -116,7 +137,16 @@ const CourseDetailsPage = () => {
 
   // Handle "Enroll Now" button click
   const handleEnrollClick = () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
     setShowModal(true);
+  };
+
+  // Handle "Go to Course" button click
+  const handleGoToCourse = () => {
+    navigate(`/student/course/${course._id}`);
   };
 
   // Handle modal confirmation
@@ -129,7 +159,8 @@ const CourseDetailsPage = () => {
       try {
         const result = await dispatch(enrollCourseAction(course._id)).unwrap();
         if (result.success) {
-          navigate("/student/enrollment-success");
+          setIsEnrolled(true); // Update enrollment status
+          navigate("/student/enrollment-success", { replace: true });
         } else {
           setEnrollmentError(result.message || "Failed to enroll in the free course");
         }
@@ -148,6 +179,7 @@ const CourseDetailsPage = () => {
   // Handle payment success
   const handlePaymentSuccess = () => {
     setShowPaymentForm(false);
+    setIsEnrolled(true); // Update enrollment status after successful payment
     navigate("/student/enrollment-success");
   };
 
@@ -343,16 +375,33 @@ const CourseDetailsPage = () => {
               {enrollmentError && (
                 <div className="text-red-500 text-sm mb-4">{enrollmentError}</div>
               )}
+              {isEnrolled && (
+                <div className="text-green-500 text-sm mb-4">
+                  You are already enrolled in this course!
+                </div>
+              )}
               {showPaymentForm ? (
                 <Elements stripe={stripePromise}>
                   <CheckoutForm course={course} onSuccess={handlePaymentSuccess} />
                 </Elements>
+              ) : isEnrolled ? (
+                <button
+                  onClick={handleGoToCourse}
+                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+                >
+                  Go to Course
+                </button>
               ) : (
                 <button
                   onClick={handleEnrollClick}
-                  className="w-full bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c]"
+                  disabled={isCheckingEnrollment}
+                  className={`w-full py-2 rounded text-white ${
+                    isCheckingEnrollment
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-[#49BBBD] hover:bg-[#3a9a9c]"
+                  }`}
                 >
-                  Enroll Now
+                  {isCheckingEnrollment ? "Checking..." : "Enroll Now"}
                 </button>
               )}
             </div>

@@ -5,7 +5,7 @@ import { AppDispatch } from "../../redux/store";
 import {
   createPaymentIntentAction,
   confirmPaymentAction,
-} from "../../redux/actions/courseActions";
+} from "../../redux/actions/enrollmentActions";
 
 // Course interface
 interface Course {
