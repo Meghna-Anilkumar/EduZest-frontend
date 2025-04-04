@@ -5,6 +5,16 @@ import { AxiosError } from "axios";
 import { ICourse } from "../../interface/ICourse";
 
 
+interface FilterOptions {
+  level?: "beginner" | "intermediate" | "advanced";
+  pricingType?: "free" | "paid";
+}
+
+interface SortOptions {
+  field: "price" | "updatedAt" | "studentsEnrolled";
+  order: "asc" | "desc";
+}
+
 export const createCourseAction = createAsyncThunk(
   "instructor/createCourse",
   async (formData: FormData, { rejectWithValue }) => {
@@ -41,15 +51,34 @@ export const getAllCoursesByInstructorAction = createAsyncThunk(
 export const getAllActiveCoursesAction = createAsyncThunk(
   "courses/getAllActiveCourses",
   async (
-    { page, limit, search }: { page: number; limit: number; search?: string },
+    {
+      page,
+      limit,
+      search,
+      filters,
+      sort,
+    }: {
+      page: number;
+      limit: number;
+      search?: string;
+      filters?: FilterOptions;
+      sort?: SortOptions;
+    },
     { rejectWithValue }
   ) => {
     try {
       const response = await serverUser.get(userEndPoints.getAllActiveCourses, {
-        params: { page, limit, search },
+        params: {
+          page,
+          limit,
+          search,
+          ...filters,
+          sortField: sort?.field,
+          sortOrder: sort?.order,
+        },
         withCredentials: true,
       });
-      return response.data.data; 
+      return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });

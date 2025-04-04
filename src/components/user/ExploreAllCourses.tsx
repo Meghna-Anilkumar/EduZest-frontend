@@ -21,11 +21,23 @@ interface DisplayCourse {
   imageUrl: string;
 }
 
+interface FilterOptions {
+  level?: "beginner" | "intermediate" | "advanced";
+  pricingType?: "free" | "paid";
+}
+
+interface SortOptions {
+  field: "price" | "updatedAt" | "studentsEnrolled";
+  order: "asc" | "desc";
+}
+
 const CourseListing: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { activeCourses, loading, error } = useSelector((state: RootState) => state.course);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const [sort, setSort] = useState<SortOptions>({ field: "updatedAt", order: "desc" });
 
   useEffect(() => {
     dispatch(
@@ -33,16 +45,30 @@ const CourseListing: React.FC = () => {
         page: currentPage,
         limit: 10,
         search: searchTerm || undefined,
+        filters,
+        sort,
       })
     );
 
     return () => {
       dispatch(clearError());
     };
-  }, [dispatch, currentPage, searchTerm]);
+  }, [dispatch, currentPage, searchTerm, filters, sort]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value || undefined }));
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const [field, order] = e.target.value.split(":");
+    setSort({ field: field as any, order: order as "asc" | "desc" });
     setCurrentPage(1);
   };
 
@@ -54,8 +80,8 @@ const CourseListing: React.FC = () => {
     id: course._id,
     title: course.title,
     instructor: course.instructorRef?.name || "Unknown Instructor",
-    rating: 4.5,
-    reviewCount: 1000,
+    rating: 4.5, // Static for now; replace with actual rating if available
+    reviewCount: 1000, // Static for now
     originalPrice: course.pricing?.amount || 0,
     tags: [
       ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
@@ -75,20 +101,34 @@ const CourseListing: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Courses to get you started</h1>
           <p className="text-gray-600 mb-6 md:mb-8">Explore courses from experienced, real-world experts</p>
 
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col md:flex-row gap-4">
             <SearchBar onSearchChange={handleSearchChange} />
-          </div>
-
-          <div class="flex space-x-2 md:space-x-4 mb-6 md:mb-8 overflow-x-auto">
-            <button className="px-3 py-1 md:px-4 md:py-2 bg-black text-white rounded-full text-sm md:text-base whitespace-nowrap">
-              Most popular
-            </button>
-            <button className="px-3 py-1 md:px-4 md:py-2 text-gray-600 hover:bg-gray-200 rounded-full text-sm md:text-base whitespace-nowrap">
-              New
-            </button>
-            <button className="px-3 py-1 md:px-4 md:py-2 text-gray-600 hover:bg-gray-200 rounded-full text-sm md:text-base whitespace-nowrap">
-              Trending
-            </button>
+            <select
+              name="level"
+              onChange={handleFilterChange}
+              className="border p-2 rounded"
+            >
+              <option value="">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+            <select
+              name="pricingType"
+              onChange={handleFilterChange}
+              className="border p-2 rounded"
+            >
+              <option value="">All Pricing</option>
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
+            </select>
+            <select onChange={handleSortChange} className="border p-2 rounded">
+              <option value="updatedAt:desc">Newest First</option>
+              <option value="updatedAt:asc">Oldest First</option>
+              <option value="price:asc">Price: Low to High</option>
+              <option value="price:desc">Price: High to Low</option>
+              <option value="studentsEnrolled:desc">Most Popular</option>
+            </select>
           </div>
 
           {loading ? (
@@ -118,7 +158,6 @@ const CourseListing: React.FC = () => {
                       <p className="text-gray-600 text-xs md:text-sm mb-1 md:mb-2">
                         {course.instructor}
                       </p>
-
                       <div className="flex items-center mb-1 md:mb-2">
                         <span className="text-yellow-500 font-bold mr-1 md:mr-2 text-sm md:text-base">
                           {course.rating}
@@ -139,13 +178,11 @@ const CourseListing: React.FC = () => {
                           ({course.reviewCount.toLocaleString()})
                         </span>
                       </div>
-
                       <div className="mb-2 md:mb-4">
                         <span className="text-base md:text-xl font-bold">
                           ₹{course.originalPrice}
                         </span>
                       </div>
-
                       <div className="flex space-x-1 md:space-x-2">
                         {course.tags?.map((tag) => (
                           <span
@@ -169,7 +206,6 @@ const CourseListing: React.FC = () => {
                   </Link>
                 ))}
               </div>
-
               <div className="mt-8">
                 <Pagination
                   currentPage={activeCourses.currentPage}

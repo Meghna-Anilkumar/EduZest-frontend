@@ -27,7 +27,7 @@ interface CourseData {
 
 interface EnrollmentData {
   _id: string;
-  courseId: CourseData | null; // Allow courseId to be null
+  courseId: CourseData | null;
   enrolledAt: string;
   completionStatus: "enrolled" | "in-progress" | "completed";
 }
@@ -115,43 +115,45 @@ const MyCourses: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
 
-      {/* Mobile menu button */}
-      <button
-        className="md:hidden fixed top-20 left-4 z-40 bg-[#49BBBD] text-white p-2 rounded-md"
-        onClick={toggleMobileMenu}
-        aria-label="Toggle menu"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Mobile sidebar */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-30" onClick={closeMobileMenu}>
-          <div className="absolute top-0 left-0 h-full w-64 bg-white z-40" onClick={(e) => e.stopPropagation()}>
-            <StudentSidebar
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              isMobile={true}
-              closeMobileMenu={closeMobileMenu}
-            />
-          </div>
+      <div className="flex flex-1">
+        {/* Desktop sidebar - Fixed position */}
+        <div className="hidden md:block fixed top-16 left-0 h-full w-64 z-30 overflow-y-auto bg-white shadow-md">
+          <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
-      )}
 
-      <div className="flex flex-1 pt-16">
-        {/* Desktop sidebar */}
-        <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden fixed top-20 left-4 z-40 bg-[#49BBBD] text-white p-2 rounded-md"
+          onClick={toggleMobileMenu}
+          aria-label="Toggle menu"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
 
-        {/* Main content */}
-        <main className="flex-1 p-4 md:p-8 pt-8 md:ml-64">
+        {/* Mobile sidebar - Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={closeMobileMenu}>
+            <div className="absolute top-0 left-0 h-full w-64 bg-white z-50" onClick={(e) => e.stopPropagation()}>
+              <StudentSidebar
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                isMobile={true}
+                closeMobileMenu={closeMobileMenu}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Main content - Adjusted margin */}
+        <main className="flex-1 p-4 md:p-6 pt-6 md:ml-64 mt-16">
           <div className="max-w-6xl mx-auto">
             <h1 className="text-2xl md:text-3xl font-bold mb-6">My Courses</h1>
 
@@ -176,7 +178,7 @@ const MyCourses: React.FC = () => {
                   return (
                     <div
                       key={enrollment._id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col"
                     >
                       <div className="relative h-48 overflow-hidden">
                         <img
@@ -196,7 +198,7 @@ const MyCourses: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="p-4">
+                      <div className="p-4 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-2">
                           <h2 className="text-lg font-semibold text-gray-900 line-clamp-2">
                             {enrollment.courseId.title || "Untitled Course"}
@@ -234,12 +236,15 @@ const MyCourses: React.FC = () => {
                           <span>Enrolled on {formatEnrollmentDate(enrollment.enrolledAt)}</span>
                         </div>
 
-                        <Link
-                          to={`/learn/${enrollment.courseId._id}`}
-                          className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
-                        >
-                          Continue Learning
-                        </Link>
+                        {/* Using margin-top: auto to push button to bottom */}
+                        <div className="mt-auto">
+                          <Link
+                            to={`/learn/${enrollment.courseId._id}`}
+                            className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
+                          >
+                            Continue Learning
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   );

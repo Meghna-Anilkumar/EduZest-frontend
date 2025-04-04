@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 interface StudentSidebarProps {
   activeTab: string;
@@ -14,9 +15,15 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   closeMobileMenu
 }) => {
   const tabs = ["Profile", "My Courses", "Assessments"];
-  
+  const navigate = useNavigate();
+
   const handleTabClick = (tab: string) => {
     setActiveTab(tab);
+    
+    if (tab === "My Courses") {
+      navigate("/student/my-enrollments");
+    }
+
     if (isMobile && closeMobileMenu) {
       closeMobileMenu();
     }
