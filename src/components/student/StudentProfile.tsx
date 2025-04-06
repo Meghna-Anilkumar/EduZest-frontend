@@ -153,7 +153,7 @@ const StudentProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       <Suspense
         fallback={
           <div className="h-16 bg-white border-b shadow-sm flex items-center justify-center">
@@ -178,8 +178,9 @@ const StudentProfilePage = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-lg shadow flex flex-col md:flex-row">
+      <div className="max-w-6xl mx-auto px-0 py-6"> {/* Changed from px-2 to px-0 */}
+        <div className="bg-white rounded-lg shadow flex flex-col md:flex-row relative">
+          {/* Mobile Menu Toggle */}
           <div className="md:hidden p-4 border-b">
             <button
               onClick={toggleMobileMenu}
@@ -190,31 +191,44 @@ const StudentProfilePage = () => {
             </button>
           </div>
 
-          {/* Mobile Sidebar */}
-          <div className={`md:hidden ${mobileMenuOpen ? "block" : "hidden"} border-b`}>
-            <StudentSidebar 
-              activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
-              isMobile={true} 
-              closeMobileMenu={closeMobileMenu}
-            />
-          </div>
+          {/* Mobile Sidebar Overlay */}
+          {mobileMenuOpen && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+              onClick={closeMobileMenu}
+            >
+              <div
+                className="w-64 bg-white h-full absolute left-0 top-0 z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <StudentSidebar
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  isMobile={true}
+                  closeMobileMenu={closeMobileMenu}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Desktop Sidebar */}
-          <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          <div className="hidden md:block w-64 border-r">
+            <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
 
-          <div className="flex-1 p-4 md:p-6">
-            <div className="max-w-2xl mx-auto md:mx-0">
+          {/* Main Content - Adjusted positioning */}
+          <div className="flex-1 p-0 md:p-0 ml-0 pt-24 md:pt-6 relative z-10"> {/* Removed padding */}
+            <div className="max-w-none ml-0 px-2 md:px-4"> {/* Added px-2/px-4 for minimal padding */}
               {/* Error Message Display */}
               {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                <div className="mb-4 p-2 text-left text-red-700 bg-red-50 border border-red-200 rounded-lg">
                   {error}
                 </div>
               )}
 
               {/* Success Message Display */}
               {isSaved && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+                <div className="mb-4 p-2 text-left text-green-700 bg-green-50 border border-green-200 rounded-lg">
                   Profile updated successfully!
                 </div>
               )}
@@ -228,10 +242,10 @@ const StudentProfilePage = () => {
                 validateOnBlur
               >
                 {({ values, errors, touched, isSubmitting, setFieldValue }) => (
-                  <Form>
-                    <div className="mb-8">
-                      <h3 className="text-sm font-medium text-gray-700 mb-4">Profile Picture</h3>
-                      <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                  <Form className="w-full md:w-4/5 lg:w-3/4"> {/* Added width constraint */}
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium text-gray-700 mb-2 text-left">Profile Picture</h3>
+                      <div className="flex flex-col sm:flex-row items-start space-y-4 sm:space-y-0 sm:space-x-4">
                         <div className="relative">
                           <div className="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
                             {values.profilePic ? (
@@ -248,11 +262,11 @@ const StudentProfilePage = () => {
                             <Camera className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-4">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="text-blue-500 font-medium hover:text-blue-600 text-center sm:text-left"
+                            className="text-blue-500 font-medium hover:text-blue-600 text-left"
                           >
                             Change picture
                           </button>
@@ -267,61 +281,61 @@ const StudentProfilePage = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Username</label>
                         <Field
                           type="text"
                           name="username"
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                             errors.username && touched.username ? "border-red-500" : ""
                           }`}
                           placeholder="Enter username"
                         />
-                        <ErrorMessage name="username" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage name="username" component="div" className="mt-1 text-sm text-red-600 text-left" />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Primary Email</label>
                         <Field
                           type="email"
                           name="email"
                           readOnly
-                          className="w-full px-4 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
+                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 cursor-not-allowed"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Additional Email</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Additional Email</label>
                         <Field
                           type="email"
                           name="additionalEmail"
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                             errors.additionalEmail && touched.additionalEmail ? "border-red-500" : ""
                           }`}
                           placeholder="Enter additional email"
                         />
-                        <ErrorMessage name="additionalEmail" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage name="additionalEmail" component="div" className="mt-1 text-sm text-red-600 text-left" />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Date of Birth</label>
                         <Field
                           type="date"
                           name="dob"
-                          className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                             errors.dob && touched.dob ? "border-red-500" : ""
                           }`}
                         />
-                        <ErrorMessage name="dob" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage name="dob" component="div" className="mt-1 text-sm text-red-600 text-left" />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Gender</label>
                         <Field
                           as="select"
                           name="gender"
-                          className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select gender</option>
                           <option value="Male">Male</option>
@@ -335,14 +349,14 @@ const StudentProfilePage = () => {
                       <button
                         type="button"
                         onClick={handleChangePassword}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
+                        className="flex items-start justify-start gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg border hover:bg-gray-200 w-full sm:w-auto transition-colors duration-200"
                       >
                         <Lock className="w-4 h-4" />
                         <span>Change Password</span>
                       </button>
                     </div>
 
-                    <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center sm:justify-end">
+                    <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-start">
                       <button
                         type="submit"
                         disabled={isSubmitting || isSaved}

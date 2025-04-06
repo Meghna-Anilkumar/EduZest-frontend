@@ -18,9 +18,9 @@ export const createPaymentIntentAction = createAsyncThunk(
             const response = await serverUser.post(
                 userEndPoints.createPaymentIntent,
                 { courseId, amount, paymentType },
-                { withCredentials: true } // Include cookies for authentication
+                { withCredentials: true }
             );
-            return response.data; // { success, message, data: { clientSecret, paymentId } }
+            return response.data;
         } catch (error) {
             const err = error as AxiosError;
             return rejectWithValue(err.response?.data || { message: err.message });
@@ -35,9 +35,9 @@ export const confirmPaymentAction = createAsyncThunk(
             const response = await serverUser.post(
                 userEndPoints.confirmPayment,
                 { paymentId },
-                { withCredentials: true } // Include cookies for authentication
+                { withCredentials: true }
             );
-            return response.data; // { success, message, data }
+            return response.data;
         } catch (error) {
             const err = error as AxiosError;
             return rejectWithValue(err.response?.data || { message: err.message });
@@ -52,9 +52,9 @@ export const enrollCourseAction = createAsyncThunk(
             const response = await serverUser.post(
                 userEndPoints.enrollCourse,
                 { courseId },
-                { withCredentials: true } // Include cookies for authentication
+                { withCredentials: true }
             );
-            return response.data; // { success, message, data }
+            return response.data;
         } catch (error) {
             const err = error as AxiosError;
             return rejectWithValue(err.response?.data || { message: err.message });
@@ -68,9 +68,9 @@ export const checkEnrollmentAction = createAsyncThunk(
     async (courseId: string, { rejectWithValue }) => {
         try {
             const response = await serverUser.get(`${userEndPoints.checkEnrollment}/${courseId}`, {
-                withCredentials: true, // Include cookies for authentication
+                withCredentials: true,
             });
-            return response.data; // { success, message, data: { isEnrolled, enrollment? } }
+            return response.data;
         } catch (error) {
             const err = error as AxiosError;
             return rejectWithValue(err.response?.data || { message: err.message });
@@ -86,10 +86,43 @@ export const getAllEnrollmentsAction = createAsyncThunk(
             const response = await serverUser.get(userEndPoints.enrollments, {
                 withCredentials: true,
             });
-            return response.data; 
+            return response.data;
         } catch (error) {
             const err = error as AxiosError;
             return rejectWithValue(err.response?.data || { message: err.message });
         }
     }
 );
+
+export const getPaymentsByUserAction = createAsyncThunk(
+    "payment/getPaymentsByUser",
+    async (
+      {
+        userId,
+        page,
+        limit = 10,
+        search = "",
+        sortField = "createdAt",
+        sortOrder = "desc",
+      }: {
+        userId: string;
+        page: number;
+        limit?: number;
+        search?: string;
+        sortField?: string;
+        sortOrder?: "asc" | "desc";
+      },
+      { rejectWithValue }
+    ) => {
+      try {
+        const response = await serverUser.get(userEndPoints.getPaymentHistory, {
+          params: { userId, page, limit, search, sortField, sortOrder },
+          withCredentials: true,
+        });
+        return response.data;
+      } catch (error) {
+        const err = error as AxiosError;
+        return rejectWithValue(err.response?.data || { message: err.message });
+      }
+    }
+  );

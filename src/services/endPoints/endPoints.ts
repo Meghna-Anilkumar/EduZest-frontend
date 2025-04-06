@@ -28,6 +28,7 @@ export const userEndPoints: UserEndpoints = {
   enrollCourse: 'student/enroll-course',
   checkEnrollment: 'student/check-enrollment',
   enrollments: '/student/enrollments',
+  getPaymentHistory: "student/payment-history",
 }
 
 export const adminEndpoints: AdminEndpoints = {

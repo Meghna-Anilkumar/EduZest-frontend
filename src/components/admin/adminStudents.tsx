@@ -19,7 +19,7 @@ import {
   Button,
 } from "@mui/material";
 
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
+const Sidebar = lazy(() => import("../common/admin/AdminSidebar"));
 
 interface Student extends IUserdata {
   _id: string;

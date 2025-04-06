@@ -11,7 +11,11 @@ interface CourseData {
   _id: string;
   title: string;
   description: string;
-  instructorRef: { _id: string; name: string; profile?: { profilePic?: string } };
+  instructorRef: {
+    _id: string;
+    name: string;
+    profile?: { profilePic?: string };
+  };
   thumbnail: string;
   modules: Array<{
     moduleTitle: string;
@@ -71,7 +75,10 @@ const MyCourses: React.FC = () => {
   };
 
   const calculateTotalLessons = (course: CourseData) => {
-    return course.modules.reduce((acc, module) => acc + module.lessons.length, 0);
+    return course.modules.reduce(
+      (acc, module) => acc + module.lessons.length,
+      0
+    );
   };
 
   const formatEnrollmentDate = (dateString: string) => {
@@ -134,14 +141,25 @@ const MyCourses: React.FC = () => {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           </svg>
         </button>
 
         {/* Mobile sidebar - Overlay */}
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={closeMobileMenu}>
-            <div className="absolute top-0 left-0 h-full w-64 bg-white z-50" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={closeMobileMenu}
+          >
+            <div
+              className="absolute top-0 left-0 h-full w-64 bg-white z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
               <StudentSidebar
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
@@ -164,14 +182,19 @@ const MyCourses: React.FC = () => {
             ) : error ? (
               <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center mb-4">
                 <AlertCircle className="h-5 w-5 mr-2" />
-                <span>Failed to load your courses. Please try again later.</span>
+                <span>
+                  Failed to load your courses. Please try again later.
+                </span>
               </div>
             ) : enrollments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {enrollments.map((enrollment: EnrollmentData) => {
                   // Skip rendering if courseId or level is missing
                   if (!enrollment.courseId || !enrollment.courseId.level) {
-                    console.warn(`Skipping enrollment ${enrollment._id}: Missing courseId or level`, enrollment);
+                    console.warn(
+                      `Skipping enrollment ${enrollment._id}: Missing courseId or level`,
+                      enrollment
+                    );
                     return null;
                   }
 
@@ -182,7 +205,10 @@ const MyCourses: React.FC = () => {
                     >
                       <div className="relative h-48 overflow-hidden">
                         <img
-                          src={enrollment.courseId.thumbnail || "default-thumbnail.jpg"}
+                          src={
+                            enrollment.courseId.thumbnail ||
+                            "default-thumbnail.jpg"
+                          }
                           alt={enrollment.courseId.title || "Course"}
                           className="w-full h-full object-cover"
                         />
@@ -210,13 +236,17 @@ const MyCourses: React.FC = () => {
                           >
                             {enrollment.completionStatus
                               .split("-")
-                              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                              .map(
+                                (word) =>
+                                  word.charAt(0).toUpperCase() + word.slice(1)
+                              )
                               .join(" ")}
                           </span>
                         </div>
 
                         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                          {enrollment.courseId.description || "No description available"}
+                          {enrollment.courseId.description ||
+                            "No description available"}
                         </p>
 
                         <div className="flex items-center text-gray-500 text-xs mb-2">
@@ -228,18 +258,22 @@ const MyCourses: React.FC = () => {
                             lessons
                           </span>
                           <span className="mx-2">•</span>
-                          <span>{enrollment.courseId.language || "Unknown"}</span>
+                          <span>
+                            {enrollment.courseId.language || "Unknown"}
+                          </span>
                         </div>
 
                         <div className="flex items-center text-gray-500 text-xs mb-4">
                           <Clock className="h-4 w-4 mr-1" />
-                          <span>Enrolled on {formatEnrollmentDate(enrollment.enrolledAt)}</span>
+                          <span>
+                            Enrolled on{" "}
+                            {formatEnrollmentDate(enrollment.enrolledAt)}
+                          </span>
                         </div>
 
-                        {/* Using margin-top: auto to push button to bottom */}
                         <div className="mt-auto">
                           <Link
-                            to={`/learn/${enrollment.courseId._id}`}
+                            to={`/student/learn/${enrollment.courseId._id}`}
                             className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
                           >
                             Continue Learning
@@ -255,14 +289,23 @@ const MyCourses: React.FC = () => {
                 <div className="flex justify-center mb-4">
                   <Book className="h-16 w-16 text-gray-300" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-700 mb-2">No courses yet</h2>
-                <p className="text-gray-500 mb-6">You haven't enrolled in any courses yet.</p>
+                <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                  No courses yet
+                </h2>
+                <p className="text-gray-500 mb-6">
+                  You haven't enrolled in any courses yet.
+                </p>
                 <Link
                   to="/all-courses"
                   className="inline-flex items-center bg-[#49BBBD] text-white px-4 py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
                 >
                   Browse Courses
-                  <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="ml-2 h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

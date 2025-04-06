@@ -29,6 +29,7 @@ export interface UserEndpoints extends IEndPoints {
     enrollCourse: string
     checkEnrollment:string
     enrollments:string
+    getPaymentHistory:string
 }
 
 export interface AdminEndpoints extends IEndPoints {

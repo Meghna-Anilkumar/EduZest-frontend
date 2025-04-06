@@ -2,18 +2,8 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userEndPoints } from "../../services/endPoints/endPoints"; 
 import { serverUser } from "../../services"; 
 import { AxiosError } from "axios";
-import { ICourse } from "../../interface/ICourse";
+import { ICourse ,FilterOptions,SortOptions} from "../../interface/ICourse";
 
-
-interface FilterOptions {
-  level?: "beginner" | "intermediate" | "advanced";
-  pricingType?: "free" | "paid";
-}
-
-interface SortOptions {
-  field: "price" | "updatedAt" | "studentsEnrolled";
-  order: "asc" | "desc";
-}
 
 export const createCourseAction = createAsyncThunk(
   "instructor/createCourse",
