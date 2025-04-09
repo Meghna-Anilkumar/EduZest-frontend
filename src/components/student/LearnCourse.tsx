@@ -1,3 +1,4 @@
+// CourseDetails.tsx
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -7,6 +8,7 @@ import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import { ChevronDown, ChevronRight, PlayCircle } from "lucide-react";
 import { ICourse, ILesson, IModule } from "../../interface/ICourse";
+import RatingReview from "./ReviewComponent";
 
 interface Lesson extends ILesson {
   lessonNumber: string;
@@ -55,7 +57,6 @@ const CourseDetails: React.FC = () => {
       setError(null);
       try {
         const result = await dispatch(getCourseByIdAction(courseId)).unwrap();
-        // Add mock objectives if not provided by API
         const enrichedResult = {
           ...result,
           modules: result.modules.map((module) => ({
@@ -96,25 +97,6 @@ const CourseDetails: React.FC = () => {
   const handleLessonClick = (lesson: Lesson) => {
     setSelectedLesson(lesson);
   };
-
-  // const calculateTotalLessons = () => {
-  //   return course?.modules?.reduce((acc: number, module: Module) => acc + module.lessons.length, 0) || 0;
-  // };
-
-  // const calculateTotalDuration = () => {
-  //   let totalSeconds = 0;
-  //   course?.modules?.forEach((module: Module) => {
-  //     module.lessons.forEach((lesson: Lesson) => {
-  //       if (lesson.duration) {
-  //         const [hours, minutes, seconds] = lesson.duration.split(":").map(Number);
-  //         totalSeconds += hours * 3600 + minutes * 60 + (seconds || 0);
-  //       }
-  //     });
-  //   });
-  //   const hours = Math.floor(totalSeconds / 3600);
-  //   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  //   return `${hours}h ${minutes}m`;
-  // };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -158,7 +140,7 @@ const CourseDetails: React.FC = () => {
         )}
 
         {/* Main content */}
-        <main className="flex-1 p-4 md:p-6 pt-24 md:ml-64 mt-16"> {/* Changed pt-20 to pt-24 */}
+        <main className="flex-1 p-4 md:p-6 pt-24 md:ml-64 mt-16">
           <div className="max-w-6xl mx-auto">
             {loading ? (
               <div className="flex items-center justify-center h-64">
@@ -202,7 +184,6 @@ const CourseDetails: React.FC = () => {
                         </video>
                         <div className="p-4 text-white">
                           <h3 className="text-lg font-semibold">{selectedLesson.title}</h3>
-                          {/* Objectives */}
                           {selectedLesson.objectives && selectedLesson.objectives.length > 0 && (
                             <div className="mt-2">
                               <h4 className="font-medium">Objectives:</h4>
@@ -213,7 +194,6 @@ const CourseDetails: React.FC = () => {
                               </ul>
                             </div>
                           )}
-                          {/* Description */}
                           {selectedLesson.description && (
                             <p className="mt-2 text-sm">{selectedLesson.description}</p>
                           )}
@@ -230,10 +210,6 @@ const CourseDetails: React.FC = () => {
                   <div className="lg:w-1/3">
                     <div className="bg-white rounded-lg shadow-md p-4">
                       <h2 className="text-xl font-bold mb-4">Course Content</h2>
-                      {/* <p className="text-gray-600 mb-4">
-                        {course.modules.length} sections • {calculateTotalLessons()} lectures •{" "}
-                        {calculateTotalDuration()} total length
-                      </p> */}
                       <button className="text-blue-600 mb-4">Expand all sections</button>
 
                       {course.modules.map((module: Module, index: number) => (
@@ -256,7 +232,7 @@ const CourseDetails: React.FC = () => {
                                   key={lesson.lessonNumber}
                                   className={`flex items-center justify-between py-1 cursor-pointer ${
                                     selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                      ? "bg-blue-100 text-blue-800" // Highlight with blue background
+                                      ? "bg-blue-100 text-blue-800"
                                       : "hover:bg-gray-100"
                                   }`}
                                   onClick={() => handleLessonClick(lesson)}
@@ -276,6 +252,11 @@ const CourseDetails: React.FC = () => {
                       ))}
                     </div>
                   </div>
+                </div>
+
+                {/* Rating and Review Section */}
+                <div className="mt-6">
+                <RatingReview courseId={course._id} rating={4.5} reviewCount={120} /> 
                 </div>
               </>
             ) : (

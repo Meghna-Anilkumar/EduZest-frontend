@@ -6,7 +6,7 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Book, Clock, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { AppDispatch, RootState } from "../../redux/store";
 import { getCourseByIdAction } from "../../redux/actions/courseActions";
-import {enrollCourseAction, checkEnrollmentAction} from "../../redux/actions/enrollmentActions"
+import { enrollCourseAction, checkEnrollmentAction } from "../../redux/actions/enrollmentActions";
 import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
 
@@ -51,37 +51,37 @@ const CourseDetailsPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.course);
-  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
   const [course, setCourse] = useState<Course | null>(null);
   const [activeSections, setActiveSections] = useState<number[]>([]);
   const [expandAll, setExpandAll] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
-  const [isEnrolled, setIsEnrolled] = useState<boolean>(false); // Track enrollment status
-  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true); // Track loading state for enrollment check
+  const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
+  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true);
 
   useEffect(() => {
     if (id) {
-      // Fetch course details
       dispatch(getCourseByIdAction(id)).then((action) => {
         if (getCourseByIdAction.fulfilled.match(action)) {
           setCourse(action.payload);
         }
       });
 
-      // Check if the user is enrolled in the course
       if (isAuthenticated) {
         setIsCheckingEnrollment(true);
-        dispatch(checkEnrollmentAction(id)).then((action) => {
-          if (checkEnrollmentAction.fulfilled.match(action)) {
-            const { data } = action.payload;
-            setIsEnrolled(data.isEnrolled);
-          }
-          setIsCheckingEnrollment(false);
-        }).catch(() => {
-          setIsCheckingEnrollment(false);
-        });
+        dispatch(checkEnrollmentAction(id))
+          .then((action) => {
+            if (checkEnrollmentAction.fulfilled.match(action)) {
+              const { data } = action.payload;
+              setIsEnrolled(data.isEnrolled);
+            }
+            setIsCheckingEnrollment(false);
+          })
+          .catch(() => {
+            setIsCheckingEnrollment(false);
+          });
       } else {
         setIsCheckingEnrollment(false);
       }
@@ -135,7 +135,6 @@ const CourseDetailsPage = () => {
     setExpandAll(!expandAll);
   };
 
-  // Handle "Enroll Now" button click
   const handleEnrollClick = () => {
     if (!isAuthenticated) {
       navigate("/login");
@@ -144,22 +143,19 @@ const CourseDetailsPage = () => {
     setShowModal(true);
   };
 
-  // Handle "Go to Course" button click
   const handleGoToCourse = () => {
     navigate(`/student/course/${course._id}`);
   };
 
-  // Handle modal confirmation
   const confirmEnrollment = async () => {
     setShowModal(false);
     setEnrollmentError(null);
 
     if (course.pricing.type === "free") {
-      // Dispatch the enrollCourseAction for free courses
       try {
         const result = await dispatch(enrollCourseAction(course._id)).unwrap();
         if (result.success) {
-          setIsEnrolled(true); // Update enrollment status
+          setIsEnrolled(true);
           navigate("/student/enrollment-success", { replace: true });
         } else {
           setEnrollmentError(result.message || "Failed to enroll in the free course");
@@ -171,21 +167,21 @@ const CourseDetailsPage = () => {
         console.error("Enrollment error:", err);
       }
     } else {
-      // Show payment form for paid courses
       setShowPaymentForm(true);
     }
   };
 
-  // Handle payment success
   const handlePaymentSuccess = () => {
     setShowPaymentForm(false);
-    setIsEnrolled(true); // Update enrollment status after successful payment
+    setIsEnrolled(true);
     navigate("/student/enrollment-success");
   };
 
+  // Check if the user is an instructor
+  const isInstructor = userData?.role === "Instructor";
+
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Confirmation Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -209,17 +205,13 @@ const CourseDetailsPage = () => {
         </div>
       )}
 
-      {/* Fixed Header */}
       <Suspense fallback={<div>Loading...</div>}>
         <Header className="fixed top-0 left-0 right-0 z-50" />
       </Suspense>
 
-      {/* Main Content */}
       <div className="flex-grow">
-        {/* Top Section with Dark Background */}
         <div className="bg-gray-900 text-white pt-24 pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-8">
-            {/* Left Column - Course Details */}
             <div className="flex-1">
               <div className="mb-4">
                 {course.isPublished && course.studentsEnrolled > 0 && (
@@ -278,7 +270,6 @@ const CourseDetailsPage = () => {
               </div>
             </div>
 
-            {/* Right Column - Preview Image */}
             <div className="lg:w-96">
               <div className="relative">
                 <img
@@ -291,9 +282,7 @@ const CourseDetailsPage = () => {
           </div>
         </div>
 
-        {/* Main Content Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
-          {/* Left Column - Lesson Objectives and Course Content */}
           <div className="flex-1">
             <div className="mb-8">
               <h2 className="text-2xl font-semibold mb-4">Lesson Objectives</h2>
@@ -364,7 +353,6 @@ const CourseDetailsPage = () => {
             </div>
           </div>
 
-          {/* Right Column - Purchase Card */}
           <div className="lg:w-96">
             <div className="border rounded-lg p-4 shadow-lg bg-white -mt-32 lg:sticky lg:top-24">
               <div className="flex items-center justify-between mb-4">
@@ -391,7 +379,7 @@ const CourseDetailsPage = () => {
                 >
                   Go to Course
                 </button>
-              ) : (
+              ) : !isInstructor ? (
                 <button
                   onClick={handleEnrollClick}
                   disabled={isCheckingEnrollment}
@@ -403,7 +391,7 @@ const CourseDetailsPage = () => {
                 >
                   {isCheckingEnrollment ? "Checking..." : "Enroll Now"}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

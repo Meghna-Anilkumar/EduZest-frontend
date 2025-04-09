@@ -63,9 +63,19 @@ const CourseDetailsPage: React.FC = () => {
     fetchCourseData();
   }, [dispatch, courseId, isAuthenticated, navigate, courseDetails]);
 
+  const normalizeVideoUrls = (modules: Module[]) => {
+    return modules.map(module => ({
+      ...module,
+      lessons: module.lessons.map(lesson => ({
+        ...lesson,
+        video: lesson.video ? decodeURIComponent(lesson.video) : lesson.video,
+      })),
+    }));
+  };
+  
   const handleSaveLesson = async (updatedLesson: Lesson, videoFile?: File) => {
     if (!courseDetails || !selectedModule) return;
-
+  
     setIsUploading(true);
     try {
       const updatedModules = courseDetails.modules.map((module) =>
@@ -78,13 +88,14 @@ const CourseDetailsPage: React.FC = () => {
             }
           : module
       );
-
+  
+      const normalizedModules = normalizeVideoUrls(updatedModules);
       const formData = new FormData();
-      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: updatedModules }));
+      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: normalizedModules }));
       if (videoFile) {
         formData.append('videos', videoFile);
       }
-
+  
       await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
       setSelectedModule(null);
     } catch (error) {

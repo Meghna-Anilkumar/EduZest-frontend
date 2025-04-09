@@ -6,14 +6,14 @@ import TableComponent from "../../components/common/TableComponent";
 import Header from "../../components/common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import { getPaymentsByUserAction } from "../../redux/actions/enrollmentActions";
-import { getAllActiveCoursesAction } from "../../redux/actions/courseActions"; // Import course action
+import { getAllActiveCoursesAction } from "../../redux/actions/courseActions"; 
 import Pagination from "../common/Pagination";
 import { SearchBar } from "../common/SearchBar";
-import { RootState } from "../../redux/store"; // Import RootState for typing
+import { RootState } from "../../redux/store"; 
 
 const PaymentsHistory: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const courses = useSelector((state: RootState) => state.course.activeCourses.courses); // Access courses from Redux
+  const courses = useSelector((state: RootState) => state.course.activeCourses.courses); 
   const [payments, setPayments] = useState<{ data: any[]; total: number; page: number; limit: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,12 +21,10 @@ const PaymentsHistory: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const limit = 5; // Adjust as needed
-  const sortField = "createdAt"; // Default sort field
-  const sortOrder = "desc"; // Default sort order
-  const userId = "some-user-id"; // Replace with authenticated user ID from context or token
-
-  // Log component mount
+  const limit = 5;
+  const sortField = "createdAt";
+  const sortOrder = "desc"; 
+  const userId = "some-user-id";
   console.log("Component mounted");
 
   // Fetch courses on mount
@@ -52,7 +50,7 @@ const PaymentsHistory: React.FC = () => {
           })
         ).unwrap();
         setPayments(result.data);
-        console.log("Payments data received:", result.data); // Log payment data
+        console.log("Payments data received:", result.data); 
       } catch (err: any) {
         setError(err.message || "Failed to fetch payments");
         console.error("Payments fetch error:", err);
@@ -63,7 +61,6 @@ const PaymentsHistory: React.FC = () => {
     fetchPayments();
   }, [dispatch, currentPage, searchTerm, userId, limit, sortField, sortOrder]);
 
-  // Log courses when they change
   useEffect(() => {
     console.log("Courses from Redux store:", courses);
   }, [courses]);
@@ -74,7 +71,7 @@ const PaymentsHistory: React.FC = () => {
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setCurrentPage(1); // Reset to first page on new search
+    setCurrentPage(1); 
   };
 
   const handleDownload = () => (
@@ -86,10 +83,9 @@ const PaymentsHistory: React.FC = () => {
     </button>
   );
 
-  // Map courses to an object for easier lookup
   const courseMap = courses.reduce((acc, course) => ({
     ...acc,
-    [course._id]: course.title, // Use 'title' instead of 'name' based on API response
+    [course._id]: course.title, 
   }), {} as { [key: string]: string });
 
   const transactionHistory =
@@ -99,7 +95,7 @@ const PaymentsHistory: React.FC = () => {
         "Sl. No.": (currentPage - 1) * limit + index + 1,
         Course: courseName,
         Date: new Date(p.createdAt).toLocaleDateString(),
-        Amount: `$${p.amount}`,
+        Amount: `₹${p.amount}`,
         Status: (
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -163,15 +159,15 @@ const PaymentsHistory: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Total Amount Paid</h3>
-                <p className="text-2xl font-bold text-gray-900">${paymentOverview.totalAmountPaid}</p>
+                <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.totalAmountPaid}</p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Total Payment</h3>
-                <p className="text-2xl font-bold text-gray-900">${paymentOverview.totalPayment}</p>
+                <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.totalPayment}</p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Pending Payments</h3>
-                <p className="text-2xl font-bold text-gray-900">${paymentOverview.pendingPayments}</p>
+                <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.pendingPayments}</p>
               </div>
             </div>
           </div>

@@ -29,6 +29,9 @@ export const userEndPoints: UserEndpoints = {
   checkEnrollment: 'student/check-enrollment',
   enrollments: '/student/enrollments',
   getPaymentHistory: "student/payment-history",
+
+  //reviews
+  addReview:'student/reviews'
 }
 
 export const adminEndpoints: AdminEndpoints = {

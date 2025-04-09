@@ -39,6 +39,10 @@ const CourseListing: React.FC = () => {
   const [filters, setFilters] = useState<FilterOptions>({});
   const [sort, setSort] = useState<SortOptions>({ field: "updatedAt", order: "desc" });
 
+  // useEffect(() => {
+  //   console.log("Redux activeCourses.courses:", activeCourses.courses);
+  // }, [activeCourses.courses]);
+
   useEffect(() => {
     dispatch(
       getAllActiveCoursesAction({
@@ -80,8 +84,8 @@ const CourseListing: React.FC = () => {
     id: course._id,
     title: course.title,
     instructor: course.instructorRef?.name || "Unknown Instructor",
-    rating: 4.5, // Static for now; replace with actual rating if available
-    reviewCount: 1000, // Static for now
+    rating: 4.5, 
+    reviewCount: 1000, 
     originalPrice: course.pricing?.amount || 0,
     tags: [
       ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),

@@ -30,6 +30,9 @@ export interface UserEndpoints extends IEndPoints {
     checkEnrollment:string
     enrollments:string
     getPaymentHistory:string
+
+    //review
+    addReview:string
 }
 
 export interface AdminEndpoints extends IEndPoints {
