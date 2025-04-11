@@ -31,7 +31,9 @@ export const userEndPoints: UserEndpoints = {
   getPaymentHistory: "student/payment-history",
 
   //reviews
-  addReview:'student/reviews'
+  addReview:'student/reviews',
+  getReviewsByCourse:"/courses/:courseId/reviews",
+  getReview: "student/review/:courseId",
 }
 
 export const adminEndpoints: AdminEndpoints = {

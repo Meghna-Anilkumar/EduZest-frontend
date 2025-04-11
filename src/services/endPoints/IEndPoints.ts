@@ -33,6 +33,8 @@ export interface UserEndpoints extends IEndPoints {
 
     //review
     addReview:string
+    getReviewsByCourse:string
+    getReview:string
 }
 
 export interface AdminEndpoints extends IEndPoints {

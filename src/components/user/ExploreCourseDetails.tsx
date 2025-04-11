@@ -6,9 +6,13 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Book, Clock, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { AppDispatch, RootState } from "../../redux/store";
 import { getCourseByIdAction } from "../../redux/actions/courseActions";
-import { enrollCourseAction, checkEnrollmentAction } from "../../redux/actions/enrollmentActions";
+import {
+  enrollCourseAction,
+  checkEnrollmentAction,
+} from "../../redux/actions/enrollmentActions";
 import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
+import ReviewsSection from "./ReviewsSection"; // Import the new component
 
 const Header = lazy(() => import("../common/users/Header"));
 
@@ -51,7 +55,9 @@ const CourseDetailsPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.course);
-  const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
+  const { isAuthenticated, userData } = useSelector(
+    (state: RootState) => state.user
+  );
   const [course, setCourse] = useState<Course | null>(null);
   const [activeSections, setActiveSections] = useState<number[]>([]);
   const [expandAll, setExpandAll] = useState(false);
@@ -59,7 +65,8 @@ const CourseDetailsPage = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
-  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true);
+  const [isCheckingEnrollment, setIsCheckingEnrollment] =
+    useState<boolean>(true);
 
   useEffect(() => {
     if (id) {
@@ -93,27 +100,40 @@ const CourseDetailsPage = () => {
   }, [dispatch, id, isAuthenticated]);
 
   if (loading) return <div className="text-center py-10">Loading...</div>;
-  if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
-  if (!course) return <div className="text-center py-10 text-gray-500">Course not found.</div>;
+  if (error)
+    return <div className="text-center py-10 text-red-500">{error}</div>;
+  if (!course)
+    return (
+      <div className="text-center py-10 text-gray-500">Course not found.</div>
+    );
 
-  const totalLessons = course.modules.reduce((acc, module) => acc + module.lessons.length, 0);
+  const totalLessons = course.modules.reduce(
+    (acc, module) => acc + module.lessons.length,
+    0
+  );
   const totalDuration = course.modules.reduce((acc, module) => {
     const moduleDuration = module.lessons.reduce((lessonAcc, lesson) => {
       if (!lesson.duration) return lessonAcc;
-      const [hours, minutes] = lesson.duration.match(/(\d+)hr(\d+)min/)?.slice(1) || ["0", "0"];
+      const [hours, minutes] = lesson.duration
+        .match(/(\d+)hr(\d+)min/)
+        ?.slice(1) || ["0", "0"];
       const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
       return lessonAcc + lessonMinutes;
     }, 0);
     return acc + moduleDuration;
   }, 0);
-  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m`;
+  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${
+    totalDuration % 60
+  }m`;
 
   const totalModules = course.modules.length;
 
   const formatModuleDuration = (lessons: Course["modules"][0]["lessons"]) => {
     const moduleDuration = lessons.reduce((acc, lesson) => {
       if (!lesson.duration) return acc;
-      const [hours, minutes] = lesson.duration.match(/(\d+)hr(\d+)min/)?.slice(1) || ["0", "0"];
+      const [hours, minutes] = lesson.duration
+        .match(/(\d+)hr(\d+)min/)
+        ?.slice(1) || ["0", "0"];
       const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
       return acc + lessonMinutes;
     }, 0);
@@ -158,11 +178,15 @@ const CourseDetailsPage = () => {
           setIsEnrolled(true);
           navigate("/student/enrollment-success", { replace: true });
         } else {
-          setEnrollmentError(result.message || "Failed to enroll in the free course");
+          setEnrollmentError(
+            result.message || "Failed to enroll in the free course"
+          );
         }
       } catch (err) {
         setEnrollmentError(
-          err instanceof Error ? err.message : "An error occurred during enrollment"
+          err instanceof Error
+            ? err.message
+            : "An error occurred during enrollment"
         );
         console.error("Enrollment error:", err);
       }
@@ -186,7 +210,9 @@ const CourseDetailsPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-semibold mb-4">Confirm Enrollment</h2>
-            <p className="mb-6">Are you sure you want to enroll in this course?</p>
+            <p className="mb-6">
+              Are you sure you want to enroll in this course?
+            </p>
             <div className="flex justify-end gap-4">
               <button
                 onClick={() => setShowModal(false)}
@@ -220,7 +246,9 @@ const CourseDetailsPage = () => {
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+                {course.title}
+              </h1>
               <p className="text-lg text-gray-300 mb-4">{course.description}</p>
 
               <div className="flex items-center mb-4">
@@ -229,7 +257,9 @@ const CourseDetailsPage = () => {
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`w-5 h-5 ${i < 4.7 ? "fill-yellow-400" : "fill-none"}`}
+                      className={`w-5 h-5 ${
+                        i < 4.7 ? "fill-yellow-400" : "fill-none"
+                      }`}
                     />
                   ))}
                 </div>
@@ -243,13 +273,15 @@ const CourseDetailsPage = () => {
 
               <p className="mb-2">
                 Created by{" "}
-                <a href="#" className="text-[#49BBBD] hover:text-[#3a9a9c]">
+                <a href="#" className="text-[#49BBBD] hover:underline">
                   {course.instructorRef?.name || "Unknown Instructor"}
                 </a>
               </p>
               <div className="flex items-center text-gray-400 mb-4">
                 <Clock className="w-4 h-4 mr-2" />
-                <span>Last updated {new Date(course.updatedAt).toLocaleDateString()}</span>
+                <span>
+                  Last updated {new Date(course.updatedAt).toLocaleDateString()}
+                </span>
                 <span className="ml-4 flex items-center">
                   <svg
                     className="w-4 h-4 mr-2"
@@ -281,118 +313,145 @@ const CourseDetailsPage = () => {
             </div>
           </div>
         </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className="flex-1">
+              <div className="mb-8">
+                <h2 className="text-2xl font-semibold mb-4">
+                  Lesson Objectives
+                </h2>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {course.modules.flatMap((module) =>
+                    module.lessons.flatMap((lesson) =>
+                      (lesson.objectives || []).map((obj, index) => (
+                        <li
+                          key={`${lesson.lessonNumber}-${index}`}
+                          className="flex items-start"
+                        >
+                          <Book className="w-5 h-5 mr-2 mt-1 text-[#49BBBD]" />
+                          <span>{obj}</span>
+                        </li>
+                      ))
+                    )
+                  )}
+                </ul>
+              </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
-          <div className="flex-1">
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Lesson Objectives</h2>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {course.modules.flatMap((module) =>
-                  module.lessons.flatMap((lesson) =>
-                    (lesson.objectives || []).map((obj, index) => (
-                      <li key={`${lesson.lessonNumber}-${index}`} className="flex items-start">
-                        <Book className="w-5 h-5 mr-2 mt-1 text-[#49BBBD]" />
-                        <span>{obj}</span>
-                      </li>
-                    ))
-                  )
-                )}
-              </ul>
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-semibold">Course Content</h2>
+                  <button
+                    onClick={toggleAllSections}
+                    className="text-[#49BBBD] hover:underline text-sm font-medium"
+                  >
+                    {expandAll ? "Collapse all modules" : "Expand all modules"}
+                  </button>
+                </div>
+                <div className="text-gray-600 text-sm mb-4">
+                  {totalModules} sections • {totalLessons} lectures •{" "}
+                  {formattedDuration} total length
+                </div>
+                <div className="border rounded-lg">
+                  {course.modules.map((module, index) => (
+                    <div key={index} className="border-b last:border-b-0">
+                      <button
+                        onClick={() => toggleSection(index)}
+                        className="w-full flex justify-between items-center py-4 px-4 text-left hover:bg-gray-50 focus:outline-none"
+                      >
+                        <div className="flex items-center">
+                          {activeSections.includes(index) ? (
+                            <ChevronUp className="w-5 h-5 mr-2 text-gray-600" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5 mr-2 text-gray-600" />
+                          )}
+                          <span className="font-medium text-gray-800">
+                            {module.moduleTitle}
+                          </span>
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                          {module.lessons.length} lectures •{" "}
+                          {formatModuleDuration(module.lessons)}
+                        </div>
+                      </button>
+                      {activeSections.includes(index) && (
+                        <div className="bg-gray-50 px-4 py-2">
+                          {module.lessons.map((lesson, lessonIndex) => (
+                            <div
+                              key={lessonIndex}
+                              className="flex justify-between items-center py-2 border-t first:border-t-0"
+                            >
+                              <span className="text-gray-700">
+                                {lesson.title}
+                              </span>
+                              <span className="text-gray-500 text-sm">
+                                {lesson.duration || "N/A"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold">Course Content</h2>
-                <button
-                  onClick={toggleAllSections}
-                  className="text-[#49BBBD] hover:underline text-sm font-medium"
-                >
-                  {expandAll ? "Collapse all modules" : "Expand all modules"}
-                </button>
-              </div>
-              <div className="text-gray-600 text-sm mb-4">
-                {totalModules} sections • {totalLessons} lectures • {formattedDuration} total length
-              </div>
-              <div className="border rounded-lg">
-                {course.modules.map((module, index) => (
-                  <div key={index} className="border-b last:border-b-0">
-                    <button
-                      onClick={() => toggleSection(index)}
-                      className="w-full flex justify-between items-center py-4 px-4 text-left hover:bg-gray-50 focus:outline-none"
-                    >
-                      <div className="flex items-center">
-                        {activeSections.includes(index) ? (
-                          <ChevronUp className="w-5 h-5 mr-2 text-gray-600" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 mr-2 text-gray-600" />
-                        )}
-                        <span className="font-medium text-gray-800">{module.moduleTitle}</span>
-                      </div>
-                      <div className="text-gray-500 text-sm">
-                        {module.lessons.length} lectures • {formatModuleDuration(module.lessons)}
-                      </div>
-                    </button>
-                    {activeSections.includes(index) && (
-                      <div className="bg-gray-50 px-4 py-2">
-                        {module.lessons.map((lesson, lessonIndex) => (
-                          <div
-                            key={lessonIndex}
-                            className="flex justify-between items-center py-2 border-t first:border-t-0"
-                          >
-                            <span className="text-gray-700">{lesson.title}</span>
-                            <span className="text-gray-500 text-sm">
-                              {lesson.duration || "N/A"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+            <div className="lg:w-96">
+              <div className="border rounded-lg p-4 shadow-lg bg-white -mt-32 lg:sticky lg:top-24">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-2xl font-bold text-[#49BBBD]">
+                    {course.pricing.type === "free"
+                      ? "Free"
+                      : `₹${course.pricing.amount}`}
+                  </span>
+                </div>
+                {enrollmentError && (
+                  <div className="text-red-500 text-sm mb-4">
+                    {enrollmentError}
                   </div>
-                ))}
+                )}
+                {isEnrolled && (
+                  <div className="text-green-500 text-sm mb-4">
+                    You are already enrolled in this course!
+                  </div>
+                )}
+                {showPaymentForm ? (
+                  <Elements stripe={stripePromise}>
+                    <CheckoutForm
+                      course={course}
+                      onSuccess={handlePaymentSuccess}
+                    />
+                  </Elements>
+                ) : isEnrolled ? (
+                  <button
+                    onClick={handleGoToCourse}
+                    className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
+                  >
+                    Go to Course
+                  </button>
+                ) : !isInstructor ? (
+                  <button
+                    onClick={handleEnrollClick}
+                    disabled={isCheckingEnrollment}
+                    className={`w-full py-2 rounded text-white ${
+                      isCheckingEnrollment
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-[#49BBBD] hover:bg-[#3a9a9c]"
+                    }`}
+                  >
+                    {isCheckingEnrollment ? "Checking..." : "Enroll Now"}
+                  </button>
+                ) : null}
               </div>
             </div>
           </div>
-
-          <div className="lg:w-96">
-            <div className="border rounded-lg p-4 shadow-lg bg-white -mt-32 lg:sticky lg:top-24">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-2xl font-bold text-[#49BBBD]">
-                  {course.pricing.type === "free" ? "Free" : `₹${course.pricing.amount}`}
-                </span>
-              </div>
-              {enrollmentError && (
-                <div className="text-red-500 text-sm mb-4">{enrollmentError}</div>
-              )}
-              {isEnrolled && (
-                <div className="text-green-500 text-sm mb-4">
-                  You are already enrolled in this course!
-                </div>
-              )}
-              {showPaymentForm ? (
-                <Elements stripe={stripePromise}>
-                  <CheckoutForm course={course} onSuccess={handlePaymentSuccess} />
-                </Elements>
-              ) : isEnrolled ? (
-                <button
-                  onClick={handleGoToCourse}
-                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
-                >
-                  Go to Course
-                </button>
-              ) : !isInstructor ? (
-                <button
-                  onClick={handleEnrollClick}
-                  disabled={isCheckingEnrollment}
-                  className={`w-full py-2 rounded text-white ${
-                    isCheckingEnrollment
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-[#49BBBD] hover:bg-[#3a9a9c]"
-                  }`}
-                >
-                  {isCheckingEnrollment ? "Checking..." : "Enroll Now"}
-                </button>
-              ) : null}
-            </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-gray-50">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              Student Feedback
+            </h2>
+            <ReviewsSection courseId={course?._id || ""} />
           </div>
         </div>
       </div>
