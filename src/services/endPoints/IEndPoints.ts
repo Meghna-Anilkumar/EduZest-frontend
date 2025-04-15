@@ -23,18 +23,20 @@ export interface UserEndpoints extends IEndPoints {
     getAllCoursesByInstructor: string;
     getAllActiveCourses: string;
     getCourseById: string;
+    getCourseByInstructor: string
     editCourse: string;
     createPaymentIntent: string
     confirmPayment: string
     enrollCourse: string
-    checkEnrollment:string
-    enrollments:string
-    getPaymentHistory:string
+    checkEnrollment: string
+    enrollments: string
+    getPaymentHistory: string
 
     //review
-    addReview:string
-    getReviewsByCourse:string
-    getReview:string
+    addReview: string
+    getReviewsByCourse: string
+    getReview: string
+    streamVideo:string
 }
 
 export interface AdminEndpoints extends IEndPoints {

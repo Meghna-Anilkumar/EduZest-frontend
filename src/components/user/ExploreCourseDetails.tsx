@@ -1,3 +1,4 @@
+// components/CourseDetailsPage.tsx
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
@@ -12,7 +13,7 @@ import {
 } from "../../redux/actions/enrollmentActions";
 import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
-import ReviewsSection from "./ReviewsSection"; // Import the new component
+import ReviewsSection from "./ReviewsSection";
 
 const Header = lazy(() => import("../common/users/Header"));
 
@@ -28,6 +29,7 @@ interface Course {
   level: "beginner" | "intermediate" | "advanced";
   pricing: { type: "free" | "paid"; amount: number };
   thumbnail: string;
+  thumbnailKey?: string;
   modules: Array<{
     moduleTitle: string;
     lessons: Array<{
@@ -35,11 +37,15 @@ interface Course {
       title: string;
       description: string;
       objectives?: string[];
-      video: string;
+      video: string; // Signed URL
+      videoKey: string; // Raw S3 key
       duration?: string;
     }>;
   }>;
-  trial: { video?: string };
+  trial: {
+    video?: string; // Signed URL
+    videoKey?: string; // Raw S3 key
+  };
   attachments?: { title?: string; url?: string };
   isRequested: boolean;
   isBlocked: boolean;
@@ -65,8 +71,7 @@ const CourseDetailsPage = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
-  const [isCheckingEnrollment, setIsCheckingEnrollment] =
-    useState<boolean>(true);
+  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true);
 
   useEffect(() => {
     if (id) {
@@ -114,27 +119,21 @@ const CourseDetailsPage = () => {
   const totalDuration = course.modules.reduce((acc, module) => {
     const moduleDuration = module.lessons.reduce((lessonAcc, lesson) => {
       if (!lesson.duration) return lessonAcc;
-      const [hours, minutes] = lesson.duration
-        .match(/(\d+)hr(\d+)min/)
-        ?.slice(1) || ["0", "0"];
-      const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
+      const durationMatch = lesson.duration.match(/(\d+)/);
+      const lessonMinutes = durationMatch ? parseInt(durationMatch[1]) : 0;
       return lessonAcc + lessonMinutes;
     }, 0);
     return acc + moduleDuration;
   }, 0);
-  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${
-    totalDuration % 60
-  }m`;
+  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m`;
 
   const totalModules = course.modules.length;
 
   const formatModuleDuration = (lessons: Course["modules"][0]["lessons"]) => {
     const moduleDuration = lessons.reduce((acc, lesson) => {
       if (!lesson.duration) return acc;
-      const [hours, minutes] = lesson.duration
-        .match(/(\d+)hr(\d+)min/)
-        ?.slice(1) || ["0", "0"];
-      const lessonMinutes = parseInt(hours) * 60 + parseInt(minutes);
+      const durationMatch = lesson.duration.match(/(\d+)/);
+      const lessonMinutes = durationMatch ? parseInt(durationMatch[1]) : 0;
       return acc + lessonMinutes;
     }, 0);
     return `${Math.floor(moduleDuration / 60)}h ${moduleDuration % 60}min`;
@@ -201,7 +200,6 @@ const CourseDetailsPage = () => {
     navigate("/student/enrollment-success");
   };
 
-  // Check if the user is an instructor
   const isInstructor = userData?.role === "Instructor";
 
   return (
@@ -309,6 +307,17 @@ const CourseDetailsPage = () => {
                   alt="Course Preview"
                   className="w-full rounded-lg shadow-lg"
                 />
+                {course.trial?.videoKey && (
+                  <video
+                    controls
+                    preload="metadata"
+                    src={`/api/courses/${course._id}/stream?videoKey=${encodeURIComponent(course.trial.videoKey)}`}
+                    className="w-full mt-4 rounded-lg"
+                    onError={(e) => console.error("Trial video playback error:", e)}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                )}
               </div>
             </div>
           </div>
@@ -380,9 +389,29 @@ const CourseDetailsPage = () => {
                               key={lessonIndex}
                               className="flex justify-between items-center py-2 border-t first:border-t-0"
                             >
-                              <span className="text-gray-700">
-                                {lesson.title}
-                              </span>
+                              <div className="flex-1">
+                                <span className="text-gray-700">
+                                  {lesson.title}
+                                </span>
+                                {isEnrolled && lesson.videoKey && (
+                                  <div className="mt-2">
+                                    <video
+                                      controls
+                                      preload="metadata"
+                                      src={`/api/courses/${course._id}/stream?videoKey=${encodeURIComponent(lesson.videoKey)}`}
+                                      className="w-full max-w-md rounded-lg"
+                                      onError={(e) => console.error("Video playback error:", e)}
+                                    >
+                                      Your browser does not support the video tag.
+                                    </video>
+                                  </div>
+                                )}
+                                {!isEnrolled && lesson.videoKey && (
+                                  <p className="text-sm text-gray-500 mt-2">
+                                    Enroll to access this lesson's video.
+                                  </p>
+                                )}
+                              </div>
                               <span className="text-gray-500 text-sm">
                                 {lesson.duration || "N/A"}
                               </span>

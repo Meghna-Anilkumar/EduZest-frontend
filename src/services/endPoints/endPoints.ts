@@ -23,12 +23,14 @@ export const userEndPoints: UserEndpoints = {
   getAllActiveCourses: '/active-courses',
   getCourseById: '/courses',
   editCourse: '/instructor/courses/:id',
+  getCourseByInstructor:'/instructor/courses/:id',
   createPaymentIntent: 'student/create-payment-intent',
   confirmPayment: 'student/confirm-payment',
   enrollCourse: 'student/enroll-course',
   checkEnrollment: 'student/check-enrollment',
   enrollments: '/student/enrollments',
   getPaymentHistory: "student/payment-history",
+  streamVideo: "/courses/:courseId/stream",
 
   //reviews
   addReview:'student/reviews',

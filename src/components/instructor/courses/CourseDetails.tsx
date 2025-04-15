@@ -78,12 +78,26 @@ const CourseDetailsPage: React.FC = () => {
   
     setIsUploading(true);
     try {
-      const updatedModules = courseDetails.modules.map((module) =>
-        module.moduleTitle === selectedModule.moduleTitle
+      // Find the module and lesson indices
+      const moduleIndex = courseDetails.modules.findIndex(
+        (module) => module.moduleTitle === selectedModule.moduleTitle
+      );
+      const lessonIndex = selectedModule.lessons.findIndex(
+        (lesson) => lesson.lessonNumber === updatedLesson.lessonNumber
+      );
+  
+      // Create video mapping
+      const videoMapping = videoFile
+        ? { [`${moduleIndex}-${lessonIndex}`]: `${moduleIndex}-${lessonIndex}` }
+        : {};
+  
+      // Update the lesson in the modules array
+      const updatedModules = courseDetails.modules.map((module, idx) =>
+        idx === moduleIndex
           ? {
               ...module,
-              lessons: module.lessons.map((lesson) =>
-                lesson.lessonNumber === updatedLesson.lessonNumber ? updatedLesson : lesson
+              lessons: module.lessons.map((lesson, lIdx) =>
+                lIdx === lessonIndex ? { ...updatedLesson, video: lesson.video } : lesson
               ),
             }
           : module
@@ -94,6 +108,7 @@ const CourseDetailsPage: React.FC = () => {
       formData.append('courseData', JSON.stringify({ ...courseDetails, modules: normalizedModules }));
       if (videoFile) {
         formData.append('videos', videoFile);
+        formData.append('videoMapping', JSON.stringify(videoMapping));
       }
   
       await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
@@ -108,27 +123,37 @@ const CourseDetailsPage: React.FC = () => {
 
   const handleSaveModule = async (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => {
     if (!courseDetails) return;
-
+  
     setIsUploading(true);
     try {
       let updatedModules: Module[];
       const moduleIndex = originalModuleTitle
         ? courseDetails.modules.findIndex((module) => module.moduleTitle === originalModuleTitle)
         : courseDetails.modules.findIndex((module) => module.moduleTitle === updatedModule.moduleTitle);
-
+  
+      // Create video mapping for new lessons
+      const videoMapping = {};
+      if (videoFile && updatedModule.lessons.length > 0) {
+        // Assume the last lesson is the new one (for adding a lesson)
+        const lessonIndex = updatedModule.lessons.length - 1;
+        videoMapping[`${moduleIndex}-${lessonIndex}`] = `${moduleIndex}-${lessonIndex}`;
+      }
+  
       if (moduleIndex !== -1) {
         updatedModules = [...courseDetails.modules];
         updatedModules[moduleIndex] = updatedModule;
       } else {
         updatedModules = [...courseDetails.modules, updatedModule];
       }
-
+  
+      const normalizedModules = normalizeVideoUrls(updatedModules);
       const formData = new FormData();
-      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: updatedModules }));
+      formData.append('courseData', JSON.stringify({ ...courseDetails, modules: normalizedModules }));
       if (videoFile) {
         formData.append('videos', videoFile);
+        formData.append('videoMapping', JSON.stringify(videoMapping));
       }
-
+  
       await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
       setSelectedModule(null);
       setIsAddingNewModule(false);
@@ -139,7 +164,6 @@ const CourseDetailsPage: React.FC = () => {
       setIsUploading(false);
     }
   };
-
   const handleRemoveModule = async (moduleTitle: string) => {
     if (!courseDetails) return;
 
@@ -376,6 +400,7 @@ const CourseDetailsPage: React.FC = () => {
         {(selectedModule || isAddingNewModule) && (
           <ModuleViewModal
             module={selectedModule || { moduleTitle: '', lessons: [] }}
+            courseId={courseId}
             onClose={() => {
               setSelectedModule(null);
               setIsAddingNewModule(false);

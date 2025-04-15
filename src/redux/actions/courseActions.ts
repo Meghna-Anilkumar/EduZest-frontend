@@ -83,9 +83,46 @@ export const getCourseByIdAction = createAsyncThunk(
       const response = await serverUser.get(`${userEndPoints.getCourseById}/${courseId}`, {
         withCredentials: true, 
       });
+      console.log("API Response:", response.data);
       return response.data.data; 
     } catch (error) {
       const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+export const streamVideoAction = createAsyncThunk(
+  'course/streamVideo',
+  async (
+    { courseId, videoKey }: { courseId: string; videoKey: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await serverUser.get(
+        `${userEndPoints.streamVideo.replace(':courseId', courseId)}`,
+        {
+          params: { videoKey },
+          responseType: 'blob',
+          withCredentials: true,
+        }
+      );
+      const blob = new Blob([response.data], { type: 'video/mp4' });
+      console.log('Stream Video Response:', {
+        videoKey,
+        blobSize: blob.size,
+        blobType: blob.type,
+      });
+      const videoUrl = window.URL.createObjectURL(blob);
+      console.log('Generated Blob URL:', { videoUrl, videoKey });
+      return { videoUrl, videoKey };
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error('Failed to stream video:', {
+        videoKey,
+        message: err.message,
+        status: err.response?.status,
+      });
       return rejectWithValue(err.response?.data || { message: err.message });
     }
   }
@@ -112,6 +149,29 @@ export const editCourseAction = createAsyncThunk<
         formData,
         {
           headers,
+          withCredentials: true,
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+
+export const getCourseByInstructorAction = createAsyncThunk<
+  ICourse, // Return type
+  string, // Argument type (courseId)
+  { rejectValue: { message: string } } // ThunkAPI reject value type
+>(
+  "instructor/getCourseByInstructor",
+  async (courseId: string, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.get(
+        `${userEndPoints.getCourseByInstructor}/${courseId}`,
+        {
           withCredentials: true,
         }
       );

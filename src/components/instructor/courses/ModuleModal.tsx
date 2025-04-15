@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { Loader } from '../../Loader';
+import { useDispatch } from 'react-redux';
+import { streamVideoAction } from '../../../redux/actions/courseActions';
+import { AppDispatch } from '../../../redux/store';
 
 interface Lesson {
   lessonNumber: string;
   title: string;
   description: string;
   objectives?: string[];
-  video?: string;
+  videoKey?: string;
   duration?: string;
   content?: string;
   resources?: string[];
@@ -26,24 +29,20 @@ interface ModuleViewModalProps {
   onSaveModule?: (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => void;
   onRemoveModule?: (moduleTitle: string) => void;
   isAddingNewModule?: boolean;
+  courseId: string;
 }
 
 const getVideoDuration = (file: File): Promise<number> => {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.preload = 'metadata';
-
     video.onloadedmetadata = () => {
       window.URL.revokeObjectURL(video.src);
       const durationInSeconds = video.duration;
       const durationInHours = durationInSeconds / 3600;
       resolve(durationInHours);
     };
-
-    video.onerror = () => {
-      reject(new Error('Error loading video metadata'));
-    };
-
+    video.onerror = () => reject(new Error('Error loading video metadata'));
     video.src = window.URL.createObjectURL(file);
   });
 };
@@ -77,25 +76,88 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
   onSaveModule,
   onRemoveModule,
   isAddingNewModule = false,
+  courseId,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [isEditingLesson, setIsEditingLesson] = useState(false);
   const [isEditingModule, setIsEditingModule] = useState(false);
   const [isAddingLesson, setIsAddingLesson] = useState(false);
   const [isAddingModule, setIsAddingModule] = useState(isAddingNewModule);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  console.log('ModuleViewModal props:', { courseId, module });
 
   useEffect(() => {
-    if (isAddingNewModule) {
-      setIsAddingModule(true);
-    }
+    if (isAddingNewModule) setIsAddingModule(true);
   }, [isAddingNewModule]);
 
+  useEffect(() => {
+    console.log('Video streaming useEffect:', {
+      selectedLesson,
+      courseId,
+      videoKey: selectedLesson?.videoKey,
+      videoUrl,
+    });
+
+    // Clear previous video URL and reset state
+    if (videoUrl) {
+      console.log('Clearing previous videoUrl:', videoUrl);
+      window.URL.revokeObjectURL(videoUrl);
+      setVideoUrl(null);
+    }
+    setVideoError(null);
+    setVideoLoading(true);
+
+    if (selectedLesson?.videoKey && courseId) {
+      console.log('Dispatching streamVideoAction:', { courseId, videoKey: selectedLesson.videoKey });
+      dispatch(streamVideoAction({ courseId, videoKey: selectedLesson.videoKey }))
+        .unwrap()
+        .then((result: { videoUrl: string; videoKey: string }) => {
+          console.log('Video stream successful:', result);
+          setVideoUrl(result.videoUrl);
+          setVideoLoading(false);
+        })
+        .catch((error: unknown) => {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : typeof error === 'object' && error && 'message' in error
+              ? String(error.message)
+              : 'Failed to load video. Please try again.';
+          console.error('Stream video error:', error);
+          setVideoError(errorMessage);
+          setVideoLoading(false);
+        });
+    } else {
+      console.log('Cannot dispatch streamVideoAction:', {
+        hasVideoKey: !!selectedLesson?.videoKey,
+        hasCourseId: !!courseId,
+      });
+      setVideoLoading(false);
+    }
+  }, [selectedLesson, courseId, dispatch]);
+
+  useEffect(() => {
+    if (videoUrl && videoRef.current) {
+      console.log('Loading video with URL:', videoUrl);
+      videoRef.current.src = videoUrl; // Explicitly set src
+      videoRef.current.load();
+    }
+  }, [videoUrl]);
+
   const handleLessonSelect = (lesson: Lesson) => {
+    console.log('Selected lesson:', lesson);
     setSelectedLesson(lesson);
     setIsEditingLesson(false);
     setIsAddingLesson(false);
     setIsAddingModule(false);
+    setVideoError(null);
+    setVideoUrl(null); // Clear video URL on lesson change
   };
 
   const handleEditLesson = () => {
@@ -111,21 +173,12 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
 
   const handleRemoveLesson = (lessonNumber: string) => {
     if (onSaveModule) {
-      // Filter out the lesson to be removed
       const filteredLessons = module.lessons.filter((lesson) => lesson.lessonNumber !== lessonNumber);
-
-      // Renumber the remaining lessons sequentially starting from 1
       const updatedLessons = filteredLessons.map((lesson, index) => ({
         ...lesson,
         lessonNumber: (index + 1).toString(),
       }));
-
-      // Create the updated module with renumbered lessons
-      const updatedModule = {
-        ...module,
-        lessons: updatedLessons,
-      };
-
+      const updatedModule = { ...module, lessons: updatedLessons };
       onSaveModule(updatedModule);
       setSelectedLesson(null);
     }
@@ -197,7 +250,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   title: values.title,
                   description: values.description,
                   duration: values.duration,
-                  video: values.videoFile ? undefined : selectedLesson.video,
+                  videoKey: values.videoFile ? undefined : selectedLesson.videoKey,
                 };
                 onSaveLesson(updatedLesson, values.videoFile);
                 setSelectedLesson(updatedLesson);
@@ -284,17 +337,41 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
           </Formik>
         ) : (
           <div className="space-y-4">
-            {selectedLesson.video ? (
-              <div className="bg-black rounded-lg overflow-hidden">
-                <video controls className="w-full h-[450px] object-cover" src={selectedLesson.video}>
-                  Your browser does not support the video tag.
-                </video>
+            {selectedLesson.videoKey ? (
+              <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
+                {videoLoading ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                    <p className="text-gray-600">Loading video...</p>
+                  </div>
+                ) : videoError ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                    <p className="text-red-500">Error: {videoError}</p>
+                  </div>
+                ) : videoUrl ? (
+                  <video
+                    ref={videoRef}
+                    controls
+                    className="absolute inset-0 w-full h-full object-cover"
+                    key={selectedLesson.videoKey}
+                    onError={() => setVideoError('Failed to play video. Please try again.')}
+                  >
+                    <source src={videoUrl} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
+                    <p className="text-gray-600">
+                      No video URL available for {selectedLesson.videoKey}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-gray-100 rounded-lg p-4 text-center">
-                <p className="text-gray-600">No video available for this lesson</p>
+                <p className="text-gray-600">No video provided for this lesson</p>
               </div>
             )}
+            {videoError && <p className="text-red-500 text-sm mt-2">{videoError}</p>}
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-800 mb-2">Lesson Overview</h4>
               <div className="flex justify-between text-sm text-gray-600">
@@ -341,7 +418,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               title: values.title,
               description: values.description,
               duration: values.duration || undefined,
-              video: undefined,
+              videoKey: undefined,
             };
             const updatedModule = {
               ...module,
@@ -572,7 +649,13 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   </>
                 )}
                 <button onClick={onClose} className="text-gray-600 hover:text-gray-900 focus:outline-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -587,27 +670,30 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               ) : module.lessons.length === 0 ? (
                 <div className="text-center text-gray-500 py-4">No lessons available. Add a lesson to get started.</div>
               ) : (
-                module.lessons.map((lesson, index) => (
-                  <div
-                    key={lesson.lessonNumber + index}
-                    onClick={() => handleLessonSelect(lesson)}
-                    className={`border-b last:border-b-0 py-4 hover:bg-gray-100 transition-colors cursor-pointer ${
-                      selectedLesson?.lessonNumber === lesson.lessonNumber ? 'bg-[#49BBBD] bg-opacity-10' : ''
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm text-gray-500">Lesson {lesson.lessonNumber}</span>
-                          <span className="text-[#49BBBD] bg-[#49BBBD] bg-opacity-10 px-2 py-1 rounded-full text-xs">
-                            {lesson.duration ? `${lesson.duration} hrs` : 'N/A'}
-                          </span>
+                <>
+                  {console.log('Rendering lessons:', module.lessons)}
+                  {module.lessons.map((lesson) => (
+                    <div
+                      key={lesson.videoKey || lesson.lessonNumber} // Use videoKey for uniqueness
+                      onClick={() => handleLessonSelect(lesson)}
+                      className={`border-b last:border-b-0 py-4 hover:bg-gray-100 transition-colors cursor-pointer ${
+                        selectedLesson?.lessonNumber === lesson.lessonNumber ? 'bg-[#49BBBD] bg-opacity-10' : ''
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm text-gray-500">Lesson {lesson.lessonNumber}</span>
+                            <span className="text-[#49BBBD] bg-[#49BBBD] bg-opacity-10 px-2 py-1 rounded-full text-xs">
+                              {lesson.duration ? `${lesson.duration} hrs` : 'N/A'}
+                            </span>
+                          </div>
+                          <h4 className="font-medium text-gray-800 mt-1">{lesson.title}</h4>
                         </div>
-                        <h4 className="font-medium text-gray-800 mt-1">{lesson.title}</h4>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </>
               )}
             </div>
             <div className="col-span-2">

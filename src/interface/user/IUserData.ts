@@ -18,6 +18,7 @@ export interface LoginData{
 
 
 export interface IUserdata {
+  _id:string;
   email: string;
   name: string;
   isVerified?: boolean;
