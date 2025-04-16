@@ -7,10 +7,12 @@ import { streamVideoAction } from '../../../redux/actions/courseActions';
 import { AppDispatch } from '../../../redux/store';
 
 interface Lesson {
+  _id?: string;
   lessonNumber: string;
   title: string;
   description: string;
   objectives?: string[];
+  video: string;
   videoKey?: string;
   duration?: string;
   content?: string;
@@ -18,6 +20,7 @@ interface Lesson {
 }
 
 interface Module {
+  _id?: string;
   moduleTitle: string;
   lessons: Lesson[];
 }
@@ -26,7 +29,7 @@ interface ModuleViewModalProps {
   module: Module;
   onClose: () => void;
   onSaveLesson?: (updatedLesson: Lesson, videoFile?: File) => void;
-  onSaveModule?: (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => void;
+  onSaveModule?: (updatedModule: Module, originalModuleTitle?: string, videoFile?: File, lessonIndex?: number) => void;
   onRemoveModule?: (moduleTitle: string) => void;
   isAddingNewModule?: boolean;
   courseId: string;
@@ -48,6 +51,22 @@ const getVideoDuration = (file: File): Promise<number> => {
 };
 
 const lessonValidationSchema = Yup.object({
+  title: Yup.string()
+    .required('Lesson title is required')
+    .min(3, 'Title must be at least 3 characters long'),
+  description: Yup.string()
+    .required('Description is required')
+    .min(10, 'Description must be at least 10 characters long'),
+  videoFile: Yup.mixed<File>()
+    .required('A video file is required') // Enforce video for new lessons
+    .test('fileType', 'Only video files are allowed (e.g., .mp4, .mov)', (value) => {
+      if (!value) return false;
+      const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/mpeg'];
+      return allowedTypes.includes((value as File).type);
+    }),
+});
+
+const editLessonValidationSchema = Yup.object({
   title: Yup.string()
     .required('Lesson title is required')
     .min(3, 'Title must be at least 3 characters long'),
@@ -104,7 +123,6 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
       videoUrl,
     });
 
-    // Clear previous video URL and reset state
     if (videoUrl) {
       console.log('Clearing previous videoUrl:', videoUrl);
       window.URL.revokeObjectURL(videoUrl);
@@ -140,12 +158,18 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
       });
       setVideoLoading(false);
     }
+
+    return () => {
+      if (videoUrl) {
+        window.URL.revokeObjectURL(videoUrl);
+      }
+    };
   }, [selectedLesson, courseId, dispatch]);
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
       console.log('Loading video with URL:', videoUrl);
-      videoRef.current.src = videoUrl; // Explicitly set src
+      videoRef.current.src = videoUrl;
       videoRef.current.load();
     }
   }, [videoUrl]);
@@ -157,7 +181,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setIsAddingLesson(false);
     setIsAddingModule(false);
     setVideoError(null);
-    setVideoUrl(null); // Clear video URL on lesson change
+    setVideoUrl(null);
   };
 
   const handleEditLesson = () => {
@@ -171,9 +195,9 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setIsAddingModule(false);
   };
 
-  const handleRemoveLesson = (lessonNumber: string) => {
-    if (onSaveModule) {
-      const filteredLessons = module.lessons.filter((lesson) => lesson.lessonNumber !== lessonNumber);
+  const handleRemoveLesson = (lessonId?: string) => {
+    if (onSaveModule && lessonId) {
+      const filteredLessons = module.lessons.filter((lesson) => lesson._id !== lessonId);
       const updatedLessons = filteredLessons.map((lesson, index) => ({
         ...lesson,
         lessonNumber: (index + 1).toString(),
@@ -191,10 +215,10 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     }
   };
 
-  const handleAddModule = () => {
-    setIsAddingModule(true);
-    setIsEditingModule(false);
-    setIsAddingLesson(false);
+  const handleAddLesson = () => {
+    setIsAddingLesson(true);
+    setIsEditingLesson(false);
+    setIsAddingModule(false);
     setSelectedLesson(null);
   };
 
@@ -217,7 +241,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   Edit Lesson
                 </button>
                 <button
-                  onClick={() => handleRemoveLesson(selectedLesson.lessonNumber)}
+                  onClick={() => handleRemoveLesson(selectedLesson._id)}
                   className="text-red-500 hover:bg-red-500 hover:text-white border border-red-500 px-3 py-1 rounded-md transition-colors"
                 >
                   Remove Lesson
@@ -241,18 +265,18 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               duration: selectedLesson.duration || '',
               videoFile: undefined as File | undefined,
             }}
-            validationSchema={lessonValidationSchema}
-            onSubmit={(values, { setSubmitting }) => {
+            validationSchema={editLessonValidationSchema}
+            onSubmit={async (values, { setSubmitting }) => {
               setIsSubmitting(true);
               if (onSaveLesson) {
-                const updatedLesson = {
+                const updatedLesson: Lesson = {
                   ...selectedLesson,
                   title: values.title,
                   description: values.description,
-                  duration: values.duration,
-                  videoKey: values.videoFile ? undefined : selectedLesson.videoKey,
+                  duration: values.duration || selectedLesson.duration,
+                  video: selectedLesson.videoKey || "", // Use videoKey as video path
                 };
-                onSaveLesson(updatedLesson, values.videoFile);
+                await onSaveLesson(updatedLesson, values.videoFile);
                 setSelectedLesson(updatedLesson);
                 setIsEditingLesson(false);
               }
@@ -281,7 +305,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   <ErrorMessage name="description" component="div" className="text-red-500 text-sm mt-1" />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-2">Upload Video</label>
+                  <label className="block text-gray-700 font-medium mb-2">Upload Video (optional)</label>
                   <input
                     type="file"
                     accept="video/*"
@@ -294,10 +318,10 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                           setFieldValue('duration', durationInHours.toFixed(2));
                         } catch (error) {
                           console.error('Error getting video duration:', error);
-                          setFieldValue('duration', '');
+                          setFieldValue('duration', selectedLesson.duration || '');
                         }
                       } else {
-                        setFieldValue('duration', '');
+                        setFieldValue('duration', selectedLesson.duration || '');
                       }
                     }}
                     className="w-full border rounded-md px-3 py-2"
@@ -393,6 +417,16 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                 </ul>
               </div>
             )}
+            {selectedLesson.objectives && selectedLesson.objectives.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-2">Objectives</h4>
+                <ul className="list-disc list-inside text-gray-700">
+                  {selectedLesson.objectives.map((objective, index) => (
+                    <li key={index}>{objective}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -410,7 +444,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
           videoFile: undefined as File | undefined,
         }}
         validationSchema={lessonValidationSchema}
-        onSubmit={(values, { setSubmitting, resetForm }) => {
+        onSubmit={async (values, { setSubmitting, resetForm }) => {
           setIsSubmitting(true);
           if (onSaveModule) {
             const newLessonData: Lesson = {
@@ -418,13 +452,31 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               title: values.title,
               description: values.description,
               duration: values.duration || undefined,
-              videoKey: undefined,
+              // Omit video and videoKey
             };
+            
+            // Log the new lesson data and video file
+            console.log('Adding new lesson:', {
+              newLessonData,
+              videoFile: values.videoFile?.name,
+              lessonIndex: module.lessons.length,
+              moduleTitle: module.moduleTitle,
+              courseId,
+            });
+  
             const updatedModule = {
               ...module,
               lessons: [...module.lessons, newLessonData],
             };
-            onSaveModule(updatedModule, undefined, values.videoFile);
+  
+            // Log the updated module and video mapping info
+            console.log('Calling onSaveModule with:', {
+              updatedModule,
+              videoFile: values.videoFile?.name,
+              lessonIndex: module.lessons.length,
+            });
+  
+            await onSaveModule(updatedModule, undefined, values.videoFile, module.lessons.length);
             resetForm();
             setIsAddingLesson(false);
           }
@@ -464,6 +516,13 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                     try {
                       const durationInHours = await getVideoDuration(file);
                       setFieldValue('duration', durationInHours.toFixed(2));
+                      // Log video file details
+                      console.log('Selected video file:', {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        duration: durationInHours.toFixed(2),
+                      });
                     } catch (error) {
                       console.error('Error getting video duration:', error);
                       setFieldValue('duration', '');
@@ -516,11 +575,11 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
       <Formik
         initialValues={{ moduleTitle: '' }}
         validationSchema={moduleValidationSchema}
-        onSubmit={(values, { setSubmitting, resetForm }) => {
+        onSubmit={async (values, { setSubmitting, resetForm }) => {
           setIsSubmitting(true);
           if (onSaveModule) {
-            const newModule = { moduleTitle: values.moduleTitle, lessons: [] };
-            onSaveModule(newModule);
+            const newModule: Module = { moduleTitle: values.moduleTitle, lessons: [] };
+            await onSaveModule(newModule);
             resetForm();
             setIsAddingModule(false);
           }
@@ -576,11 +635,11 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               <Formik
                 initialValues={{ moduleTitle: module.moduleTitle }}
                 validationSchema={moduleValidationSchema}
-                onSubmit={(values, { setSubmitting }) => {
+                onSubmit={async (values, { setSubmitting }) => {
                   setIsSubmitting(true);
                   if (onSaveModule) {
                     const updatedModule = { ...module, moduleTitle: values.moduleTitle };
-                    onSaveModule(updatedModule, module.moduleTitle);
+                    await onSaveModule(updatedModule, module.moduleTitle);
                     setIsEditingModule(false);
                   }
                   setIsSubmitting(false);
@@ -635,16 +694,10 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                       Remove Module
                     </button>
                     <button
-                      onClick={() => setIsAddingLesson(true)}
+                      onClick={handleAddLesson}
                       className="text-green-500 hover:bg-green-500 hover:text-white border border-green-500 px-3 py-1 rounded-md transition-colors"
                     >
                       Add Lesson
-                    </button>
-                    <button
-                      onClick={handleAddModule}
-                      className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
-                    >
-                      Add Module
                     </button>
                   </>
                 )}
@@ -674,10 +727,10 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   {console.log('Rendering lessons:', module.lessons)}
                   {module.lessons.map((lesson) => (
                     <div
-                      key={lesson.videoKey || lesson.lessonNumber} // Use videoKey for uniqueness
+                      key={lesson._id || lesson.lessonNumber}
                       onClick={() => handleLessonSelect(lesson)}
                       className={`border-b last:border-b-0 py-4 hover:bg-gray-100 transition-colors cursor-pointer ${
-                        selectedLesson?.lessonNumber === lesson.lessonNumber ? 'bg-[#49BBBD] bg-opacity-10' : ''
+                        selectedLesson?._id === lesson._id ? 'bg-[#49BBBD] bg-opacity-10' : ''
                       }`}
                     >
                       <div className="flex justify-between items-center">

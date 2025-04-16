@@ -121,7 +121,12 @@ const CourseDetailsPage: React.FC = () => {
     }
   };
 
-  const handleSaveModule = async (updatedModule: Module, originalModuleTitle?: string, videoFile?: File) => {
+  const handleSaveModule = async (
+    updatedModule: Module,
+    originalModuleTitle?: string,
+    videoFile?: File,
+    lessonIndex?: number
+  ) => {
     if (!courseDetails) return;
   
     setIsUploading(true);
@@ -132,12 +137,14 @@ const CourseDetailsPage: React.FC = () => {
         : courseDetails.modules.findIndex((module) => module.moduleTitle === updatedModule.moduleTitle);
   
       // Create video mapping for new lessons
-      const videoMapping = {};
-      if (videoFile && updatedModule.lessons.length > 0) {
-        // Assume the last lesson is the new one (for adding a lesson)
-        const lessonIndex = updatedModule.lessons.length - 1;
-        videoMapping[`${moduleIndex}-${lessonIndex}`] = `${moduleIndex}-${lessonIndex}`;
+      const videoMapping: { [key: string]: number } = {};
+      if (videoFile && lessonIndex !== undefined) {
+        const lessonKey = `new-lesson-${moduleIndex}-${lessonIndex}`;
+        videoMapping[lessonKey] = 0; // Single video file, index 0
       }
+  
+      // Log video mapping
+      console.log('Constructed videoMapping:', videoMapping);
   
       if (moduleIndex !== -1) {
         updatedModules = [...courseDetails.modules];
@@ -153,6 +160,13 @@ const CourseDetailsPage: React.FC = () => {
         formData.append('videos', videoFile);
         formData.append('videoMapping', JSON.stringify(videoMapping));
       }
+  
+      // Log FormData contents
+      console.log('FormData contents:', {
+        courseData: formData.get('courseData')?.toString(),
+        videoMapping: formData.get('videoMapping')?.toString(),
+        videos: formData.getAll('videos').map((f: File) => f.name),
+      });
   
       await dispatch(editCourseAction({ courseId: courseDetails._id, formData })).unwrap();
       setSelectedModule(null);
