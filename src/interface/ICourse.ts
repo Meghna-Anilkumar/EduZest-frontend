@@ -1,7 +1,7 @@
 
 
 export interface ILesson {
- 
+  
   lessonNumber: string;
   title: string;
   description: string;

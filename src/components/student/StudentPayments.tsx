@@ -6,14 +6,15 @@ import TableComponent from "../../components/common/TableComponent";
 import Header from "../../components/common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import { getPaymentsByUserAction } from "../../redux/actions/enrollmentActions";
-import { getAllActiveCoursesAction } from "../../redux/actions/courseActions"; 
+import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
 import Pagination from "../common/Pagination";
 import { SearchBar } from "../common/SearchBar";
-import { RootState } from "../../redux/store"; 
+import { RootState } from "../../redux/store";
+import Invoice from "./InvoiceComponent";
 
 const PaymentsHistory: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const courses = useSelector((state: RootState) => state.course.activeCourses.courses); 
+  const courses = useSelector((state: RootState) => state.course.activeCourses.courses);
   const [payments, setPayments] = useState<{ data: any[]; total: number; page: number; limit: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,17 +22,14 @@ const PaymentsHistory: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const limit = 5;
   const sortField = "createdAt";
-  const sortOrder = "desc"; 
+  const sortOrder = "desc";
   const userId = "some-user-id";
-  console.log("Component mounted");
 
-  // Fetch courses on mount
   useEffect(() => {
-    dispatch(getAllActiveCoursesAction({ page: 1, limit: 100 }))
-      .then(() => console.log("Courses action dispatched"))
-      .catch((err) => console.error("Failed to dispatch courses action:", err));
+    dispatch(getAllActiveCoursesAction({ page: 1, limit: 100 }));
   }, [dispatch]);
 
   useEffect(() => {
@@ -50,20 +48,14 @@ const PaymentsHistory: React.FC = () => {
           })
         ).unwrap();
         setPayments(result.data);
-        console.log("Payments data received:", result.data); 
       } catch (err: any) {
         setError(err.message || "Failed to fetch payments");
-        console.error("Payments fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
     fetchPayments();
-  }, [dispatch, currentPage, searchTerm, userId, limit, sortField, sortOrder]);
-
-  useEffect(() => {
-    console.log("Courses from Redux store:", courses);
-  }, [courses]);
+  }, [dispatch, currentPage, searchTerm, userId]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -71,22 +63,35 @@ const PaymentsHistory: React.FC = () => {
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
-
-  const handleDownload = () => (
-    <button
-      className="text-blue-500 hover:text-blue-700 underline"
-      onClick={() => alert("Downloading invoice")}
-    >
-      Download
-    </button>
-  );
 
   const courseMap = courses.reduce((acc, course) => ({
     ...acc,
-    [course._id]: course.title, 
+    [course._id]: course.title,
   }), {} as { [key: string]: string });
+
+  const handleViewInvoice = (payment: any) => {
+    setSelectedPayment(payment);
+  };
+
+  const handleCloseInvoice = () => {
+    setSelectedPayment(null);
+  };
+
+  const handlePrintInvoice = () => {
+    const printContent = document.getElementById('printable-invoice');
+    const originalContents = document.body.innerHTML;
+    
+    if (printContent) {
+      document.body.innerHTML = printContent.innerHTML;
+      window.print();
+      document.body.innerHTML = originalContents;
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    }
+  };
 
   const transactionHistory =
     payments?.data?.map((p: any, index: number) => {
@@ -109,7 +114,14 @@ const PaymentsHistory: React.FC = () => {
             {p.status.charAt(0).toUpperCase() + p.status.slice(1)}
           </span>
         ),
-        Download: handleDownload(),
+        Actions: (
+          <button
+            className="text-blue-500 hover:text-blue-700 underline"
+            onClick={() => handleViewInvoice(p)}
+          >
+            View Invoice
+          </button>
+        ),
       };
     }) || [];
 
@@ -167,14 +179,14 @@ const PaymentsHistory: React.FC = () => {
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Pending Payments</h3>
-                <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.pendingPayments}</p>
+                <p className="text-2xl font-bold text-gray-900">{paymentOverview.pendingPayments}</p>
               </div>
             </div>
           </div>
 
           <h2 className="text-xl font-bold text-gray-900 mb-4">Transaction History</h2>
           <TableComponent
-            headers={["Sl. No.", "Course", "Date", "Amount", "Status", "Download"]}
+            headers={["Sl. No.", "Course", "Date", "Amount", "Status", "Actions"]}
             data={transactionHistory}
           />
           <div className="mt-4">
@@ -186,6 +198,15 @@ const PaymentsHistory: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {selectedPayment && (
+        <Invoice 
+          payment={selectedPayment}
+          courseName={courseMap[selectedPayment.courseId] || "Unknown"}
+          onClose={handleCloseInvoice}
+          onPrint={handlePrintInvoice}
+        />
+      )}
     </div>
   );
 };

@@ -7,7 +7,7 @@ import {
   streamVideoAction,
 } from "../../redux/actions/courseActions";
 import { clearError } from "../../redux/reducers/courseReducer";
-import { checkEnrollmentAction } from "../../redux/actions/enrollmentActions";
+import { checkEnrollmentAction, getLessonProgressAction, updateLessonProgressAction } from "../../redux/actions/enrollmentActions";
 import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import {
@@ -22,6 +22,7 @@ import {
 import RatingReview from "./ReviewComponent";
 
 interface ILesson {
+  _id: string;
   lessonNumber: string;
   title: string;
   description: string;
@@ -55,6 +56,13 @@ interface ICourse {
   isPublished: boolean;
 }
 
+interface LessonProgress {
+  lessonId: string;
+  progress: number;
+  isCompleted: boolean;
+  lastWatched: string;
+}
+
 const CourseDetails: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const dispatch = useDispatch<AppDispatch>();
@@ -69,7 +77,9 @@ const CourseDetails: React.FC = () => {
   const [expandAll, setExpandAll] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lessonProgress, setLessonProgress] = useState<LessonProgress[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const lastProgressUpdate = useRef<number>(0);
 
   useEffect(() => {
     const fetchCourseAndEnrollment = async () => {
@@ -99,6 +109,11 @@ const CourseDetails: React.FC = () => {
         if (userData) {
           const response = await dispatch(checkEnrollmentAction(courseId)).unwrap();
           setIsEnrolled(response.data.isEnrolled);
+
+          if (response.data.isEnrolled) {
+            const progressResponse = await dispatch(getLessonProgressAction(courseId)).unwrap();
+            setLessonProgress(progressResponse.data || []);
+          }
         }
 
         if (
@@ -122,9 +137,9 @@ const CourseDetails: React.FC = () => {
 
   useEffect(() => {
     const fetchVideoStream = async () => {
-      if (selectedLesson && selectedLesson.videoKey) {
+      if (selectedLesson && selectedLesson.videoKey && isLessonUnlocked(selectedLesson)) {
         setIsLoading(true);
-        setVideoUrl(null); // Reset video URL to force new stream
+        setVideoUrl(null);
         try {
           const result = await dispatch(
             streamVideoAction({ courseId: courseId!, videoKey: selectedLesson.videoKey })
@@ -132,7 +147,7 @@ const CourseDetails: React.FC = () => {
           setVideoUrl(result.videoUrl);
           console.log("Video URL set:", result.videoUrl);
           if (videoRef.current) {
-            videoRef.current.load(); // Force reload to apply new src
+            videoRef.current.load();
           }
         } catch (err: any) {
           console.error("Failed to stream video:", err.message);
@@ -151,6 +166,53 @@ const CourseDetails: React.FC = () => {
     };
   }, [dispatch, selectedLesson, courseId]);
 
+  const isLessonUnlocked = (lesson: ILesson): boolean => {
+    if (!course || !isEnrolled) return false;
+
+    const allLessons = course.modules.flatMap((module) => module.lessons);
+    const lessonIndex = allLessons.findIndex((l) => l._id === lesson._id);
+
+    if (lessonIndex === 0) return true;
+
+    const previousLesson = allLessons[lessonIndex - 1];
+    const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
+    return previousProgress?.isCompleted || false;
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current && selectedLesson) {
+      const currentTime = videoRef.current.currentTime;
+      const duration = videoRef.current.duration;
+      if (duration && currentTime) {
+        const progress = Math.min((currentTime / duration) * 100, 100);
+        const currentTimeMs = Date.now();
+  
+        if (currentTimeMs - lastProgressUpdate.current >= 5000) {
+          lastProgressUpdate.current = currentTimeMs;
+          
+          // Log the payload we're about to send
+          const payload = {
+            courseId: courseId!,
+            lessonId: selectedLesson._id,
+            progress,
+          };
+          console.log("Sending progress update payload:", payload);
+          console.log("Selected lesson:", selectedLesson);
+          dispatch(updateLessonProgressAction(payload))
+            .then((result: any) => {
+              console.log("Progress update response:", result);
+              if (result.payload?.data) {
+                setLessonProgress(result.payload.data);
+              }
+            })
+            .catch(err => {
+              console.error("Progress update error:", err);
+            });
+        }
+      }
+    }
+  };
+
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
@@ -162,8 +224,10 @@ const CourseDetails: React.FC = () => {
     );
 
   const handleLessonClick = (lesson: ILesson) => {
-    setSelectedLesson(lesson);
-    setVideoError(null);
+    if (isLessonUnlocked(lesson)) {
+      setSelectedLesson(lesson);
+      setVideoError(null);
+    }
   };
 
   const handleExpandAll = () => {
@@ -346,32 +410,47 @@ const CourseDetails: React.FC = () => {
                             </button>
                             {expandedSections.includes(module.moduleTitle) && (
                               <ul className="mt-2 pl-2">
-                                {module.lessons.map((lesson: ILesson) => (
-                                  <li
-                                    key={lesson.lessonNumber}
-                                    className={`flex items-center justify-between p-2 cursor-pointer rounded-md transition-colors duration-200 ${
-                                      selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                        ? "bg-blue-50 text-[#49BBBD]"
-                                        : "hover:bg-gray-50"
-                                    }`}
-                                    onClick={() => handleLessonClick(lesson)}
-                                  >
-                                    <div className="flex items-center">
-                                      <PlayCircle
-                                        className={`h-4 w-4 mr-2 ${
-                                          selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                            ? "text-[#49BBBD]"
-                                            : "text-gray-500"
-                                        }`}
-                                      />
-                                      <span className="text-sm truncate max-w-xs">{lesson.title}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-500 flex items-center">
-                                      <Clock className="h-3 w-3 mr-1" />
-                                      {formatLessonDuration(lesson.duration)}
-                                    </span>
-                                  </li>
-                                ))}
+                                {module.lessons.map((lesson: ILesson) => {
+                                  const isUnlocked = isLessonUnlocked(lesson);
+                                  const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
+                                  return (
+                                    <li
+                                      key={lesson.lessonNumber}
+                                      className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
+                                        selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
+                                          ? "bg-blue-50 text-[#49BBBD]"
+                                          : isUnlocked
+                                          ? "hover:bg-gray-50 cursor-pointer"
+                                          : "opacity-50 cursor-not-allowed"
+                                      }`}
+                                      onClick={() => isUnlocked && handleLessonClick(lesson)}
+                                    >
+                                      <div className="flex items-center flex-1">
+                                        <PlayCircle
+                                          className={`h-4 w-4 mr-2 ${
+                                            selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
+                                              ? "text-[#49BBBD]"
+                                              : isUnlocked
+                                              ? "text-gray-500"
+                                              : "text-gray-300"
+                                          }`}
+                                        />
+                                        <span className="text-sm truncate max-w-xs">{lesson.title}</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        {progress && (
+                                          <span className="text-xs text-gray-500 mr-2">
+                                            {Math.round(progress.progress)}%
+                                          </span>
+                                        )}
+                                        <span className="text-xs text-gray-500 flex items-center">
+                                          <Clock className="h-3 w-3 mr-1" />
+                                          {formatLessonDuration(lesson.duration)}
+                                        </span>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             )}
                           </div>
@@ -387,13 +466,14 @@ const CourseDetails: React.FC = () => {
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
                               <p className="text-gray-600">Loading video...</p>
                             </div>
-                          ) : videoUrl ? (
+                          ) : videoUrl && isLessonUnlocked(selectedLesson) ? (
                             <video
                               ref={videoRef}
                               controls
                               className="absolute inset-0 w-full h-full"
                               src={videoUrl}
                               poster={course.thumbnail}
+                              onTimeUpdate={handleTimeUpdate}
                               onError={(e) => {
                                 console.error("Video Error:", e.target.error);
                                 setVideoError("Failed to play video. Please try refreshing or contact support.");
@@ -412,6 +492,13 @@ const CourseDetails: React.FC = () => {
                                 alt={`${course.title} thumbnail`}
                                 className="object-cover w-full h-full"
                               />
+                              {!isLessonUnlocked(selectedLesson) && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                                  <p className="text-white text-lg">
+                                    Complete the previous lesson to unlock
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
