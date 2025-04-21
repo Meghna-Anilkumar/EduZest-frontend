@@ -99,29 +99,21 @@ export const streamVideoAction = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await serverUser.get(
-        `${userEndPoints.streamVideo.replace(':courseId', courseId)}`,
-        {
-          params: { videoKey },
-          responseType: 'blob',
-          withCredentials: true,
-        }
-      );
-      const blob = new Blob([response.data], { type: 'video/mp4' });
-      console.log('Stream Video Response:', {
-        videoKey,
-        blobSize: blob.size,
-        blobType: blob.type,
-      });
-      const videoUrl = window.URL.createObjectURL(blob);
-      console.log('Generated Blob URL:', { videoUrl, videoKey });
+      // Instead of fetching the video and converting to blob,
+      // just return the API endpoint URL
+      const encodedVideoKey = encodeURIComponent(videoKey);
+      
+      // Construct the API URL that your video player will use directly
+      const videoUrl = `${serverUser.defaults.baseURL}${userEndPoints.streamVideo.replace(':courseId', courseId)}?videoKey=${encodedVideoKey}`;
+      
+      console.log('Video streaming URL:', { videoUrl, videoKey });
+      
       return { videoUrl, videoKey };
     } catch (error) {
       const err = error as AxiosError;
-      console.error('Failed to stream video:', {
+      console.error('Failed to prepare video stream:', {
         videoKey,
         message: err.message,
-        status: err.response?.status,
       });
       return rejectWithValue(err.response?.data || { message: err.message });
     }
@@ -129,9 +121,9 @@ export const streamVideoAction = createAsyncThunk(
 );
 
 export const editCourseAction = createAsyncThunk<
-  ICourse, // Return type
-  { courseId: string; formData: FormData | Partial<ICourse> }, // Argument type
-  { rejectValue: { message: string } } // ThunkAPI reject value type
+  ICourse, 
+  { courseId: string; formData: FormData | Partial<ICourse> }, 
+  { rejectValue: { message: string } } 
 >(
   "course/editCourse",
   async (

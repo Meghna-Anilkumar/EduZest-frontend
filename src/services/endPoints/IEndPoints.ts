@@ -31,12 +31,22 @@ export interface UserEndpoints extends IEndPoints {
     checkEnrollment: string
     enrollments: string
     getPaymentHistory: string
+    getInstructorPayouts: (
+        page: number,
+        limit: number,
+        search?: string,
+        sortField?: string,
+        sortOrder?: "asc" | "desc",
+        instructorId?: string
+    ) => string;
+    createAssessment: (courseId: string, moduleTitle: string) => string;
+    getAssessmentsByCourseAndModule: (courseId: string, moduleTitle: string, page: number, limit: number) => string;
 
     //review
     addReview: string
     getReviewsByCourse: string
     getReview: string
-    streamVideo:string
+    streamVideo: string
 }
 
 export interface AdminEndpoints extends IEndPoints {
@@ -51,5 +61,6 @@ export interface AdminEndpoints extends IEndPoints {
     deleteCategory: (categoryId: string) => string;
     getAllInstructors: (page: number, limit: number, search?: string) => string;
     getInstructorRequestDetails: (userId: string) => string;
+    getAdminPayouts: string
 }
 

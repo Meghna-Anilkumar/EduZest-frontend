@@ -393,7 +393,7 @@ const CourseDetailsPage = () => {
                                 <span className="text-gray-700">
                                   {lesson.title}
                                 </span>
-                                {isEnrolled && lesson.videoKey && (
+                                {/* {isEnrolled && lesson.videoKey && (
                                   <div className="mt-2">
                                     <video
                                       controls
@@ -410,7 +410,7 @@ const CourseDetailsPage = () => {
                                   <p className="text-sm text-gray-500 mt-2">
                                     Enroll to access this lesson's video.
                                   </p>
-                                )}
+                                )} */}
                               </div>
                               <span className="text-gray-500 text-sm">
                                 {lesson.duration || "N/A"}

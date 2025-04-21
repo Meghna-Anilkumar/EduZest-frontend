@@ -58,7 +58,7 @@ const lessonValidationSchema = Yup.object({
     .required('Description is required')
     .min(10, 'Description must be at least 10 characters long'),
   videoFile: Yup.mixed<File>()
-    .required('A video file is required') // Enforce video for new lessons
+    .required('A video file is required') 
     .test('fileType', 'Only video files are allowed (e.g., .mp4, .mov)', (value) => {
       if (!value) return false;
       const allowedTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/mpeg'];

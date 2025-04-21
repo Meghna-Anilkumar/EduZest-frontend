@@ -1,6 +1,3 @@
-// import { IUser } from "./user/IUserData";
-
-
 export enum ResponseStatus {
     SUCCESS = 'success',
     ERROR = 'error',

@@ -31,6 +31,32 @@ export const userEndPoints: UserEndpoints = {
   enrollments: '/student/enrollments',
   getPaymentHistory: "student/payment-history",
   streamVideo: "/courses/:courseId/stream",
+  getInstructorPayouts: (
+    page: number,
+    limit: number,
+    search?: string,
+    sortField?: string,
+    sortOrder?: "asc" | "desc",
+    instructorId?: string
+  ) => {
+    const query = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(search && { search }),
+      ...(sortField && { sortField }),
+      ...(sortOrder && { sortOrder }),
+      ...(instructorId && { instructorId }),
+    }).toString();
+    return `instructor/getTransactions?${query}`;
+  },
+
+
+  //assessments
+  createAssessment: (courseId: string, moduleTitle: string) => 
+    `/instructor/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments`,
+  getAssessmentsByCourseAndModule: (courseId: string, moduleTitle: string, page: number, limit: number) =>
+    `/instructor/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments?page=${page}&limit=${limit}`,
+  
 
   //reviews
   addReview:'student/reviews',
@@ -79,4 +105,5 @@ export const adminEndpoints: AdminEndpoints = {
     return `/fetchAllInstructors?${queryParams.toString()}`;
   },
   getInstructorRequestDetails: (userId: string) => `/get-instructor-request-details/${userId}`,
+  getAdminPayouts:'/getTransactions'
 };

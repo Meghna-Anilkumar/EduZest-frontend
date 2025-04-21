@@ -193,3 +193,39 @@ export const refreshSignedUrlThunk = createAsyncThunk<
   }
 );
 
+
+export const getInstructorPayoutsAction = createAsyncThunk(
+  "instructor/getInstructorPayouts",
+  async (
+    {
+      instructorId,
+      page,
+      limit,
+      search,
+      sortField,
+      sortOrder,
+    }: {
+      instructorId: string;
+      page: number;
+      limit: number;
+      search?: string;
+      sortField?: string;
+      sortOrder?: "asc" | "desc";
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      if (!instructorId) {
+        throw new Error("Instructor ID is required");
+      }
+      const url = userEndPoints.getInstructorPayouts(page, limit, search, sortField, sortOrder);
+      console.log("Fetching instructor payouts with URL:", url);
+      const response = await serverUser.get(url); // No headers
+      console.log("Action response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Get instructor payouts action Error:", error.response?.data);
+      return rejectWithValue(error.response?.data || "Failed to fetch instructor payouts");
+    }
+  }
+);

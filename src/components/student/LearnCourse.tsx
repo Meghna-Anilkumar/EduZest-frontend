@@ -468,23 +468,18 @@ const CourseDetails: React.FC = () => {
                             </div>
                           ) : videoUrl && isLessonUnlocked(selectedLesson) ? (
                             <video
-                              ref={videoRef}
-                              controls
-                              className="absolute inset-0 w-full h-full"
-                              src={videoUrl}
-                              poster={course.thumbnail}
-                              onTimeUpdate={handleTimeUpdate}
-                              onError={(e) => {
-                                console.error("Video Error:", e.target.error);
-                                setVideoError("Failed to play video. Please try refreshing or contact support.");
-                              }}
-                              onLoadStart={() => console.log("Video load started:", videoUrl)}
-                              onCanPlay={() => console.log("Video ready to play:", videoUrl)}
-                              onPlaying={() => console.log("Video playing:", videoUrl)}
-                              onPause={() => console.log("Video paused:", videoUrl)}
-                            >
-                              Your browser does not support the video tag.
-                            </video>
+                            ref={videoRef}
+                            controls
+                            className="absolute inset-0 w-full h-full"
+                            src={videoUrl}
+                            poster={course.thumbnail}
+                            preload="metadata" 
+                            onTimeUpdate={handleTimeUpdate}
+                            onError={(e) => {
+                              console.error("Video Error:", e.currentTarget.error);
+                              setVideoError("Failed to play video. Please try refreshing or contact support.");
+                            }}
+                          />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
                               <img
