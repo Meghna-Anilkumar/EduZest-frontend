@@ -23,7 +23,7 @@ export const userEndPoints: UserEndpoints = {
   getAllActiveCourses: '/active-courses',
   getCourseById: '/courses',
   editCourse: '/instructor/courses/:id',
-  getCourseByInstructor:'/instructor/courses/:id',
+  getCourseByInstructor: '/instructor/courses/:id',
   createPaymentIntent: 'student/create-payment-intent',
   confirmPayment: 'student/confirm-payment',
   enrollCourse: 'student/enroll-course',
@@ -52,16 +52,29 @@ export const userEndPoints: UserEndpoints = {
 
 
   //assessments
-  createAssessment: (courseId: string, moduleTitle: string) => 
+  createAssessment: (courseId: string, moduleTitle: string) =>
     `/instructor/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments`,
   getAssessmentsByCourseAndModule: (courseId: string, moduleTitle: string, page: number, limit: number) =>
     `/instructor/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments?page=${page}&limit=${limit}`,
-  
+  editAssessment: (assessmentId: string) => `/instructor/assessments/${assessmentId}`,
+  deleteAssessment: (assessmentId: string) => `/instructor/assessments/${assessmentId}`,
+  getAssessmentsForStudent: (
+    courseId: string,
+    moduleTitle: string,
+    page: number,
+    limit: number
+  ) =>
+    `/student/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments?page=${page}&limit=${limit}`,
+  getAssessmentById: (assessmentId: string) => `/assessments/${assessmentId}`,
+  submitAssessment: (assessmentId: string) => `/student/assessments/${assessmentId}/submit`,
+  getAssessmentByIdForStudent:(assessmentId: string)=>`student/assessments/${assessmentId}`,
 
-  //reviews
-  addReview:'student/reviews',
-  getReviewsByCourse:"/courses/:courseId/reviews",
+    //reviews
+    addReview: 'student/reviews',
+  getReviewsByCourse: "/courses/:courseId/reviews",
   getReview: "student/review/:courseId",
+
+
 }
 
 export const adminEndpoints: AdminEndpoints = {
@@ -105,5 +118,5 @@ export const adminEndpoints: AdminEndpoints = {
     return `/fetchAllInstructors?${queryParams.toString()}`;
   },
   getInstructorRequestDetails: (userId: string) => `/get-instructor-request-details/${userId}`,
-  getAdminPayouts:'/getTransactions'
+  getAdminPayouts: '/getTransactions'
 };

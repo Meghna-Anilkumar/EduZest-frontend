@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { IAssessment, IQuestion } from '../../../interface/IAssessment';
 
 interface AssessmentFormProps {
-  assessment?: IAssessment;
+  assessment?: IAssessment | null;
   onSave: (assessment: IAssessment) => void;
   onCancel: () => void;
 }
@@ -13,7 +13,12 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
   const { courseId } = useParams<{ courseId: string }>();
   const [title, setTitle] = useState(assessment?.title || '');
   const [description, setDescription] = useState(assessment?.description || '');
-  const [questions, setQuestions] = useState<IQuestion[]>(assessment?.questions || []);
+  const [questions, setQuestions] = useState<IQuestion[]>(
+    assessment?.questions || []
+  );
+
+  // Calculate total marks dynamically
+  const totalMarks = questions.reduce((sum, question) => sum + (question.marks || 0), 0);
 
   const addQuestion = () => {
     const newQuestion: IQuestion = {
@@ -26,6 +31,7 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
         { id: 'D', text: '' },
       ],
       correctOption: 'A',
+      marks: 1, // Default marks for new question
     };
     setQuestions([...questions, newQuestion]);
   };
@@ -46,14 +52,37 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
       console.error('courseId is missing');
       return;
     }
+
+    // Validate questions
+    if (questions.length === 0) {
+      toast.error('Please add at least one question');
+      return;
+    }
+
+    // Check for empty questions, options, or invalid marks
+    const hasInvalidFields = questions.some(
+      (q) =>
+        !q.text.trim() ||
+        q.options.some((opt) => !opt.text.trim()) ||
+        !q.marks ||
+        q.marks < 1
+    );
+
+    if (hasInvalidFields) {
+      toast.error('Please fill in all fields and ensure marks are at least 1');
+      return;
+    }
+
     const newAssessment: IAssessment = {
+      _id: assessment?._id,
       id: assessment?.id || `a${Date.now()}`,
       courseId,
-      moduleTitle: '',
+      moduleTitle: assessment?.moduleTitle || '',
       title,
       description,
       questions,
-      createdAt: new Date(),
+      totalMarks, // Include calculated totalMarks
+      createdAt: assessment?.createdAt || new Date(),
       updatedAt: new Date(),
     };
     onSave(newAssessment);
@@ -109,6 +138,22 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
                   placeholder="Enter question text"
                   required
                 />
+                <div className="mb-2">
+                  <label className="block text-gray-700">Marks</label>
+                  <input
+                    type="number"
+                    value={question.marks || 1}
+                    onChange={(e) =>
+                      updateQuestion(qIndex, {
+                        ...question,
+                        marks: parseInt(e.target.value) || 1,
+                      })
+                    }
+                    className="w-full border rounded-md p-2"
+                    min="1"
+                    required
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2 mb-2">
                   {question.options.map((option, oIndex) => (
                     <div key={option.id} className="flex items-center">
@@ -160,6 +205,15 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
             >
               Add Question
             </button>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700">Total Marks</label>
+            <input
+              type="text"
+              value={totalMarks}
+              className="w-full border rounded-md p-2 bg-gray-100"
+              readOnly
+            />
           </div>
           <div className="flex justify-end space-x-2">
             <button

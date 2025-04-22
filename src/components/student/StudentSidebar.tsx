@@ -29,8 +29,9 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
       navigate("/student/chat");
     } else if (tab === "Settings") {
       navigate("/student/settings");
+    }else if (tab === "Profile") {
+      navigate("/profile");
     }
-
     if (isMobile && closeMobileMenu) {
       closeMobileMenu();
     }

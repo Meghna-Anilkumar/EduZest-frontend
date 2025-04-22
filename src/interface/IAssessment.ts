@@ -8,15 +8,23 @@ export interface IQuestion {
   text: string;
   options: IOption[];
   correctOption: string;
+  marks:number
 }
 
 export interface IAssessment {
-  id: string;
+  _id: string;
   courseId: string;
   moduleTitle: string;
   title: string;
   description: string;
-  questions: IQuestion[];
-  createdAt: Date;
-  updatedAt: Date;
+  questions: {
+    id: string;
+    text: string;
+    options: { id: string; text: string }[];
+    correctOption: string;
+    marks: number;
+  }[];
+  totalMarks: number;
+  createdAt: string;
+  updatedAt: string;
 }

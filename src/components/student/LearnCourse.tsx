@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../redux/store";
 import {
@@ -7,7 +7,12 @@ import {
   streamVideoAction,
 } from "../../redux/actions/courseActions";
 import { clearError } from "../../redux/reducers/courseReducer";
-import { checkEnrollmentAction, getLessonProgressAction, updateLessonProgressAction } from "../../redux/actions/enrollmentActions";
+import {
+  checkEnrollmentAction,
+  getLessonProgressAction,
+  updateLessonProgressAction,
+} from "../../redux/actions/enrollmentActions";
+import { getAssessmentsForStudentAction } from "../../redux/actions/assessmentActions";
 import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import {
@@ -18,6 +23,7 @@ import {
   BookOpen,
   User,
   Shield,
+  FileText,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
 
@@ -63,9 +69,34 @@ interface LessonProgress {
   lastWatched: string;
 }
 
+interface IAssessment {
+  _id: string;
+  courseId: string;
+  moduleTitle: string;
+  title: string;
+  description: string;
+  questions: {
+    _id: string;
+    text: string;
+    options: string[];
+    correctAnswer: number;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface IAssessmentsResponse {
+  assessments: IAssessment[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 const CourseDetails: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { userData } = useSelector((state: RootState) => state.user);
   const [course, setCourse] = useState<ICourse | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -78,6 +109,12 @@ const CourseDetails: React.FC = () => {
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lessonProgress, setLessonProgress] = useState<LessonProgress[]>([]);
+  const [assessmentsByModule, setAssessmentsByModule] = useState<{
+    [moduleTitle: string]: IAssessmentsResponse | null;
+  }>({});
+  const [assessmentErrors, setAssessmentErrors] = useState<{
+    [moduleTitle: string]: string | null;
+  }>({});
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastProgressUpdate = useRef<number>(0);
 
@@ -166,6 +203,43 @@ const CourseDetails: React.FC = () => {
     };
   }, [dispatch, selectedLesson, courseId]);
 
+  useEffect(() => {
+    const fetchAssessmentsForModule = async (moduleTitle: string) => {
+      if (!courseId || !isEnrolled || !moduleTitle) return;
+
+      try {
+        const result = await dispatch(
+          getAssessmentsForStudentAction({
+            courseId,
+            moduleTitle,
+            page: 1,
+            limit: 10,
+          })
+        ).unwrap();
+        setAssessmentsByModule((prev) => ({
+          ...prev,
+          [moduleTitle]: result,
+        }));
+        setAssessmentErrors((prev) => ({
+          ...prev,
+          [moduleTitle]: null,
+        }));
+      } catch (err: any) {
+        console.error(`Failed to fetch assessments for module ${moduleTitle}:`, err.message);
+        setAssessmentErrors((prev) => ({
+          ...prev,
+          [moduleTitle]: err.message || "Failed to load assessments.",
+        }));
+      }
+    };
+
+    expandedSections.forEach((moduleTitle) => {
+      if (!assessmentsByModule[moduleTitle]) {
+        fetchAssessmentsForModule(moduleTitle);
+      }
+    });
+  }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule]);
+
   const isLessonUnlocked = (lesson: ILesson): boolean => {
     if (!course || !isEnrolled) return false;
 
@@ -179,6 +253,14 @@ const CourseDetails: React.FC = () => {
     return previousProgress?.isCompleted || false;
   };
 
+  const isModuleFullyCompleted = (module: IModule): boolean => {
+    if (!module.lessons || module.lessons.length === 0) return false;
+    return module.lessons.every((lesson) => {
+      const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
+      return progress?.isCompleted || false;
+    });
+  };
+
   const handleTimeUpdate = () => {
     if (videoRef.current && selectedLesson) {
       const currentTime = videoRef.current.currentTime;
@@ -186,18 +268,16 @@ const CourseDetails: React.FC = () => {
       if (duration && currentTime) {
         const progress = Math.min((currentTime / duration) * 100, 100);
         const currentTimeMs = Date.now();
-  
+
         if (currentTimeMs - lastProgressUpdate.current >= 5000) {
           lastProgressUpdate.current = currentTimeMs;
-          
-          // Log the payload we're about to send
+
           const payload = {
             courseId: courseId!,
             lessonId: selectedLesson._id,
             progress,
           };
           console.log("Sending progress update payload:", payload);
-          console.log("Selected lesson:", selectedLesson);
           dispatch(updateLessonProgressAction(payload))
             .then((result: any) => {
               console.log("Progress update response:", result);
@@ -205,7 +285,7 @@ const CourseDetails: React.FC = () => {
                 setLessonProgress(result.payload.data);
               }
             })
-            .catch(err => {
+            .catch((err) => {
               console.error("Progress update error:", err);
             });
         }
@@ -216,18 +296,23 @@ const CourseDetails: React.FC = () => {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
-  const toggleSection = (moduleTitle: string) =>
+  const toggleSection = (moduleTitle: string) => {
     setExpandedSections((prev) =>
       prev.includes(moduleTitle)
         ? prev.filter((title) => title !== moduleTitle)
         : [...prev, moduleTitle]
     );
+  };
 
   const handleLessonClick = (lesson: ILesson) => {
     if (isLessonUnlocked(lesson)) {
       setSelectedLesson(lesson);
       setVideoError(null);
     }
+  };
+
+  const handleAssessmentClick = (assessment: IAssessment) => {
+    navigate(`/student/courses/${courseId}/assessments/${assessment._id}`);
   };
 
   const handleExpandAll = () => {
@@ -409,49 +494,86 @@ const CourseDetails: React.FC = () => {
                               </div>
                             </button>
                             {expandedSections.includes(module.moduleTitle) && (
-                              <ul className="mt-2 pl-2">
-                                {module.lessons.map((lesson: ILesson) => {
-                                  const isUnlocked = isLessonUnlocked(lesson);
-                                  const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
-                                  return (
-                                    <li
-                                      key={lesson.lessonNumber}
-                                      className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
-                                        selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                          ? "bg-blue-50 text-[#49BBBD]"
-                                          : isUnlocked
-                                          ? "hover:bg-gray-50 cursor-pointer"
-                                          : "opacity-50 cursor-not-allowed"
-                                      }`}
-                                      onClick={() => isUnlocked && handleLessonClick(lesson)}
-                                    >
-                                      <div className="flex items-center flex-1">
-                                        <PlayCircle
-                                          className={`h-4 w-4 mr-2 ${
-                                            selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                              ? "text-[#49BBBD]"
-                                              : isUnlocked
-                                              ? "text-gray-500"
-                                              : "text-gray-300"
-                                          }`}
-                                        />
-                                        <span className="text-sm truncate max-w-xs">{lesson.title}</span>
-                                      </div>
-                                      <div className="flex items-center">
-                                        {progress && (
-                                          <span className="text-xs text-gray-500 mr-2">
-                                            {Math.round(progress.progress)}%
+                              <div className="mt-2 pl-2">
+                                <ul>
+                                  {module.lessons.map((lesson: ILesson) => {
+                                    const isUnlocked = isLessonUnlocked(lesson);
+                                    const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
+                                    return (
+                                      <li
+                                        key={lesson.lessonNumber}
+                                        className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
+                                          selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
+                                            ? "bg-blue-50 text-[#49BBBD]"
+                                            : isUnlocked
+                                            ? "hover:bg-gray-50 cursor-pointer"
+                                            : "opacity-50 cursor-not-allowed"
+                                        }`}
+                                        onClick={() => isUnlocked && handleLessonClick(lesson)}
+                                      >
+                                        <div className="flex items-center flex-1">
+                                          <PlayCircle
+                                            className={`h-4 w-4 mr-2 ${
+                                              selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
+                                                ? "text-[#49BBBD]"
+                                                : isUnlocked
+                                                ? "text-gray-500"
+                                                : "text-gray-300"
+                                            }`}
+                                          />
+                                          <span className="text-sm truncate max-w-xs">{lesson.title}</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                          {progress && (
+                                            <span className="text-xs text-gray-500 mr-2">
+                                              {Math.round(progress.progress)}%
+                                            </span>
+                                          )}
+                                          <span className="text-xs text-gray-500 flex items-center">
+                                            <Clock className="h-3 w-3 mr-1" />
+                                            {formatLessonDuration(lesson.duration)}
                                           </span>
-                                        )}
-                                        <span className="text-xs text-gray-500 flex items-center">
-                                          <Clock className="h-3 w-3 mr-1" />
-                                          {formatLessonDuration(lesson.duration)}
-                                        </span>
-                                      </div>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                                {isModuleFullyCompleted(module) ? (
+                                  assessmentsByModule[module.moduleTitle] ? (
+                                    <div className="mt-4">
+                                      <h4 className="font-medium text-gray-700 mb-2">Assessments</h4>
+                                      <ul className="space-y-2">
+                                        {assessmentsByModule[module.moduleTitle]!.assessments.map((assessment) => (
+                                          <li
+                                            key={assessment._id}
+                                            className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                                            onClick={() => handleAssessmentClick(assessment)}
+                                          >
+                                            <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                                            <span className="text-sm text-gray-600">{assessment.title}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                      {assessmentsByModule[module.moduleTitle]!.total > assessmentsByModule[module.moduleTitle]!.assessments.length && (
+                                        <p className="text-xs text-gray-500 mt-2">
+                                          Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
+                                          {assessmentsByModule[module.moduleTitle]!.total} assessments
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : assessmentErrors[module.moduleTitle] ? (
+                                    <p className="text-red-500 text-sm mt-2">
+                                      {assessmentErrors[module.moduleTitle]}
+                                    </p>
+                                  ) : (
+                                    <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
+                                  )
+                                ) : (
+                                  <p className="text-gray-500 text-sm mt-2">
+                                    Complete all lessons in this module to unlock assessments
+                                  </p>
+                                )}
+                              </div>
                             )}
                           </div>
                         ))}
@@ -468,18 +590,18 @@ const CourseDetails: React.FC = () => {
                             </div>
                           ) : videoUrl && isLessonUnlocked(selectedLesson) ? (
                             <video
-                            ref={videoRef}
-                            controls
-                            className="absolute inset-0 w-full h-full"
-                            src={videoUrl}
-                            poster={course.thumbnail}
-                            preload="metadata" 
-                            onTimeUpdate={handleTimeUpdate}
-                            onError={(e) => {
-                              console.error("Video Error:", e.currentTarget.error);
-                              setVideoError("Failed to play video. Please try refreshing or contact support.");
-                            }}
-                          />
+                              ref={videoRef}
+                              controls
+                              className="absolute inset-0 w-full h-full"
+                              src={videoUrl}
+                              poster={course.thumbnail}
+                              preload="metadata"
+                              onTimeUpdate={handleTimeUpdate}
+                              onError={(e) => {
+                                console.error("Video Error:", e.currentTarget.error);
+                                setVideoError("Failed to play video. Please try refreshing or contact support.");
+                              }}
+                            />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
                               <img
