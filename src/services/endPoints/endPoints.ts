@@ -67,10 +67,15 @@ export const userEndPoints: UserEndpoints = {
     `/student/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments?page=${page}&limit=${limit}`,
   getAssessmentById: (assessmentId: string) => `/assessments/${assessmentId}`,
   submitAssessment: (assessmentId: string) => `/student/assessments/${assessmentId}/submit`,
-  getAssessmentByIdForStudent:(assessmentId: string)=>`student/assessments/${assessmentId}`,
+  getAssessmentByIdForStudent: (assessmentId: string) => `student/assessments/${assessmentId}`,
+  getAssessmentResult:(assessmentId:string)=>`/student/assessments/${assessmentId}/result`,
+  getCourseProgress: (courseId: string) =>
+    `/student/courses/${courseId}/progress`,
+  getAllAssessmentsForCourse: (courseId: string, page: number, limit: number) =>
+    `/student/courses/${courseId}/assessments?page=${page}&limit=${limit}`,
 
-    //reviews
-    addReview: 'student/reviews',
+  //reviews
+  addReview: 'student/reviews',
   getReviewsByCourse: "/courses/:courseId/reviews",
   getReview: "student/review/:courseId",
 

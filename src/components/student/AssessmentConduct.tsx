@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { AppDispatch} from "../../redux/store";
-import { getAssessmentByIdForStudentAction, submitAssessmentAction } from "../../redux/actions/assessmentActions";
+import { AppDispatch } from "../../redux/store";
+import { getAssessmentByIdForStudentAction, submitAssessmentAction, getAssessmentResultAction } from "../../redux/actions/assessmentActions";
 import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
-import { FileText, CheckCircle, XCircle } from "lucide-react";
+import ConfirmationModal from "../common/ConfirmationModal";
+import { FileText, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { IAssessment } from "../../interface/IAssessment";
+
+interface IAttempt {
+  score: number;
+  passed: boolean;
+  completedAt: Date;
+  answers: { questionId: string; selectedAnswer: string; isCorrect: boolean }[];
+  _id?: string;
+}
+
+interface ISubmissionResult {
+  score: number;
+  totalPoints: number;
+  passed: boolean;
+  attempts: IAttempt[];
+  status: "inProgress" | "failed" | "passed";
+}
 
 const AssessmentPlayer: React.FC = () => {
   const { courseId, assessmentId } = useParams<{ courseId: string; assessmentId: string }>();
@@ -16,42 +33,68 @@ const AssessmentPlayer: React.FC = () => {
   const [answers, setAnswers] = useState<{ questionId: string; selectedAnswer: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionResult, setSubmissionResult] = useState<{
-    score: number;
-    totalPoints: number;
-    passed: boolean;
-    attempts: number;
-    status: "inProgress" | "failed" | "passed";
-  } | null>(null);
+  const [submissionResult, setSubmissionResult] = useState<ISubmissionResult | null>(null);
   const [activeTab, setActiveTab] = useState("Assessments");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchAssessment = async () => {
+    const fetchAssessmentAndResult = async () => {
       if (!assessmentId || !courseId) {
         console.log("AssessmentPlayer: Invalid assessment or course ID", { assessmentId, courseId });
         setError("Invalid assessment or course ID.");
+        setLoading(false);
         return;
       }
 
       try {
+        // Fetch assessment
         console.log("AssessmentPlayer: Dispatching getAssessmentByIdForStudentAction", { assessmentId });
-        const result = await dispatch(getAssessmentByIdForStudentAction({ assessmentId })).unwrap();
-        console.log("AssessmentPlayer: Fetched assessment", result);
-        setAssessment(result);
-        setAnswers(
-          result.questions.map((question) => ({
-            questionId: question.id,
-            selectedAnswer: "",
-          }))
-        );
+        const assessmentResult = await dispatch(getAssessmentByIdForStudentAction({ assessmentId })).unwrap();
+        console.log("AssessmentPlayer: Fetched assessment", assessmentResult);
+        setAssessment(assessmentResult);
+
+        // Try to fetch existing result, but handle "no submission" gracefully
+        console.log("AssessmentPlayer: Dispatching getAssessmentResultAction", { assessmentId });
+        try {
+          const existingResult = await dispatch(getAssessmentResultAction({ assessmentId })).unwrap();
+          console.log("AssessmentPlayer: Existing result", existingResult);
+          if (existingResult) {
+            setSubmissionResult(existingResult);
+          } else {
+            // No result found, initialize answers for first submission
+            setAnswers(
+              assessmentResult.questions.map((question) => ({
+                questionId: question.id,
+                selectedAnswer: "",
+              }))
+            );
+          }
+        } catch (err: any) {
+          // Handle "No submission found" case gracefully
+          if (err.message === "No submission found for this assessment.") {
+            console.log("AssessmentPlayer: No prior submission, initializing answers");
+            setAnswers(
+              assessmentResult.questions.map((question) => ({
+                questionId: question.id,
+                selectedAnswer: "",
+              }))
+            );
+          } else {
+            console.error("AssessmentPlayer: Failed to fetch result:", err.message);
+            setError(err.message || "Failed to load assessment result.");
+          }
+        }
       } catch (err: any) {
         console.error("AssessmentPlayer: Failed to fetch assessment:", err.message);
         setError(err.message || "Failed to load assessment.");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchAssessment();
+    fetchAssessmentAndResult();
   }, [dispatch, assessmentId, courseId]);
 
   const handleOptionSelect = (questionId: string, selectedAnswer: string) => {
@@ -63,9 +106,10 @@ const AssessmentPlayer: React.FC = () => {
     );
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!assessment || !assessmentId) {
       console.log("AssessmentPlayer: No assessment or assessmentId");
+      setError("No assessment data available.");
       return;
     }
 
@@ -76,26 +120,60 @@ const AssessmentPlayer: React.FC = () => {
       return;
     }
 
+    setIsModalOpen(true);
+  };
+
+  const confirmSubmit = async () => {
+    setIsModalOpen(false);
     setIsSubmitting(true);
     setError(null);
 
     try {
       console.log("AssessmentPlayer: Submitting assessment", { assessmentId, answers });
-      const result = await dispatch(
-        submitAssessmentAction({ assessmentId, answers })
-      ).unwrap();
-      console.log("AssessmentPlayer: Submission result", result);
-      setSubmissionResult(result);
+      const response = await dispatch(submitAssessmentAction({ assessmentId, answers })).unwrap();
+      console.log("AssessmentPlayer: Submission response", response);
+      if (!response || typeof response.score !== "number" || !Array.isArray(response.attempts)) {
+        throw new Error("Invalid submission response");
+      }
+      setSubmissionResult(response);
+      setAnswers(
+        assessment!.questions.map((question) => ({
+          questionId: question.id,
+          selectedAnswer: "",
+        }))
+      );
     } catch (err: any) {
       console.error("AssessmentPlayer: Failed to submit assessment:", err.message);
-      setError(err.message || "Failed to submit assessment.");
+      setError(err.message || "Failed to submit assessment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleTryAgain = () => {
+    console.log("AssessmentPlayer: Resetting for new attempt");
+    setSubmissionResult(null);
+    setError(null);
+    setAnswers(
+      assessment!.questions.map((question) => ({
+        questionId: question.id,
+        selectedAnswer: "",
+      }))
+    );
+  };
+
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -144,7 +222,9 @@ const AssessmentPlayer: React.FC = () => {
         )}
         <main className="flex-1 p-4 md:p-6 pt-24 md:ml-64 mt-16">
           <div className="max-w-4xl mx-auto">
-            {assessment ? (
+            {loading ? (
+              <div className="text-center text-gray-600">Loading assessment...</div>
+            ) : assessment ? (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center mb-4">
                   <FileText className="h-6 w-6 text-[#49BBBD] mr-2" />
@@ -155,30 +235,82 @@ const AssessmentPlayer: React.FC = () => {
                 )}
                 {error && <p className="text-red-500 mb-4">{error}</p>}
                 {submissionResult ? (
-                  <div className="bg-gray-100 p-6 rounded-lg text-center">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Assessment Submitted</h2>
-                    <p className="text-gray-600 mb-2">
-                      Score: {submissionResult.score} / {submissionResult.totalPoints}
-                    </p>
-                    <p className="text-gray-600 mb-4">
-                      {submissionResult.passed ? (
-                        <span className="flex items-center justify-center text-green-600">
-                          <CheckCircle className="h-5 w-5 mr-1" />
-                          Passed
-                        </span>
-                      ) : (
-                        <span className="flex items-center justify-center text-red-600">
-                          <XCircle className="h-5 w-5 mr-1" />
-                          Failed
-                        </span>
+                  <div className="bg-gray-100 p-6 rounded-lg">
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">Assessment Results</h2>
+                    <div className="mb-4">
+                      <p className="text-gray-600 mb-2">
+                        Overall Status:{" "}
+                        {submissionResult.status === "passed" ? (
+                          <span className="flex items-center text-green-600">
+                            <CheckCircle className="h-5 w-5 mr-1" />
+                            Passed
+                          </span>
+                        ) : (
+                          <span className="flex items-center text-red-600">
+                            <XCircle className="h-5 w-5 mr-1" />
+                            Failed
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-gray-600 mb-2">
+                        Latest Score: {submissionResult.score} / {submissionResult.totalPoints}
+                      </p>
+                      <p className="text-gray-600 mb-4">
+                        Total Attempts: {submissionResult.attempts.length}
+                      </p>
+                    </div>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">Attempt History</h3>
+                      {submissionResult.attempts.map((attempt, index) => (
+                        <div
+                          key={attempt._id || index}
+                          className="border-b py-2 flex justify-between items-center"
+                        >
+                          <div>
+                            <p className="text-gray-600">
+                              Attempt {index + 1} - Score: {attempt.score} / {submissionResult.totalPoints}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              Completed: {formatDate(attempt.completedAt)}
+                            </p>
+                          </div>
+                          <p
+                            className={`flex items-center ${
+                              attempt.passed ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {attempt.passed ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Passed
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="h-4 w-4 mr-1" />
+                                Failed
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between">
+                      {submissionResult.status !== "passed" && (
+                        <button
+                          className="flex items-center bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                          onClick={handleTryAgain}
+                        >
+                          <RefreshCw className="h-5 w-5 mr-2" />
+                          Try Again
+                        </button>
                       )}
-                    </p>
-                    <button
-                      className="bg-[#49BBBD] hover:bg-[#3aa9ab] text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                      onClick={() => navigate(`/courses/${courseId}`)}
-                    >
-                      Back to Course
-                    </button>
+                      <button
+                        className="bg-[#49BBBD] hover:bg-[#3aa9ab] text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+                        onClick={() => navigate(`/courses/${courseId}`)}
+                      >
+                        Back to Course
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -198,8 +330,7 @@ const AssessmentPlayer: React.FC = () => {
                                   type="radio"
                                   name={`question-${question.id}`}
                                   checked={
-                                    answers.find((a) => a.questionId === question.id)?.selectedAnswer ===
-                                    option.id
+                                    answers.find((a) => a.questionId === question.id)?.selectedAnswer === option.id
                                   }
                                   onChange={() => handleOptionSelect(question.id, option.id)}
                                   className="h-4 w-4 text-[#49BBBD] focus:ring-[#49BBBD]"
@@ -224,14 +355,18 @@ const AssessmentPlayer: React.FC = () => {
                   </>
                 )}
               </div>
-            ) : error ? (
-              <div className="text-center text-red-500">{error}</div>
             ) : (
-              <div className="text-center text-gray-500">Loading assessment...</div>
+              <div className="text-center text-red-500">{error || "Failed to load assessment."}</div>
             )}
           </div>
         </main>
       </div>
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={confirmSubmit}
+        message="Are you sure you want to submit your assessment? This action cannot be undone."
+      />
     </div>
   );
 };

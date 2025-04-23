@@ -15,7 +15,7 @@ import {
 import { AppDispatch } from "../../../redux/store";
 import AssessmentForm from "./AssessmentForm";
 import Pagination from "../../common/Pagination";
-import ConfirmationModal from "./ConfirmationModal";
+import ConfirmationModal from "../../common/ConfirmationModal";
 
 const AssessmentsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);

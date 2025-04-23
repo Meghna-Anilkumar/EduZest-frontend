@@ -48,11 +48,14 @@ export interface UserEndpoints extends IEndPoints {
         moduleTitle: string,
         page: number,
         limit: number
-      ) => string;
+    ) => string;
 
-      getAssessmentById: (assessmentId: string) => string;
-      getAssessmentByIdForStudent:(assessmentId: string) => string;
-      submitAssessment: (assessmentId: string) => string;
+    getAssessmentById: (assessmentId: string) => string;
+    getAssessmentByIdForStudent: (assessmentId: string) => string;
+    submitAssessment: (assessmentId: string) => string;
+    getAssessmentResult: (assessmentId: string) => string;
+    getCourseProgress: (courseId: string) => string
+    getAllAssessmentsForCourse: (courseId: string, page: number, limit: number) => string;
 
     //review
     addReview: string

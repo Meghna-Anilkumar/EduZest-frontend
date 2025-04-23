@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import { Book, Clock, AlertCircle } from "lucide-react";
+import { Book, Clock, AlertCircle, Award } from "lucide-react";
 import { AppDispatch } from "../../redux/store";
 import { getAllEnrollmentsAction } from "../../redux/actions/enrollmentActions";
 import { getCourseProgressAction } from "../../redux/actions/assessmentActions";
@@ -44,7 +44,7 @@ interface CourseProgress {
   progress: number;
 }
 
-const MyCourses: React.FC = () => {
+const CourseProgress: React.FC = () => {
   const [activeTab, setActiveTab] = useState("My Courses");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [enrollments, setEnrollments] = useState<EnrollmentData[]>([]);
@@ -86,7 +86,7 @@ const MyCourses: React.FC = () => {
               getCourseProgressAction({ courseId: enrollment.courseId._id })
             ).unwrap();
             console.log(
-              `MyCourses: Progress fetched for course ${enrollment.courseId._id}`,
+              `CourseProgress: Progress fetched for course ${enrollment.courseId._id}`,
               result
             );
             setCourseProgress((prev) => ({
@@ -95,7 +95,7 @@ const MyCourses: React.FC = () => {
             }));
           } catch (err: any) {
             console.error(
-              `MyCourses: Failed to fetch progress for course ${enrollment.courseId._id}`,
+              `CourseProgress: Failed to fetch progress for course ${enrollment.courseId._id}`,
               err
             );
             setCourseProgress((prev) => ({
@@ -165,7 +165,6 @@ const MyCourses: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
-
       <div className="flex flex-1">
         <div className="hidden md:block fixed top-16 left-0 h-full w-64 z-30 overflow-y-auto bg-white shadow-md">
           <StudentSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -213,7 +212,7 @@ const MyCourses: React.FC = () => {
 
         <main className="flex-1 p-4 md:p-6 pt-6 md:ml-64 mt-16">
           <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold mb-6">My Courses</h1>
+            <h1 className="text-2xl md:text-3xl font-bold mb-6">Course Progress</h1>
 
             {loading ? (
               <div className="flex items-center justify-center h-64">
@@ -223,7 +222,7 @@ const MyCourses: React.FC = () => {
               <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center mb-4">
                 <AlertCircle className="h-5 w-5 mr-2" />
                 <span>
-                  Failed to load your courses. Please try again later.
+                  Failed to load your progress. Please try again later.
                 </span>
               </div>
             ) : enrollments.length > 0 ? (
@@ -236,6 +235,9 @@ const MyCourses: React.FC = () => {
                     );
                     return null;
                   }
+
+                  const progressData = courseProgress[enrollment.courseId._id];
+                  const isCompleted = progressData && progressData.progress === 100;
 
                   return (
                     <div
@@ -311,13 +313,10 @@ const MyCourses: React.FC = () => {
                         </div>
 
                         <div className="mt-auto">
-                          {courseProgress[enrollment.courseId._id] ? (
+                          {progressData ? (
                             <div className="mb-3">
                               <ProgressBar
-                                completed={
-                                  courseProgress[enrollment.courseId._id]!
-                                    .progress
-                                }
+                                completed={progressData.progress}
                                 bgColor="#006400"
                                 labelAlignment="center"
                                 labelColor="#ffffff"
@@ -340,12 +339,22 @@ const MyCourses: React.FC = () => {
                               />
                             </div>
                           )}
-                          <Link
-                            to={`/student/learn/${enrollment.courseId._id}`}
-                            className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
-                          >
-                            Continue Learning
-                          </Link>
+                          {isCompleted ? (
+                            <Link
+                              to={`/student/courses/${enrollment.courseId._id}/results`}
+                              className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300 flex items-center justify-center"
+                            >
+                              <Award className="h-5 w-5 mr-2" />
+                              View Results
+                            </Link>
+                          ) : (
+                            <Link
+                              to={`/student/learn/${enrollment.courseId._id}`}
+                              className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
+                            >
+                              Continue Learning
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -358,7 +367,7 @@ const MyCourses: React.FC = () => {
                   <Book className="h-16 w-16 text-gray-300" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                  No courses yet
+                  No progress yet
                 </h2>
                 <p className="text-gray-500 mb-6">
                   You haven't enrolled in any courses yet.
@@ -391,4 +400,4 @@ const MyCourses: React.FC = () => {
   );
 };
 
-export default MyCourses;
+export default CourseProgress;

@@ -1,4 +1,3 @@
-// components/CourseDetailsPage.tsx
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
@@ -37,14 +36,14 @@ interface Course {
       title: string;
       description: string;
       objectives?: string[];
-      video: string; // Signed URL
-      videoKey: string; // Raw S3 key
+      video: string;
+      videoKey: string;
       duration?: string;
     }>;
   }>;
   trial: {
-    video?: string; // Signed URL
-    videoKey?: string; // Raw S3 key
+    video?: string;
+    videoKey?: string; 
   };
   attachments?: { title?: string; url?: string };
   isRequested: boolean;
