@@ -76,6 +76,13 @@ export interface AdminEndpoints extends IEndPoints {
     deleteCategory: (categoryId: string) => string;
     getAllInstructors: (page: number, limit: number, search?: string) => string;
     getInstructorRequestDetails: (userId: string) => string;
-    getAdminPayouts: string
+    getAdminPayouts: (
+        page: number,
+        limit: number,
+        search?: string,
+        sortField?: string,
+        sortOrder?: "asc" | "desc"
+      ) => string;
+    dashboardStats:()=>string
 }
 

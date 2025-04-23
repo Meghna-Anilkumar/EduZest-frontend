@@ -142,3 +142,21 @@ export const getAllInstructorsAction = createAsyncThunk(
       }
     }
 );
+
+
+export const getDashboardStatsAction = createAsyncThunk(
+  "admin/getDashboardStats",
+  async ({ period = "day" }: { period?: "day" | "month" | "year" }, { rejectWithValue }) => {
+    try {
+      const url = adminEndpoints.dashboardStats();
+      console.log("Fetching dashboard stats with URL:", url);
+      const response = await serverAdmin.get(url, { params: { period } });
+      console.log("Action response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Get dashboard stats action Error: ", error);
+      const e: AxiosError = error as AxiosError;
+      return rejectWithValue(e.response?.data || e.message);
+    }
+  }
+);

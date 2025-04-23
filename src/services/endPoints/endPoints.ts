@@ -123,5 +123,27 @@ export const adminEndpoints: AdminEndpoints = {
     return `/fetchAllInstructors?${queryParams.toString()}`;
   },
   getInstructorRequestDetails: (userId: string) => `/get-instructor-request-details/${userId}`,
-  getAdminPayouts: '/getTransactions'
+  getAdminPayouts: (
+    page: number,
+    limit: number,
+    search?: string,
+    sortField?: string,
+    sortOrder?: "asc" | "desc"
+  ) => {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (search) {
+      queryParams.append("search", search);
+    }
+    if (sortField) {
+      queryParams.append("sortField", sortField);
+    }
+    if (sortOrder) {
+      queryParams.append("sortOrder", sortOrder);
+    }
+    return `/getTransactions?${queryParams.toString()}`;
+  },
+  dashboardStats: () => `/dashboard-stats`,
 };
