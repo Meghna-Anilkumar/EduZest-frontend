@@ -166,3 +166,19 @@ export const updateLessonProgressAction = createAsyncThunk(
         }
     }
 );
+
+
+export const getInstructorCourseStatsAction = createAsyncThunk(
+    "enrollment/getInstructorCourseStats",
+    async (_, { rejectWithValue }) => {
+      try {
+        const response = await serverUser.get(userEndPoints.getCourseStats, {
+          withCredentials: true,
+        });
+        return response.data;
+      } catch (error) {
+        const err = error as AxiosError;
+        return rejectWithValue(err.response?.data || { message: err.message });
+      }
+    }
+  );

@@ -54,6 +54,7 @@ export interface IUserdata {
   };
   aboutMe: string;
   isRequested: string; 
+  isApproved:boolean
   socialMedia?: {
     linkedin?: string;
     github?: string;

@@ -28,7 +28,7 @@ const StudentRoutes: React.FC = () => {
           <Route path="/payments" element={<PaymentsHistory />} />
           <Route path="/courses/:courseId/assessments/:assessmentId" element={<AssessmentPlayer />} />
           <Route path="/courses/:courseId/results" element={<CourseResults />} />
-          <Route path="/assessments" element={<CourseProgress/>}/>
+          <Route path="/progress" element={<CourseProgress/>}/>
         </Route>
 
         {/* 404 Page */}

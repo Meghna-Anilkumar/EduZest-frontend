@@ -2,13 +2,16 @@ import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Upload, UserCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { applyForInstructorThunk } from "../../redux/actions/userActions";
+import {
+  applyForInstructorThunk,
+  switchToInstructorThunk,
+} from "../../redux/actions/userActions";
 import { AppDispatch, RootState } from "../../redux/store";
 import { toast } from "react-toastify";
 import { fetchUserData } from "../../redux/actions/auth/fetchUserdataAction";
 import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
 import * as Yup from "yup";
-import { Loader } from "../Loader"; 
+import { Loader } from "../Loader";
 
 const Header = lazy(() => import("../common/users/Header"));
 
@@ -41,7 +44,7 @@ const InstructorApplicationForm = () => {
     error: null as string | null,
     success: false,
   });
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
 
   const fieldNameMapping: Record<string, string> = {
     mobileNumber: "phone",
@@ -59,22 +62,42 @@ const InstructorApplicationForm = () => {
     "socialMedia.github": "githubUrl",
   };
 
-  // Fetch user data only once on mount
+  // Fetch user data and poll for updates
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
     } else {
       const fetchData = async () => {
-        setIsLoading(true); 
+        setIsLoading(true);
         try {
           await dispatch(fetchUserData()).unwrap();
         } catch (error) {
           toast.error("Failed to fetch user data. Please try again.");
         } finally {
-          setIsLoading(false); 
+          setIsLoading(false);
         }
       };
       fetchData();
+
+      // Poll every 30 seconds to check for isApproved
+      const intervalId = setInterval(async () => {
+        try {
+          const result = await dispatch(fetchUserData()).unwrap();
+          if (result.data?.isApproved) {
+            toast.info(
+              "Your instructor application has been approved! Please switch to instructor role.",
+              {
+                position: "top-center",
+                autoClose: 5000,
+              }
+            );
+          }
+        } catch (error) {
+          console.error("Polling error:", error);
+        }
+      }, 30000);
+
+      return () => clearInterval(intervalId);
     }
   }, [dispatch, isAuthenticated, navigate]);
 
@@ -305,7 +328,7 @@ const InstructorApplicationForm = () => {
       const result = await dispatch(applyForInstructorThunk(data)).unwrap();
       if (result.success) {
         if (userData?.email) {
-          await dispatch(fetchUserData()); 
+          await dispatch(fetchUserData());
         }
         setSubmitStatus({ loading: false, error: null, success: true });
         toast.success(result.message || "Application submitted successfully");
@@ -343,6 +366,31 @@ const InstructorApplicationForm = () => {
     }
   };
 
+  const handleSwitchToInstructor = async () => {
+    if (!userData?._id) {
+      toast.error("User data not available. Please try again.");
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        switchToInstructorThunk(userData._id)
+      ).unwrap();
+      if (result.success) {
+        toast.success("Switched to instructor role. Please log in again.");
+        navigate("/login");
+      } else {
+        throw new Error(
+          result.message || "Failed to switch to instructor role"
+        );
+      }
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+          "Failed to switch to instructor role. Please try again."
+      );
+    }
+  };
   if (isLoading) {
     return <Loader />;
   }
@@ -400,19 +448,34 @@ const InstructorApplicationForm = () => {
                   ></path>
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-               Success
-              </h2>
-              <p className="text-gray-600 mb-6">
-                You have successfully submitted your instructor application.
-                Please wait for our response while we review your application.
-              </p>
-              {/* <button
-                onClick={() => navigate("/dashboard")} // Replace with your desired route
-                className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-              >
-                Continue
-              </button> */}
+              {userData.isApproved ? (
+                <>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                    Application Approved!
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Your instructor application has been approved. Please switch
+                    to your instructor role and log in again.
+                  </p>
+                  <button
+                    onClick={handleSwitchToInstructor}
+                    className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                  >
+                    Switch to Instructor Role
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                    Success
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    You have successfully submitted your instructor application.
+                    Please wait for our response while we review your
+                    application.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : (

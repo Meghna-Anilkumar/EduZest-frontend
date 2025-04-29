@@ -33,7 +33,7 @@ const Requests: React.FC = () => {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [rejectionMessage, setRejectionMessage] = useState<string>(""); // New state for rejection message
+  const [rejectionMessage, setRejectionMessage] = useState<string>("");
 
   const fetchRequestedUsers = useCallback(
     async (page: number) => {

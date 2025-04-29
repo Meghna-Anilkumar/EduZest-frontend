@@ -15,7 +15,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   isMobile = false,
   closeMobileMenu
 }) => {
-  const tabs = ["My Courses", "Assessments", "Payments", "Chat Support", "Settings", "Profile"];
+  const tabs = ["My Courses", "My Progress", "Payments", "Chat Support", "Settings", "Profile"];
   const navigate = useNavigate();
 
   const handleTabClick = (tab: string) => {
@@ -31,6 +31,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
       navigate("/student/settings");
     }else if (tab === "Profile") {
       navigate("/profile");
+    }else if (tab === "My Progress") {
+      navigate("/student/progress");
     }
     if (isMobile && closeMobileMenu) {
       closeMobileMenu();

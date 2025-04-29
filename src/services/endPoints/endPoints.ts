@@ -14,6 +14,7 @@ export const userEndPoints: UserEndpoints = {
   changePassword: '/change-password',
   googleAuth: '/google-auth',
   applyInstructor: '/instructor-apply',
+  switchToInstructor:'/switch-to-instructor',
   refreshToken: '/refresh-token',
   refreshSignedUrl: '/refresh-signed-url',
 
@@ -49,6 +50,7 @@ export const userEndPoints: UserEndpoints = {
     }).toString();
     return `instructor/getTransactions?${query}`;
   },
+  getCourseStats:'/instructor/course-stats',
 
 
   //assessments

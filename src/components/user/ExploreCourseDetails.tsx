@@ -162,8 +162,9 @@ const CourseDetailsPage = () => {
   };
 
   const handleGoToCourse = () => {
-    navigate(`/student/course/${course._id}`);
+    navigate(`/student/learn/${course._id}`);
   };
+
 
   const confirmEnrollment = async () => {
     setShowModal(false);

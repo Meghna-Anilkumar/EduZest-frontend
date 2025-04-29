@@ -306,7 +306,7 @@ const AssessmentPlayer: React.FC = () => {
                       )}
                       <button
                         className="bg-[#49BBBD] hover:bg-[#3aa9ab] text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                        onClick={() => navigate(`/courses/${courseId}`)}
+                        onClick={() => navigate(`/student/learn/${courseId}`)}
                       >
                         Back to Course
                       </button>

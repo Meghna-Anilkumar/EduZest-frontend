@@ -305,18 +305,7 @@ const StudentProfilePage = () => {
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Additional Email</label>
-                        <Field
-                          type="email"
-                          name="additionalEmail"
-                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                            errors.additionalEmail && touched.additionalEmail ? "border-red-500" : ""
-                          }`}
-                          placeholder="Enter additional email"
-                        />
-                        <ErrorMessage name="additionalEmail" component="div" className="mt-1 text-sm text-red-600 text-left" />
-                      </div>
+                  
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1 text-left">Date of Birth</label>
