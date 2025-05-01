@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
 import { serverUser } from "../../../services";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
-import { LoginData } from "../../../interface/user/IUserData";
+import { LoginData } from "../../../interface/IUserData";
 import { ResponseData } from "../../../interface/Interface";
 
 

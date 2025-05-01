@@ -24,6 +24,7 @@ import {
   User,
   Shield,
   FileText,
+  Lock,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
 
@@ -240,25 +241,56 @@ const CourseDetails: React.FC = () => {
     });
   }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule]);
 
-  const isLessonUnlocked = (lesson: ILesson): boolean => {
-    if (!course || !isEnrolled) return false;
-
-    const allLessons = course.modules.flatMap((module) => module.lessons);
-    const lessonIndex = allLessons.findIndex((l) => l._id === lesson._id);
-
-    if (lessonIndex === 0) return true;
-
-    const previousLesson = allLessons[lessonIndex - 1];
-    const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
-    return previousProgress?.isCompleted || false;
+  // Find module index for a lesson
+  const findModuleIndexForLesson = (lesson: ILesson): number => {
+    if (!course) return -1;
+    return course.modules.findIndex((module) =>
+      module.lessons.some((l) => l._id === lesson._id)
+    );
   };
 
+  // Check if a module is fully completed
   const isModuleFullyCompleted = (module: IModule): boolean => {
     if (!module.lessons || module.lessons.length === 0) return false;
     return module.lessons.every((lesson) => {
       const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
       return progress?.isCompleted || false;
     });
+  };
+
+  // Check if a module is accessible
+  const isModuleAccessible = (moduleIndex: number): boolean => {
+    if (!course || !isEnrolled) return false;
+    
+    // First module is always accessible
+    if (moduleIndex === 0) return true;
+    
+    // For other modules, check if previous module is fully completed
+    const previousModule = course.modules[moduleIndex - 1];
+    return isModuleFullyCompleted(previousModule);
+  };
+
+  // Check if a lesson is unlocked
+  const isLessonUnlocked = (lesson: ILesson): boolean => {
+    if (!course || !isEnrolled) return false;
+
+    // Find which module this lesson belongs to
+    const moduleIndex = findModuleIndexForLesson(lesson);
+    if (moduleIndex === -1) return false;
+    
+    // Check if this module is accessible first
+    if (!isModuleAccessible(moduleIndex)) return false;
+    
+    const module = course.modules[moduleIndex];
+    const lessonIndex = module.lessons.findIndex((l) => l._id === lesson._id);
+    
+    // Always allow access to the first lesson of any accessible module
+    if (lessonIndex === 0) return true;
+    
+    // For other lessons, check if previous lesson in same module is completed
+    const previousLesson = module.lessons[lessonIndex - 1];
+    const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
+    return previousProgress?.isCompleted || false;
   };
 
   const handleTimeUpdate = () => {
@@ -308,6 +340,9 @@ const CourseDetails: React.FC = () => {
     if (isLessonUnlocked(lesson)) {
       setSelectedLesson(lesson);
       setVideoError(null);
+    } else {
+      // Provide feedback on why the lesson is locked
+      setVideoError("This lesson is locked. Complete previous lessons to unlock it.");
     }
   };
 
@@ -351,6 +386,134 @@ const CourseDetails: React.FC = () => {
     !duration ? "00:00" : `${parseInt(duration, 10)}m`;
 
   const totalLessons = course?.modules.reduce((acc, module) => acc + module.lessons.length, 0) || 0;
+
+  // Render a module section with its lessons
+  const renderModuleSection = (module: IModule, index: number) => {
+    const isAccessible = isModuleAccessible(index);
+    
+    return (
+      <div key={index} className="border-t border-gray-200 py-2">
+        <button
+          className={`flex justify-between items-center w-full text-left p-2 hover:bg-gray-50 rounded-md ${
+            !isAccessible ? "opacity-70" : ""
+          }`}
+          onClick={() => {
+            if (isAccessible) {
+              toggleSection(module.moduleTitle);
+            } else {
+              setVideoError("Complete previous module to unlock this content.");
+            }
+          }}
+        >
+          <div className="flex items-center">
+            {!isAccessible && (
+              <Lock className="h-4 w-4 mr-2 text-gray-400" />
+            )}
+            <span className="font-semibold text-gray-800">{module.moduleTitle}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-xs text-gray-500 mr-2">{module.lessons.length} lessons</span>
+            {expandedSections.includes(module.moduleTitle) ? (
+              <ChevronDown className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-400" />
+            )}
+          </div>
+        </button>
+        {isAccessible && expandedSections.includes(module.moduleTitle) && (
+          <div className="mt-2 pl-2">
+            <ul>
+              {module.lessons.map((lesson: ILesson) => {
+                const isUnlocked = isLessonUnlocked(lesson);
+                const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
+                return (
+                  <li
+                    key={lesson.lessonNumber}
+                    className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
+                      selectedLesson && selectedLesson._id === lesson._id
+                        ? "bg-blue-50 text-[#49BBBD]"
+                        : isUnlocked
+                        ? "hover:bg-gray-50 cursor-pointer"
+                        : "opacity-50 cursor-not-allowed"
+                    }`}
+                    onClick={() => {
+                      if (isUnlocked) {
+                        handleLessonClick(lesson);
+                      } else {
+                        setVideoError("Complete previous lessons to unlock this one.");
+                      }
+                    }}
+                  >
+                    <div className="flex items-center flex-1">
+                      {isUnlocked ? (
+                        <PlayCircle
+                          className={`h-4 w-4 mr-2 ${
+                            selectedLesson && selectedLesson._id === lesson._id
+                              ? "text-[#49BBBD]"
+                              : "text-gray-500"
+                          }`}
+                        />
+                      ) : (
+                        <Lock className="h-4 w-4 mr-2 text-gray-400" />
+                      )}
+                      <span className="text-sm truncate max-w-xs">{lesson.title}</span>
+                    </div>
+                    <div className="flex items-center">
+                      {progress && (
+                        <span className="text-xs text-gray-500 mr-2">
+                          {Math.round(progress.progress)}%
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500 flex items-center">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {formatLessonDuration(lesson.duration)}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            {isModuleFullyCompleted(module) ? (
+              assessmentsByModule[module.moduleTitle] ? (
+                <div className="mt-4">
+                  <h4 className="font-medium text-gray-700 mb-2">Assessments</h4>
+                  <ul className="space-y-2">
+                    {assessmentsByModule[module.moduleTitle]!.assessments.map((assessment) => (
+                      <li
+                        key={assessment._id}
+                        className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleAssessmentClick(assessment)}
+                      >
+                        <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                        <span className="text-sm text-gray-600">{assessment.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {assessmentsByModule[module.moduleTitle]!.total > 
+                   assessmentsByModule[module.moduleTitle]!.assessments.length && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
+                      {assessmentsByModule[module.moduleTitle]!.total} assessments
+                    </p>
+                  )}
+                </div>
+              ) : assessmentErrors[module.moduleTitle] ? (
+                <p className="text-red-500 text-sm mt-2">
+                  {assessmentErrors[module.moduleTitle]}
+                </p>
+              ) : (
+                <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
+              )
+            ) : (
+              <p className="text-gray-500 text-sm mt-2">
+                Complete all lessons in this module to unlock assessments
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -477,106 +640,9 @@ const CourseDetails: React.FC = () => {
                         {course.modules.length} modules • {totalLessons} lessons • {getTotalDuration()} total
                       </div>
                       <div className="max-h-[60vh] overflow-y-auto pr-1">
-                        {course.modules.map((module: IModule, index: number) => (
-                          <div key={index} className="border-t border-gray-200 py-2">
-                            <button
-                              className="flex justify-between items-center w-full text-left p-2 hover:bg-gray-50 rounded-md"
-                              onClick={() => toggleSection(module.moduleTitle)}
-                            >
-                              <span className="font-semibold text-gray-800">{module.moduleTitle}</span>
-                              <div className="flex items-center">
-                                <span className="text-xs text-gray-500 mr-2">{module.lessons.length} lessons</span>
-                                {expandedSections.includes(module.moduleTitle) ? (
-                                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                                )}
-                              </div>
-                            </button>
-                            {expandedSections.includes(module.moduleTitle) && (
-                              <div className="mt-2 pl-2">
-                                <ul>
-                                  {module.lessons.map((lesson: ILesson) => {
-                                    const isUnlocked = isLessonUnlocked(lesson);
-                                    const progress = lessonProgress.find((lp) => lp.lessonId === lesson._id);
-                                    return (
-                                      <li
-                                        key={lesson.lessonNumber}
-                                        className={`flex items-center justify-between p-2 rounded-md transition-colors duration-200 ${
-                                          selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                            ? "bg-blue-50 text-[#49BBBD]"
-                                            : isUnlocked
-                                            ? "hover:bg-gray-50 cursor-pointer"
-                                            : "opacity-50 cursor-not-allowed"
-                                        }`}
-                                        onClick={() => isUnlocked && handleLessonClick(lesson)}
-                                      >
-                                        <div className="flex items-center flex-1">
-                                          <PlayCircle
-                                            className={`h-4 w-4 mr-2 ${
-                                              selectedLesson && selectedLesson.lessonNumber === lesson.lessonNumber
-                                                ? "text-[#49BBBD]"
-                                                : isUnlocked
-                                                ? "text-gray-500"
-                                                : "text-gray-300"
-                                            }`}
-                                          />
-                                          <span className="text-sm truncate max-w-xs">{lesson.title}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                          {progress && (
-                                            <span className="text-xs text-gray-500 mr-2">
-                                              {Math.round(progress.progress)}%
-                                            </span>
-                                          )}
-                                          <span className="text-xs text-gray-500 flex items-center">
-                                            <Clock className="h-3 w-3 mr-1" />
-                                            {formatLessonDuration(lesson.duration)}
-                                          </span>
-                                        </div>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                                {isModuleFullyCompleted(module) ? (
-                                  assessmentsByModule[module.moduleTitle] ? (
-                                    <div className="mt-4">
-                                      <h4 className="font-medium text-gray-700 mb-2">Assessments</h4>
-                                      <ul className="space-y-2">
-                                        {assessmentsByModule[module.moduleTitle]!.assessments.map((assessment) => (
-                                          <li
-                                            key={assessment._id}
-                                            className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
-                                            onClick={() => handleAssessmentClick(assessment)}
-                                          >
-                                            <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                                            <span className="text-sm text-gray-600">{assessment.title}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                      {assessmentsByModule[module.moduleTitle]!.total > assessmentsByModule[module.moduleTitle]!.assessments.length && (
-                                        <p className="text-xs text-gray-500 mt-2">
-                                          Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
-                                          {assessmentsByModule[module.moduleTitle]!.total} assessments
-                                        </p>
-                                      )}
-                                    </div>
-                                  ) : assessmentErrors[module.moduleTitle] ? (
-                                    <p className="text-red-500 text-sm mt-2">
-                                      {assessmentErrors[module.moduleTitle]}
-                                    </p>
-                                  ) : (
-                                    <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
-                                  )
-                                ) : (
-                                  <p className="text-gray-500 text-sm mt-2">
-                                    Complete all lessons in this module to unlock assessments
-                                  </p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        {course.modules.map((module: IModule, index: number) => 
+                          renderModuleSection(module, index)
+                        )}
                       </div>
                     </div>
                   </div>
@@ -611,15 +677,39 @@ const CourseDetails: React.FC = () => {
                               />
                               {!isLessonUnlocked(selectedLesson) && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                                  <p className="text-white text-lg">
-                                    Complete the previous lesson to unlock
-                                  </p>
+                                  <div className="text-center text-white p-4">
+                                    <Lock className="h-12 w-12 mx-auto mb-2" />
+                                    <p className="text-lg font-medium">
+                                      This lesson is locked
+                                    </p>
+                                    <p className="text-sm mt-2">
+                                      Complete previous lessons to unlock this content
+                                    </p>
+                                  </div>
                                 </div>
                               )}
                             </div>
                           )}
                         </div>
-                        {videoError && <p className="text-red-500 text-sm p-4">{videoError}</p>}
+                        {videoError && (
+                          <div className="bg-red-50 text-red-700 p-4 border-l-4 border-red-500">
+                            <p className="flex items-center">
+                              <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className="h-5 w-5 mr-2" 
+                                viewBox="0 0 20 20" 
+                                fill="currentColor"
+                              >
+                                <path 
+                                  fillRule="evenodd" 
+                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" 
+                                  clipRule="evenodd" 
+                                />
+                              </svg>
+                              {videoError}
+                            </p>
+                          </div>
+                        )}
                         <div className="p-6">
                           <h3 className="text-xl font-bold text-gray-800 mb-2">{selectedLesson.title}</h3>
                           <div className="flex items-center text-sm text-gray-600 mb-4">

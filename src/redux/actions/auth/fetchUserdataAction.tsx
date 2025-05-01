@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
-import { IUserdataResponse } from "../../../interface/user/IUserData";
+import { IUserdataResponse } from "../../../interface/IUserData";
 import { serverUser } from "../../../services";
 
 export const fetchUserData = createAsyncThunk(

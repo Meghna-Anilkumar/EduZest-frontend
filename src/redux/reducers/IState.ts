@@ -1,4 +1,4 @@
-import { IUserdata } from "../../interface/user/IUserData";
+import { IUserdata } from "../../interface/IUserData";
 
 export interface IInitialState {
     isAuthenticated: boolean;

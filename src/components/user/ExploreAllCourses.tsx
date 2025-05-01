@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { Star,Filter, ChevronDown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { clearError } from "../../redux/reducers/courseReducer";
@@ -38,16 +38,13 @@ const CourseListing: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [filters, setFilters] = useState<FilterOptions>({});
   const [sort, setSort] = useState<SortOptions>({ field: "updatedAt", order: "desc" });
-
-  // useEffect(() => {
-  //   console.log("Redux activeCourses.courses:", activeCourses.courses);
-  // }, [activeCourses.courses]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     dispatch(
       getAllActiveCoursesAction({
         page: currentPage,
-        limit: 10,
+        limit: 8,
         search: searchTerm || undefined,
         filters,
         sort,
@@ -80,12 +77,16 @@ const CourseListing: React.FC = () => {
     setCurrentPage(page);
   };
 
+  const toggleFilters = () => {
+    setIsFilterOpen(!isFilterOpen);
+  };
+
   const courses: DisplayCourse[] = activeCourses.courses.map((course: any) => ({
     id: course._id,
     title: course.title,
     instructor: course.instructorRef?.name || "Unknown Instructor",
-    rating: 4.5, 
-    reviewCount: 1000, 
+    rating: 4.5,
+    reviewCount: 1000,
     originalPrice: course.pricing?.amount || 0,
     tags: [
       ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
@@ -95,82 +96,132 @@ const CourseListing: React.FC = () => {
   }));
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Suspense fallback={<div>Loading...</div>}>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#49BBBD]"></div>
+      </div>}>
         <Header className="fixed top-0 left-0 right-0 z-50" />
       </Suspense>
 
-      <div className="bg-gray-100 flex-grow pt-[80px] md:pt-[100px] p-4 md:p-8">
-        <div className="container mx-auto">
-          <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Courses to get you started</h1>
-          <p className="text-gray-600 mb-6 md:mb-8">Explore courses from experienced, real-world experts</p>
+      <div className="flex-grow pt-[80px] md:pt-[100px] pb-12">
+        <div className="container mx-auto px-4 md:px-8">
+        <div className="bg-gradient-to-r from-[#247274] to-[#49BBBD] rounded-xl p-6 md:p-10 mb-8 text-white shadow-lg">
+  <h1 className="text-3xl md:text-4xl font-bold mb-2">Discover Your Next Skill</h1>
+  <p className="text-lg md:text-xl opacity-90 mb-6">Explore courses from experienced, real-world experts</p>
+  <div className="max-w-2xl">
+    <SearchBar onSearchChange={handleSearchChange} />
+  </div>
+</div>
 
-          <div className="mb-6 flex flex-col md:flex-row gap-4">
-            <SearchBar onSearchChange={handleSearchChange} />
-            <select
-              name="level"
-              onChange={handleFilterChange}
-              className="border p-2 rounded"
-            >
-              <option value="">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-            <select
-              name="pricingType"
-              onChange={handleFilterChange}
-              className="border p-2 rounded"
-            >
-              <option value="">All Pricing</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </select>
-            <select onChange={handleSortChange} className="border p-2 rounded">
-              <option value="updatedAt:desc">Newest First</option>
-              <option value="updatedAt:asc">Oldest First</option>
-              <option value="price:asc">Price: Low to High</option>
-              <option value="price:desc">Price: High to Low</option>
-              <option value="studentsEnrolled:desc">Most Popular</option>
-            </select>
+          {/* Filter and Sort Controls */}
+          <div className="mb-8">
+            <div className="flex flex-wrap justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Featured Courses</h2>
+              <button 
+                onClick={toggleFilters} 
+                className="flex items-center gap-2 md:hidden bg-white py-2 px-4 rounded-lg shadow-sm border border-gray-200"
+              >
+                <Filter size={18} />
+                <span>Filters</span>
+                <ChevronDown size={16} className={`transform transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+            
+            <div className={`md:flex gap-3 ${isFilterOpen ? 'block' : 'hidden md:flex'}`}>
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3 md:mb-0 flex-grow md:flex-grow-0">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Level</label>
+                <select
+                  name="level"
+                  onChange={handleFilterChange}
+                  className="w-full border-gray-200 bg-gray-50 p-2 rounded text-sm focus:ring focus:ring-[#49BBBD]/20 focus:border-[#49BBBD] outline-none"
+                >
+                  <option value="">All Levels</option>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3 md:mb-0 flex-grow md:flex-grow-0">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Price</label>
+                <select
+                  name="pricingType"
+                  onChange={handleFilterChange}
+                  className="w-full border-gray-200 bg-gray-50 p-2 rounded text-sm focus:ring focus:ring-[#49BBBD]/20 focus:border-[#49BBBD] outline-none"
+                >
+                  <option value="">All Pricing</option>
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
+                </select>
+              </div>
+              
+              <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 mb-3 md:mb-0 flex-grow md:flex-grow-0">
+                <label className="block text-sm font-medium text-gray-600 mb-1">Sort By</label>
+                <select 
+                  onChange={handleSortChange} 
+                  className="w-full border-gray-200 bg-gray-50 p-2 rounded text-sm focus:ring focus:ring-[#49BBBD]/20 focus:border-[#49BBBD] outline-none"
+                >
+                  <option value="updatedAt:desc">Newest First</option>
+                  <option value="updatedAt:asc">Oldest First</option>
+                  <option value="price:asc">Price: Low to High</option>
+                  <option value="price:desc">Price: High to Low</option>
+                  <option value="studentsEnrolled:desc">Most Popular</option>
+                </select>
+              </div>
+            </div>
           </div>
 
+          {/* Course Cards */}
           {loading ? (
-            <div className="text-center">Loading courses...</div>
+            <div className="flex items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#49BBBD]"></div>
+            </div>
           ) : error ? (
-            <div className="text-center text-red-500">{error}</div>
+            <div className="text-center p-10 bg-red-50 rounded-lg border border-red-100">
+              <div className="text-red-500 font-medium text-lg mb-2">Oops! Something went wrong</div>
+              <div className="text-gray-600">{error}</div>
+            </div>
           ) : courses.length === 0 ? (
-            <div className="text-center text-gray-500">No courses found.</div>
+            <div className="text-center p-10 bg-gray-50 rounded-lg border border-gray-100">
+              <div className="text-gray-500 font-medium text-lg mb-2">No courses found</div>
+              <p className="text-gray-500">Try adjusting your search or filter criteria</p>
+            </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {courses.map((course) => (
                   <Link
                     to={`/course-details/${course.id}`}
                     key={course.id}
-                    className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+                    className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full border border-gray-100 group"
                   >
-                    <img
-                      src={course.imageUrl}
-                      alt={course.title}
-                      className="w-full h-40 md:h-48 object-cover"
-                    />
-                    <div className="p-3 md:p-4">
-                      <h2 className="font-bold text-base md:text-lg mb-1 md:mb-2 line-clamp-2">
+                    <div className="relative">
+                      <img
+                        src={course.imageUrl}
+                        alt={course.title}
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+
+                    </div>
+                    
+                    <div className="p-5 flex-grow flex flex-col">
+                      <h2 className="font-bold text-lg mb-2 line-clamp-2 text-gray-800 group-hover:text-[#49BBBD] transition-colors">
                         {course.title}
                       </h2>
-                      <p className="text-gray-600 text-xs md:text-sm mb-1 md:mb-2">
-                        {course.instructor}
+                      
+                      <p className="text-gray-600 text-sm mb-2">
+                        By <span className="font-medium">{course.instructor}</span>
                       </p>
-                      <div className="flex items-center mb-1 md:mb-2">
-                        <span className="text-yellow-500 font-bold mr-1 md:mr-2 text-sm md:text-base">
+                      
+                      <div className="flex items-center mb-3">
+                        <span className="text-yellow-500 font-bold mr-1 text-sm">
                           {course.rating}
                         </span>
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
                             <Star
                               key={i}
-                              className={`h-3 w-3 md:h-4 md:w-4 ${
+                              className={`h-4 w-4 ${
                                 i < Math.round(course.rating)
                                   ? "text-yellow-500 fill-yellow-500"
                                   : "text-gray-300"
@@ -178,39 +229,43 @@ const CourseListing: React.FC = () => {
                             />
                           ))}
                         </div>
-                        <span className="text-gray-500 ml-1 md:ml-2 text-xs md:text-sm">
+                        <span className="text-gray-500 ml-2 text-xs">
                           ({course.reviewCount.toLocaleString()})
                         </span>
                       </div>
-                      <div className="mb-2 md:mb-4">
-                        <span className="text-base md:text-xl font-bold">
-                          ₹{course.originalPrice}
-                        </span>
-                      </div>
-                      <div className="flex space-x-1 md:space-x-2">
-                        {course.tags?.map((tag) => (
-                          <span
-                            key={tag}
-                            className={`
-                              px-1 py-0.5 md:px-2 md:py-1 rounded-full text-[10px] md:text-xs font-semibold
-                              ${
-                                tag === "Paid"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : tag === "Free"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-green-100 text-green-800"
-                              }
-                            `}
-                          >
-                            {tag}
-                          </span>
-                        ))}
+                      
+                      <div className="mt-auto">
+                        <div className="flex items-center justify-between">
+                          <div className="font-bold text-lg text-gray-900">
+                            {course.originalPrice > 0 ? `₹${course.originalPrice}` : 'Free'}
+                          </div>
+                          
+                          <div className="flex space-x-2">
+                            {course.tags?.map((tag) => (
+                              <span
+                                key={tag}
+                                className={`
+                                  px-2 py-1 rounded-full text-xs font-semibold
+                                  ${
+                                    tag === "Paid"
+                                      ? "bg-purple-100 text-purple-700"
+                                      : tag === "Free"
+                                      ? "bg-[#49BBBD]/10 text-[#49BBBD]"
+                                      : "bg-green-100 text-green-700"
+                                  }
+                                `}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </Link>
                 ))}
               </div>
-              <div className="mt-8">
+              <div className="mt-12">
                 <Pagination
                   currentPage={activeCourses.currentPage}
                   totalPages={activeCourses.totalPages}

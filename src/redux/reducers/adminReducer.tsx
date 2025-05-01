@@ -3,7 +3,7 @@ import { IInitialStateError, ResponseData } from "../../interface/Interface";
 import { isErrorResponse } from "../../utils/customError";
 import { loginAdmin } from "../actions/auth/adminLoginAction";
 import { adminLogout } from "../actions/auth/adminLogoutAction"; 
-import { IAdminData } from "../../interface/user/IUserData";
+import { IAdminData } from "../../interface/IUserData";
 
 export interface IAdminState {
   isAuthenticated: boolean;

@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Clipboard, CreditCard, MessageCircle, Settings, User } from "lucide-react";
+import { BookOpen, Clipboard, CreditCard, MessageCircle, Settings, User,BarChart } from "lucide-react";
+
 
 interface StudentSidebarProps {
   activeTab: string;
@@ -41,6 +42,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
 
   const tabIcons = {
     "My Courses": <BookOpen className="w-5 h-5 mr-2" />,
+    "My Progress": <BarChart className="w-5 h-5 mr-2" />,
     Assessments: <Clipboard className="w-5 h-5 mr-2" />,
     Payments: <CreditCard className="w-5 h-5 mr-2" />,
     "Chat Support": <MessageCircle className="w-5 h-5 mr-2" />,

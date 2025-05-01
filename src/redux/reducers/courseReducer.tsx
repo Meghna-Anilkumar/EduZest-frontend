@@ -5,11 +5,11 @@ import {
   getAllActiveCoursesAction,
   editCourseAction,
 } from "../actions/courseActions";
-import { ICourse} from "../../interface/ICourse"; 
+import { ICourse } from "../../interface/ICourse";
 
 interface CourseState {
   loading: boolean;
-  data: ICourse[]; 
+  data: ICourse[];
   currentPage: number;
   totalPages: number;
   totalCourses: number;
@@ -24,12 +24,12 @@ interface CourseState {
 
 const initialState: CourseState = {
   loading: false,
-  data: [], 
+  data: [],
   currentPage: 1,
   totalPages: 1,
   totalCourses: 0,
   activeCourses: {
-    courses: [], 
+    courses: [],
     currentPage: 1,
     totalPages: 1,
     totalCourses: 0,
@@ -61,7 +61,9 @@ const courseSlice = createSlice({
       })
       .addCase(createCourseAction.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as { message: string })?.message || "Failed to create course";
+        state.error =
+          (action.payload as { message: string })?.message ||
+          "Failed to create course";
       })
       // Get All Courses By Instructor
       .addCase(getAllCoursesByInstructorAction.pending, (state) => {
@@ -93,7 +95,9 @@ const courseSlice = createSlice({
       })
       .addCase(getAllActiveCoursesAction.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as { message: string })?.message || "Failed to fetch active courses";
+        state.error =
+          (action.payload as { message: string })?.message ||
+          "Failed to fetch active courses";
       })
       // Edit Course
       .addCase(editCourseAction.pending, (state) => {
@@ -102,22 +106,28 @@ const courseSlice = createSlice({
       })
       .addCase(editCourseAction.fulfilled, (state, action) => {
         state.loading = false;
-        
+
         // Update the course in the data array
-        const index = state.data.findIndex(course => course._id === action.payload._id);
+        const index = state.data.findIndex(
+          (course) => course._id === action.payload._id
+        );
         if (index !== -1) {
           state.data[index] = action.payload;
         }
-        
+
         // Also update the course in activeCourses if it exists
-        const activeIndex = state.activeCourses.courses.findIndex(course => course._id === action.payload._id);
+        const activeIndex = state.activeCourses.courses.findIndex(
+          (course) => course._id === action.payload._id
+        );
         if (activeIndex !== -1) {
           state.activeCourses.courses[activeIndex] = action.payload;
         }
       })
       .addCase(editCourseAction.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as { message: string })?.message || "Failed to edit course";
+        state.error =
+          (action.payload as { message: string })?.message ||
+          "Failed to edit course";
       });
   },
 });

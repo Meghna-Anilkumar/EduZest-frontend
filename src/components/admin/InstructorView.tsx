@@ -1,5 +1,5 @@
 import React from "react";
-import { IUserdata } from "../../interface/user/IUserData";
+import { IUserdata } from "../../interface/IUserData";
 
 interface InstructorModalProps {
   instructor: IUserdata | null;

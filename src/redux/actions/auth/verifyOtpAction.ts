@@ -3,7 +3,7 @@ import { AxiosError } from "axios";
 import { VerifyOtpSuccessResponse } from "../../../interface/Interface";
 import { serverUser } from "../../../services";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
-import { OtpVerificationData } from "../../../interface/user/IUserData";
+import { OtpVerificationData } from "../../../interface/IUserData";
 
 
 export const verifyOTP = createAsyncThunk<VerifyOtpSuccessResponse, OtpVerificationData>(

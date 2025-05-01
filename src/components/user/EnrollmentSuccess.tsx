@@ -18,7 +18,7 @@ const EnrollmentSuccessPage: React.FC = () => {
             You have successfully enrolled in the course. Start learning now!
           </p>
           <Link
-            to="/my-courses"
+            to="/student/my-enrollments"
             className="inline-flex items-center bg-[#49BBBD] text-black font-semibold py-2 px-6 rounded-full hover:bg-white hover:text-[#49BBBD] hover:shadow-md transition duration-300"
           >
             Go to My Courses

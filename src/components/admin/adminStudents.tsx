@@ -9,7 +9,7 @@ import Pagination from "../common/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/SearchBar";
 import { StudentModal } from "./StudentView";
-import { IUserdata } from "../../interface/user/IUserData";
+import { IUserdata } from "../../interface/IUserData";
 import {
   Dialog,
   DialogTitle,
