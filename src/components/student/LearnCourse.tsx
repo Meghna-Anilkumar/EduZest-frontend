@@ -27,6 +27,7 @@ import {
   Lock,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
+import ChatComponent from "../common/ChatComponent";
 
 interface ILesson {
   _id: string;
@@ -116,10 +117,12 @@ const CourseDetails: React.FC = () => {
   const [assessmentErrors, setAssessmentErrors] = useState<{
     [moduleTitle: string]: string | null;
   }>({});
+  const [isChatOpen, setIsChatOpen] = useState(false); // State for chat modal
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastProgressUpdate = useRef<number>(0);
 
   useEffect(() => {
+    console.log('[CourseDetails] Course ID from useParams:', courseId);
     const fetchCourseAndEnrollment = async () => {
       if (!courseId) return;
 
@@ -261,10 +264,10 @@ const CourseDetails: React.FC = () => {
   // Check if a module is accessible
   const isModuleAccessible = (moduleIndex: number): boolean => {
     if (!course || !isEnrolled) return false;
-    
+
     // First module is always accessible
     if (moduleIndex === 0) return true;
-    
+
     // For other modules, check if previous module is fully completed
     const previousModule = course.modules[moduleIndex - 1];
     return isModuleFullyCompleted(previousModule);
@@ -277,16 +280,16 @@ const CourseDetails: React.FC = () => {
     // Find which module this lesson belongs to
     const moduleIndex = findModuleIndexForLesson(lesson);
     if (moduleIndex === -1) return false;
-    
+
     // Check if this module is accessible first
     if (!isModuleAccessible(moduleIndex)) return false;
-    
+
     const module = course.modules[moduleIndex];
     const lessonIndex = module.lessons.findIndex((l) => l._id === lesson._id);
-    
+
     // Always allow access to the first lesson of any accessible module
     if (lessonIndex === 0) return true;
-    
+
     // For other lessons, check if previous lesson in same module is completed
     const previousLesson = module.lessons[lessonIndex - 1];
     const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
@@ -390,7 +393,7 @@ const CourseDetails: React.FC = () => {
   // Render a module section with its lessons
   const renderModuleSection = (module: IModule, index: number) => {
     const isAccessible = isModuleAccessible(index);
-    
+
     return (
       <div key={index} className="border-t border-gray-200 py-2">
         <button
@@ -489,8 +492,8 @@ const CourseDetails: React.FC = () => {
                       </li>
                     ))}
                   </ul>
-                  {assessmentsByModule[module.moduleTitle]!.total > 
-                   assessmentsByModule[module.moduleTitle]!.assessments.length && (
+                  {assessmentsByModule[module.moduleTitle]!.total >
+                    assessmentsByModule[module.moduleTitle]!.assessments.length && (
                     <p className="text-xs text-gray-500 mt-2">
                       Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
                       {assessmentsByModule[module.moduleTitle]!.total} assessments
@@ -762,6 +765,8 @@ const CourseDetails: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* Include the CourseChatComponent with courseId prop */}
+      {courseId && <ChatComponent courseId={courseId} />}
     </div>
   );
 };

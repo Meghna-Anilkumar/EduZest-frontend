@@ -85,7 +85,7 @@ const CourseDetailsPage: React.FC = () => {
 
   const handleSaveLesson = async (updatedLesson: Lesson, videoFile?: File) => {
     if (!courseDetails || !selectedModule) return;
-
+  
     setIsUploading(true);
     try {
       // Find the module and lesson indices
@@ -95,12 +95,15 @@ const CourseDetailsPage: React.FC = () => {
       const lessonIndex = selectedModule.lessons.findIndex(
         (lesson) => lesson.lessonNumber === updatedLesson.lessonNumber
       );
-
+  
+      // Use lesson._id for existing lessons, or generate a new key for new lessons
+      const lessonKey = updatedLesson._id
+        ? updatedLesson._id
+        : `new-lesson-${moduleIndex}-${lessonIndex}`;
+  
       // Create video mapping
-      const videoMapping = videoFile
-        ? { [`${moduleIndex}-${lessonIndex}`]: `${moduleIndex}-${lessonIndex}` }
-        : {};
-
+      const videoMapping = videoFile ? { [lessonKey]: 0 } : {};
+  
       // Update the lesson in the modules array
       const updatedModules = courseDetails.modules.map((module, idx) =>
         idx === moduleIndex
@@ -108,13 +111,17 @@ const CourseDetailsPage: React.FC = () => {
               ...module,
               lessons: module.lessons.map((lesson, lIdx) =>
                 lIdx === lessonIndex
-                  ? { ...updatedLesson, video: lesson.video }
+                  ? {
+                      ...updatedLesson,
+                      video: videoFile ? "" : lesson.video, // Clear video if new file is uploaded (backend will set new key)
+                      videoKey: videoFile ? "" : lesson.videoKey, // Clear videoKey if new file is uploaded
+                    }
                   : lesson
               ),
             }
           : module
       );
-
+  
       const normalizedModules = normalizeVideoUrls(updatedModules);
       const formData = new FormData();
       formData.append(
@@ -125,7 +132,13 @@ const CourseDetailsPage: React.FC = () => {
         formData.append("videos", videoFile);
         formData.append("videoMapping", JSON.stringify(videoMapping));
       }
-
+  
+      console.log("Saving lesson with:", {
+        updatedLesson,
+        videoMapping,
+        videoFile: videoFile?.name,
+      });
+  
       await dispatch(
         editCourseAction({ courseId: courseDetails._id, formData })
       ).unwrap();

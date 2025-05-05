@@ -44,16 +44,18 @@ const getVideoDuration = (file: File): Promise<number> => {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.preload = "metadata";
+
     video.onloadedmetadata = () => {
       window.URL.revokeObjectURL(video.src);
       const durationInSeconds = video.duration;
-      const durationInHours = durationInSeconds / 3600;
-      resolve(durationInHours);
+      resolve(durationInSeconds);
     };
+
     video.onerror = () => reject(new Error("Error loading video metadata"));
     video.src = window.URL.createObjectURL(file);
   });
 };
+
 
 const lessonValidationSchema = Yup.object({
   title: Yup.string()
@@ -258,10 +260,9 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setIsAddingLesson(false);
     setSelectedLesson(null);
   };
-
   const renderLessonDetails = () => {
     if (!selectedLesson) return null;
-
+  
     return (
       <div className="mt-6 bg-white rounded-lg p-6 shadow-md">
         <div className="flex justify-between items-center mb-4">
@@ -293,33 +294,36 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
             )}
           </div>
         </div>
-
+  
         {isEditingLesson ? (
           <Formik
-            initialValues={{
-              title: selectedLesson.title,
-              description: selectedLesson.description,
-              duration: selectedLesson.duration || "",
-              videoFile: undefined as File | undefined,
-            }}
-            validationSchema={editLessonValidationSchema}
-            onSubmit={async (values, { setSubmitting }) => {
-              setIsSubmitting(true);
-              if (onSaveLesson) {
-                const updatedLesson: Lesson = {
-                  ...selectedLesson,
-                  title: values.title,
-                  description: values.description,
-                  duration: values.duration || selectedLesson.duration,
-                  video: selectedLesson.videoKey || "",
-                };
-                await onSaveLesson(updatedLesson, values.videoFile);
-                setSelectedLesson(updatedLesson);
-                setIsEditingLesson(false);
-              }
-              setIsSubmitting(false);
-              setSubmitting(false);
-            }}
+          initialValues={{
+            title: selectedLesson.title,
+            description: selectedLesson.description,
+            duration: selectedLesson.duration || "",
+            videoFile: undefined as File | undefined,
+          }}
+          validationSchema={editLessonValidationSchema}
+          onSubmit={async (values, { setSubmitting }) => {
+            setIsSubmitting(true);
+            if (onSaveLesson) {
+              const updatedLesson: Lesson = {
+                ...selectedLesson,
+                _id: selectedLesson._id, // Ensure _id is included
+                title: values.title,
+                description: values.description,
+                duration: values.duration || selectedLesson.duration,
+                video: selectedLesson.videoKey || "", // Use existing videoKey
+                videoKey: selectedLesson.videoKey || "",
+              };
+              await onSaveLesson(updatedLesson, values.videoFile);
+              setSelectedLesson(updatedLesson);
+              setIsEditingLesson(false);
+            }
+            setIsSubmitting(false);
+            setSubmitting(false);
+          }}
+        
           >
             {({ setFieldValue, isSubmitting: formikSubmitting, values }) => (
               <Form className="space-y-6">
@@ -369,6 +373,12 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                         try {
                           const durationInHours = await getVideoDuration(file);
                           setFieldValue("duration", durationInHours.toFixed(2));
+                          console.log("Selected new video file:", {
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            duration: durationInHours.toFixed(2),
+                          });
                         } catch (error) {
                           console.error("Error getting video duration:", error);
                           setFieldValue(

@@ -15,7 +15,7 @@ export interface UserEndpoints extends IEndPoints {
     changePassword: string;
     googleAuth: string;
     applyInstructor: string;
-    switchToInstructor:string
+    switchToInstructor: string
     refreshToken: string;
     refreshSignedUrl: string
 
@@ -57,13 +57,18 @@ export interface UserEndpoints extends IEndPoints {
     getAssessmentResult: (assessmentId: string) => string;
     getCourseProgress: (courseId: string) => string
     getAllAssessmentsForCourse: (courseId: string, page: number, limit: number) => string;
-    getCourseStats:string;
+    getCourseStats: string;
 
     //review
     addReview: string
     getReviewsByCourse: string
     getReview: string
     streamVideo: string
+
+
+    // Chat
+    getMessages: (courseId: string, page: number, limit: number) => string;
+    sendMessage: (courseId: string) => string;
 }
 
 export interface AdminEndpoints extends IEndPoints {
@@ -84,7 +89,7 @@ export interface AdminEndpoints extends IEndPoints {
         search?: string,
         sortField?: string,
         sortOrder?: "asc" | "desc"
-      ) => string;
-    dashboardStats:()=>string
+    ) => string;
+    dashboardStats: () => string
 }
 

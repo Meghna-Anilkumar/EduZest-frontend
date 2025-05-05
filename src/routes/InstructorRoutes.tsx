@@ -10,6 +10,8 @@ import InstructorDashboard from "../components/instructor/InstructorDashboard";
 import CourseDetailsPage from "../components/instructor/courses/CourseDetails";
 import TransactionsPage from "../components/instructor/InstructorTransactions";
 import AssessmentsPage from "../components/instructor/courses/Assessments";
+import ChatLayout from "../components/instructor/InstructorChatLayout";
+import InstructorChatGroups from "../components/instructor/ChatGroups";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -19,12 +21,26 @@ const InstructorRoutes: React.FC = () => {
       <Routes>
         <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
           <Route path="/dashboard" element={<InstructorDashboard />} />
-          <Route path='/transactions' element={<TransactionsPage/>}/>
+          <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/courses" element={<InstructorCoursesPage />} />
           <Route path="/courses/create" element={<AddCoursePage />} />
           <Route path="/courses/addLesson" element={<AddLessonsPage />} />
-          <Route path="/courseDetails/:courseId" element={<CourseDetailsPage />} />
-          <Route path="/courses/:courseId/modules/:moduleTitle/assessments" element={<AssessmentsPage />} />
+          <Route
+            path="/courseDetails/:courseId"
+            element={<CourseDetailsPage />}
+          />
+          <Route
+            path="/courses/:courseId/modules/:moduleTitle/assessments"
+            element={<AssessmentsPage />}
+          />
+          <Route
+            path="/chat"
+            element={
+              <ChatLayout>
+                <InstructorChatGroups />
+              </ChatLayout>
+            }
+          />
         </Route>
 
         {/* 404 Page */}

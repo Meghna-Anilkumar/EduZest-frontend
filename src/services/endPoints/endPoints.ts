@@ -14,7 +14,7 @@ export const userEndPoints: UserEndpoints = {
   changePassword: '/change-password',
   googleAuth: '/google-auth',
   applyInstructor: '/instructor-apply',
-  switchToInstructor:'/switch-to-instructor',
+  switchToInstructor: '/switch-to-instructor',
   refreshToken: '/refresh-token',
   refreshSignedUrl: '/refresh-signed-url',
 
@@ -50,7 +50,7 @@ export const userEndPoints: UserEndpoints = {
     }).toString();
     return `instructor/getTransactions?${query}`;
   },
-  getCourseStats:'/instructor/course-stats',
+  getCourseStats: '/instructor/course-stats',
 
 
   //assessments
@@ -70,7 +70,7 @@ export const userEndPoints: UserEndpoints = {
   getAssessmentById: (assessmentId: string) => `/assessments/${assessmentId}`,
   submitAssessment: (assessmentId: string) => `/student/assessments/${assessmentId}/submit`,
   getAssessmentByIdForStudent: (assessmentId: string) => `student/assessments/${assessmentId}`,
-  getAssessmentResult:(assessmentId:string)=>`/student/assessments/${assessmentId}/result`,
+  getAssessmentResult: (assessmentId: string) => `/student/assessments/${assessmentId}/result`,
   getCourseProgress: (courseId: string) =>
     `/student/courses/${courseId}/progress`,
   getAllAssessmentsForCourse: (courseId: string, page: number, limit: number) =>
@@ -81,6 +81,11 @@ export const userEndPoints: UserEndpoints = {
   getReviewsByCourse: "/courses/:courseId/reviews",
   getReview: "student/review/:courseId",
 
+
+  //chat
+  getMessages: (courseId: string, page: number, limit: number) =>
+    `/${courseId}/messages?page=${page}&limit=${limit}`,
+  sendMessage: (courseId: string) => `/${courseId}/messages`
 
 }
 

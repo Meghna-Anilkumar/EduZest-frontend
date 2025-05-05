@@ -55,7 +55,7 @@ const AssessmentPlayer: React.FC = () => {
         console.log("AssessmentPlayer: Fetched assessment", assessmentResult);
         setAssessment(assessmentResult);
 
-        // Try to fetch existing result, but handle "no submission" gracefully
+        // Fetch existing result
         console.log("AssessmentPlayer: Dispatching getAssessmentResultAction", { assessmentId });
         try {
           const existingResult = await dispatch(getAssessmentResultAction({ assessmentId })).unwrap();
@@ -72,7 +72,6 @@ const AssessmentPlayer: React.FC = () => {
             );
           }
         } catch (err: any) {
-          // Handle "No submission found" case gracefully
           if (err.message === "No submission found for this assessment.") {
             console.log("AssessmentPlayer: No prior submission, initializing answers");
             setAnswers(
@@ -175,6 +174,11 @@ const AssessmentPlayer: React.FC = () => {
     });
   };
 
+  // Sort attempts in reverse chronological order
+  const sortedAttempts = submissionResult?.attempts
+    ? [...submissionResult.attempts].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+    : [];
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
@@ -256,19 +260,19 @@ const AssessmentPlayer: React.FC = () => {
                         Latest Score: {submissionResult.score} / {submissionResult.totalPoints}
                       </p>
                       <p className="text-gray-600 mb-4">
-                        Total Attempts: {submissionResult.attempts.length}
+                        Total Attempts: {sortedAttempts.length}
                       </p>
                     </div>
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-gray-700 mb-2">Attempt History</h3>
-                      {submissionResult.attempts.map((attempt, index) => (
+                      {sortedAttempts.map((attempt, index) => (
                         <div
                           key={attempt._id || index}
                           className="border-b py-2 flex justify-between items-center"
                         >
                           <div>
                             <p className="text-gray-600">
-                              Attempt {index + 1} - Score: {attempt.score} / {submissionResult.totalPoints}
+                              Attempt {sortedAttempts.length - index} - Score: {attempt.score} / {submissionResult.totalPoints}
                             </p>
                             <p className="text-sm text-gray-500">
                               Completed: {formatDate(attempt.completedAt)}
