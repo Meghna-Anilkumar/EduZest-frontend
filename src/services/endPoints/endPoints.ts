@@ -85,7 +85,8 @@ export const userEndPoints: UserEndpoints = {
   //chat
   getMessages: (courseId: string, page: number, limit: number) =>
     `/${courseId}/messages?page=${page}&limit=${limit}`,
-  sendMessage: (courseId: string) => `/${courseId}/messages`
+  sendMessage: (courseId: string) => `/${courseId}/messages`,
+  getChatGroupMetadata: () => `/metadata`,
 
 }
 

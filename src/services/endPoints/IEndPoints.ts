@@ -69,6 +69,7 @@ export interface UserEndpoints extends IEndPoints {
     // Chat
     getMessages: (courseId: string, page: number, limit: number) => string;
     sendMessage: (courseId: string) => string;
+    getChatGroupMetadata:()=>string
 }
 
 export interface AdminEndpoints extends IEndPoints {

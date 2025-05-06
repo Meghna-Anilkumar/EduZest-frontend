@@ -1,8 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch, RootState } from '../../redux/store';
-import { getAllCoursesByInstructorAction } from '../../redux/actions/courseActions';
-import CourseChatDisplay from './CourseChatDisplay';
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../redux/store";
+import { getAllCoursesByInstructorAction } from "../../redux/actions/courseActions";
+import { getChatGroupMetadataThunk } from "../../redux/actions/chatActions";
+import CourseChatDisplay from "./CourseChatDisplay";
+import { useSocket } from "../context/socketContext";
+
+// Define IChatGroupMetadata interface locally
+interface IChatGroupMetadata {
+  _id: string;
+  courseId: string;
+  userId: string;
+  lastMessage: {
+    _id: string;
+    message: string;
+    senderId: {
+      _id: string;
+      name: string;
+      role: string;
+      profile?: {
+        profilePic?: string;
+      };
+    };
+    timestamp: string;
+  } | null;
+  unreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const METADATA_STORAGE_KEY = "chatGroupMetadata";
 
 const InstructorChatGroups: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -10,66 +37,288 @@ const InstructorChatGroups: React.FC = () => {
   const { data: courses } = useSelector((state: RootState) => state.course);
   const loading = useSelector((state: RootState) => state.course.loading);
   const error = useSelector((state: RootState) => state.course.error);
+  const { socket } = useSocket();
 
-  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  // Initialize selectedCourseId from localStorage
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(() => {
+    const savedCourseId = localStorage.getItem("selectedCourseId");
+    return savedCourseId || null;
+  });
 
+  // Initialize chatGroupMetadata from localStorage if available
+  const [chatGroupMetadata, setChatGroupMetadata] = useState<IChatGroupMetadata[]>(() => {
+    const savedMetadata = localStorage.getItem(METADATA_STORAGE_KEY);
+    try {
+      return savedMetadata ? JSON.parse(savedMetadata) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [metadataFetchAttempted, setMetadataFetchAttempted] = useState(false);
+
+  // Fetch courses when component mounts
   useEffect(() => {
     if (userData?._id) {
-      console.log('[InstructorChatGroups] Fetching courses for instructor:', userData._id);
       dispatch(getAllCoursesByInstructorAction({ page: 1, limit: 100 }));
     }
   }, [dispatch, userData?._id]);
 
+  // Save chatGroupMetadata to localStorage whenever it changes
+  useEffect(() => {
+    if (chatGroupMetadata.length > 0) {
+      localStorage.setItem(METADATA_STORAGE_KEY, JSON.stringify(chatGroupMetadata));
+    }
+  }, [chatGroupMetadata]);
+
+  // Fetch chat group metadata when courses are loaded
+  useEffect(() => {
+    const fetchChatGroupMetadata = async () => {
+      // Only fetch if we have user data, courses, and haven't tried fetching yet
+      if (userData?._id && courses.length > 0 && !metadataFetchAttempted) {
+        setChatLoading(true);
+        setChatError(null);
+        try {
+          const courseIds = courses.map((course) => course._id);
+          const response = await dispatch(
+            getChatGroupMetadataThunk({ userId: userData._id, courseIds })
+          ).unwrap();
+          
+          if (response.success) {
+            const metadata = response.data as IChatGroupMetadata[];
+            setChatGroupMetadata(metadata);
+            
+            // If no course is selected or selected course is not in courses list, select first course
+            if ((!selectedCourseId || !courses.some(course => course._id === selectedCourseId)) && courses.length > 0) {
+              const firstCourseId = courses[0]._id;
+              setSelectedCourseId(firstCourseId);
+              localStorage.setItem("selectedCourseId", firstCourseId);
+            }
+          } else {
+            // Don't set error if we have existing metadata
+            if (chatGroupMetadata.length === 0) {
+              setChatError(null); // Hide error messages to avoid confusion
+            }
+          }
+        } catch (error: any) {
+          // Don't set error if we have existing metadata
+          if (chatGroupMetadata.length === 0) {
+            setChatError(null); // Hide error messages to avoid confusion
+          }
+        } finally {
+          setChatLoading(false);
+          setMetadataFetchAttempted(true);
+        }
+      }
+    };
+
+    fetchChatGroupMetadata();
+  }, [userData?._id, courses, dispatch, metadataFetchAttempted, chatGroupMetadata.length]);
+
+  // Set up socket listeners for real-time updates
+  useEffect(() => {
+    if (socket && userData?._id) {
+      socket.on('chatGroupMetadataUpdate', (metadata: IChatGroupMetadata[]) => {
+        setChatGroupMetadata((prev) => {
+          const updated = [...prev];
+          metadata.forEach((newMeta) => {
+            const index = updated.findIndex(
+              (m) => m.courseId.toString() === newMeta.courseId.toString()
+            );
+            if (index >= 0) {
+              updated[index] = newMeta;
+            } else {
+              updated.push(newMeta);
+            }
+          });
+          
+          // Save the updated metadata to localStorage
+          localStorage.setItem(METADATA_STORAGE_KEY, JSON.stringify(updated));
+          
+          return updated;
+        });
+      });
+
+      // When socket reconnects, authenticate and rejoin rooms
+      socket.on('connect', () => {
+        socket.emit('authenticate', { userId: userData._id });
+        
+        // Rejoin the currently selected course room if any
+        if (selectedCourseId) {
+          socket.emit('joinCourse', selectedCourseId);
+        }
+      });
+
+      return () => {
+        socket.off('chatGroupMetadataUpdate');
+        socket.off('connect');
+      };
+    }
+  }, [socket, userData?._id, selectedCourseId]);
+
   const handleCourseClick = (courseId: string) => {
-    console.log('[InstructorChatGroups] Course clicked:', courseId);
     setSelectedCourseId(courseId);
+    localStorage.setItem("selectedCourseId", courseId);
+    
+    // Join the course room when selecting a course
+    if (socket && socket.connected) {
+      socket.emit('joinCourse', courseId);
+    }
+  };
+
+  const getLastMessagePreview = (courseId: string) => {
+    const metadata = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === courseId.toString()
+    );
+    
+    if (metadata?.lastMessage) {
+      const message = metadata.lastMessage.message;
+      return message.length > 50 ? `${message.substring(0, 47)}...` : message;
+    }
+    return 'No messages yet';
+  };
+
+  const getUnreadCount = (courseId: string) => {
+    const metadata = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === courseId.toString()
+    );
+    return metadata?.unreadCount || 0;
+  };
+
+  const getLastMessageTime = (courseId: string) => {
+    const metadata = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === courseId.toString()
+    );
+    
+    if (metadata?.lastMessage?.timestamp) {
+      const date = new Date(metadata.lastMessage.timestamp);
+      // If today, show time only
+      if (date.toDateString() === new Date().toDateString()) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      // If within the last week, show day of week
+      const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysAgo < 7) {
+        return date.toLocaleDateString([], { weekday: 'short' });
+      }
+      // Otherwise show short date
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+    return '';
+  };
+
+  const getMessageSender = (courseId: string) => {
+    const metadata = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === courseId.toString()
+    );
+    
+    if (metadata?.lastMessage?.senderId) {
+      // If message was sent by current user
+      if (metadata.lastMessage.senderId._id === userData?._id) {
+        return 'You: ';
+      }
+      // Otherwise show sender's name
+      return `${metadata.lastMessage.senderId.name}: `;
+    }
+    return '';
   };
 
   return (
     <div className="flex h-full">
-      {/* Left Side: Chat Groups (Courses) */}
-      <div className="w-1/3 bg-gray-50 border-r border-gray-200 overflow-y-auto">
-        <h2 className="text-xl font-bold text-gray-800 p-6 border-b border-gray-200">Chat Groups</h2>
-        {loading && <p className="p-6 text-gray-500 text-sm">Loading...</p>}
-        {error && <p className="p-6 text-red-500 text-sm">{error}</p>}
-        {!loading && !error && courses.length === 0 && (
-          <p className="p-6 text-gray-500 text-sm">No courses found.</p>
+      <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto shadow-sm">
+        <h2 className="text-2xl font-bold text-gray-900 p-6 border-b border-gray-200">
+          Chat Groups
+        </h2>
+        {(loading || chatLoading) && !chatGroupMetadata.length && (
+          <div className="p-6 flex items-center justify-center">
+            <div className="w-6 h-6 border-4 border-t-transparent border-[#49BBBD] rounded-full animate-spin"></div>
+            <span className="ml-3 text-gray-500 text-sm">Loading...</span>
+          </div>
         )}
-        <ul className="py-2">
+        {/* Only show error if courses are loaded and we have no metadata */}
+        {error && courses.length === 0 && (
+          <p className="p-6 text-red-600 text-sm font-medium">
+            {error}
+          </p>
+        )}
+        {!loading && !error && courses.length === 0 && (
+          <p className="p-6 text-gray-500 text-sm italic">No courses found.</p>
+        )}
+        <ul className="py-4 space-y-2">
           {courses.map((course) => (
             <li
               key={course._id}
               onClick={() => handleCourseClick(course._id)}
-              className={`mx-4 my-2 p-4 rounded-lg cursor-pointer transition-all duration-200 ease-in-out
-                ${selectedCourseId === course._id ? 'bg-white shadow-md border-l-4 border-[#49BBBD]' : 'bg-white shadow-sm'}
-                hover:shadow-md hover:bg-gray-50 hover:scale-[1.01]`}
+              className={`mx-4 p-4 rounded-xl cursor-pointer transition-all duration-200 ease-in-out
+                ${
+                  selectedCourseId === course._id
+                    ? "bg-[#49BBBD]/5 border-l-4 border-[#49BBBD] shadow-lg"
+                    : "bg-white shadow-sm"
+                }
+                hover:shadow-lg hover:bg-[#49BBBD]/5 hover:-translate-y-0.5 group relative overflow-hidden`}
             >
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#49BBBD] to-[#3aa9ab] flex items-center justify-center text-white font-bold text-lg">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#49BBBD]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="flex items-center gap-4 relative z-10">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-[#49BBBD] to-[#3aa9ab] flex items-center justify-center text-white font-bold text-lg shadow-md">
                   {course.title.charAt(0).toUpperCase()}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-800 text-base">{course.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">Course Chat</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-base tracking-tight truncate">
+                    {course.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1 truncate">
+                    <span className="font-medium">{getMessageSender(course._id)}</span>
+                    {getLastMessagePreview(course._id)}
+                  </p>
                 </div>
-                {selectedCourseId === course._id && (
-                  <div className="h-6 w-6 rounded-full bg-[#49BBBD] flex items-center justify-center text-white text-xs">
-                    ✓
-                  </div>
-                )}
+                <div className="flex flex-col items-end">
+                  {getLastMessageTime(course._id) && (
+                    <span className="text-xs text-gray-400 mb-1">
+                      {getLastMessageTime(course._id)}
+                    </span>
+                  )}
+                  {getUnreadCount(course._id) > 0 && (
+                    <span className="bg-[#49BBBD] text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm">
+                      {getUnreadCount(course._id)}
+                    </span>
+                  )}
+                </div>
               </div>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Right Side: Course Chat Display */}
-      <div className="flex-1">
+      <div className="flex-1 bg-gray-50">
         {selectedCourseId ? (
-          <CourseChatDisplay courseId={selectedCourseId} />
+          // Pass key prop to force re-render when courseId changes
+          <CourseChatDisplay key={selectedCourseId} courseId={selectedCourseId} />
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-500">
-            Select a course to view its chat
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <svg
+                className="mx-auto h-16 w-16 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="mt-4 text-gray-500 text-lg font-medium">
+                Select a course to start chatting
+              </p>
+              <p className="mt-2 text-gray-400 text-sm">
+                Engage with your students in real-time.
+              </p>
+            </div>
           </div>
         )}
       </div>

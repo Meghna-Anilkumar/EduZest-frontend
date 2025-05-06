@@ -1,6 +1,9 @@
+// redux/actions/chatActions.ts
+
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { serverUser } from '../../services';
 import { userEndPoints } from '../../services/endPoints/endPoints';
+import Cookies from 'js-cookie'; // Import js-cookie to access cookies
 
 export interface IResponse {
   success: boolean;
@@ -45,6 +48,11 @@ interface SendMessageData {
   message: string;
 }
 
+interface GetChatGroupMetadataParams {
+  userId: string;
+  courseIds: string[];
+}
+
 export const getMessagesThunk = createAsyncThunk<
   IResponse,
   GetMessagesParams,
@@ -79,6 +87,39 @@ export const sendMessageThunk = createAsyncThunk<
     } catch (error: any) {
       console.error('Error sending message:', error.response?.data);
       return rejectWithValue(error.response?.data || 'Failed to send message');
+    }
+  }
+);
+
+export const getChatGroupMetadataThunk = createAsyncThunk<
+  IResponse,
+  GetChatGroupMetadataParams,
+  { rejectValue: string | IResponse }
+>(
+  'chat/getChatGroupMetadata',
+  async ({ userId, courseIds }, { rejectWithValue }) => {
+    try {
+      console.log('Fetching chat group metadata for user:', userId, 'Courses:', courseIds);
+      const token = Cookies.get('token'); // Get token from cookies
+      if (!token) {
+        return rejectWithValue('No authentication token found');
+      }
+
+      const response = await serverUser.post(
+        userEndPoints.getChatGroupMetadata(),
+        { userId, courseIds },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      console.log('Get chat group metadata response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error fetching chat group metadata:', error.response?.data);
+      return rejectWithValue(error.response?.data || 'Failed to fetch chat group metadata');
     }
   }
 );

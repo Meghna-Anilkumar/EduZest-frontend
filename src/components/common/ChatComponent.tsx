@@ -10,10 +10,17 @@ interface ChatMessage {
   sender: string;
   message: string;
   timestamp: string;
+  date: string; // Add date field for grouping
   role: 'instructor' | 'student';
   profilePic?: string;
   isRead?: boolean;
   isCurrentUser: boolean;
+}
+
+interface OnlineUser {
+  userId: string;
+  name: string;
+  role: 'Student' | 'Instructor' | 'Admin';
 }
 
 interface ChatComponentProps {
@@ -26,6 +33,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]); // Track online users
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,13 +43,30 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const userData = useSelector((state: RootState) => state.user.userData);
   const { socket, isConnected } = useSocket();
 
-  // Log WebSocket connection status
   useEffect(() => {
     console.log('[ChatComponent] WebSocket connection status:', isConnected ? 'Connected' : 'Disconnected');
     console.log('[ChatComponent] Socket instance:', socket?.id || 'No socket');
     console.log('[ChatComponent] User ID:', userData?._id);
     console.log('[ChatComponent] Course ID:', courseId);
   }, [isConnected, socket, userData?._id, courseId]);
+
+  const formatDate = (date: Date): string => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (isToday) return 'Today';
+    if (isYesterday) return 'Yesterday';
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   const mapIChatToChatMessage = useCallback(
     (chat: IChat): ChatMessage => {
@@ -52,13 +77,15 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
         typeof chat.senderId === 'string' ? 'student' : chat.senderId.role === 'instructor' ? 'instructor' : 'student';
       const profilePic = typeof chat.senderId === 'string' ? undefined : (chat.senderId.profile?.profilePic || '');
 
+      const messageDate = chat.timestamp ? new Date(chat.timestamp) : new Date();
+      const formattedDate = formatDate(messageDate);
+
       const mappedMessage: ChatMessage = {
         id: chat._id,
         sender: senderName,
         message: chat.message,
-        timestamp: chat.timestamp
-          ? new Date(chat.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: formattedDate, // Add formatted date for grouping
         role: senderRole,
         profilePic,
         isRead: true,
@@ -70,14 +97,12 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     [userData?._id]
   );
 
-  // Ensure scrolling to bottom on initial load and when new messages are added
   useEffect(() => {
     if (isChatOpen && !isMinimized && shouldScrollToBottomRef.current) {
       scrollToBottom('auto');
     }
   }, [messages, isChatOpen, isMinimized]);
 
-  // WebSocket setup
   useEffect(() => {
     if (!socket || !isConnected || !userData?._id || !courseId) {
       console.log('[ChatComponent] Socket not ready:', {
@@ -104,7 +129,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       console.log('[ChatComponent] Joined course chat:', courseId);
       if (!hasJoinedRef.current) {
         console.log('[ChatComponent] Emitting getMessages event');
-        socket.emit('getMessages', { courseId, page: 1 }); // Removed limit
+        socket.emit('getMessages', { courseId, page: 1 });
         hasJoinedRef.current = true;
       }
     };
@@ -154,11 +179,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       console.error('[ChatComponent] WebSocket error:', data.message);
     };
 
+    const handleOnlineUsers = (users: OnlineUser[]) => {
+      setOnlineUsers(users.filter((user) => user.userId !== userData?._id)); // Exclude current user
+    };
+
     socket.on('authenticated', handleAuthenticated);
     socket.on('joined', handleJoined);
     socket.on('messages', handleMessages);
     socket.on('newMessage', handleNewMessage);
     socket.on('error', handleError);
+    socket.on('onlineUsers', handleOnlineUsers);
 
     return () => {
       console.log('[ChatComponent] Cleaning up socket listeners');
@@ -167,21 +197,21 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       socket.off('messages', handleMessages);
       socket.off('newMessage', handleNewMessage);
       socket.off('error', handleError);
+      socket.off('onlineUsers', handleOnlineUsers);
       hasJoinedRef.current = false;
     };
   }, [socket, isConnected, userData?._id, courseId, mapIChatToChatMessage, isChatOpen]);
 
-  // Handle chat open/close state
   useEffect(() => {
     if (isChatOpen) {
       shouldScrollToBottomRef.current = true;
       setTimeout(() => scrollToBottom('auto'), 100);
     } else {
       hasJoinedRef.current = false;
+      setOnlineUsers([]); // Reset online users when chat is closed
     }
   }, [isChatOpen]);
 
-  // Log messages state changes to debug rendering
   useEffect(() => {
     console.log('[ChatComponent] Messages state updated:', messages);
   }, [messages]);
@@ -258,6 +288,22 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     shouldScrollToBottomRef.current = isNearBottom();
   };
 
+  // Group messages by date for rendering
+  const groupedMessages = messages.reduce((acc, msg) => {
+    const date = msg.date;
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(msg);
+    return acc;
+  }, {} as Record<string, ChatMessage[]>);
+
+  const sortedDates = Object.keys(groupedMessages).sort((a, b) => {
+    const dateA = a === 'Today' ? new Date() : a === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(a);
+    const dateB = b === 'Today' ? new Date() : b === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(b);
+    return dateA.getTime() - dateB.getTime();
+  });
+
   return (
     <>
       <button
@@ -291,7 +337,28 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
               {!isMinimized && (
                 <div>
                   <h3 className="font-semibold">Course Discussion</h3>
-                  <p className="text-xs text-gray-100">23 participants</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {onlineUsers.length > 0 ? (
+                      onlineUsers.map((user) => (
+                        <div
+                          key={user.userId}
+                          className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
+                            user.role.toLowerCase() === 'instructor'
+                              ? 'bg-blue-200 text-blue-800'
+                              : 'bg-gray-200 text-gray-800'
+                          }`}
+                        >
+                          <span className="h-3 w-3 rounded-full bg-green-400 inline-block"></span>
+                          <span>{user.name}</span>
+                          {user.role.toLowerCase() === 'instructor' && (
+                            <span className="text-[10px] font-medium">(Instructor)</span>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-100 opacity-80">No other participants online</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -321,65 +388,92 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
           {!isMinimized && (
             <>
-              <div className="px-3 py-2 border-b border-gray-100 flex justify-end items-center bg-gray-50">
-                <span className="text-xs text-gray-400">Today</span>
-              </div>
-
               <div
                 ref={messagesContainerRef}
                 className="flex-1 p-3 overflow-y-auto space-y-3 bg-gray-50"
                 onScroll={handleScroll}
               >
-                {messages.map((msg) => {
-                  console.log('[ChatComponent] Rendering message:', msg);
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-[85%] rounded-lg flex items-start gap-2 ${
-                          msg.isCurrentUser
-                            ? 'bg-[#49BBBD] text-white'
-                            : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
-                        } ${!msg.isRead ? 'border-l-4 border-l-yellow-400' : ''}`}
-                      >
-                        {!msg.isCurrentUser && (
-                          <div className="flex-shrink-0 p-2">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                              {msg.profilePic ? (
-                                <img
-                                  src={msg.profilePic}
-                                  alt={msg.sender}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <span className="text-gray-600 text-xs font-medium">
-                                  {getInitials(msg.sender)}
-                                </span>
+                {sortedDates.length > 0 ? (
+                  sortedDates.map((date) => (
+                    <div key={date} className="space-y-3">
+                      <div className="px-3 py-1 flex justify-center items-center">
+                        <span className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-1 rounded-full">
+                          {date}
+                        </span>
+                      </div>
+                      {groupedMessages[date].map((msg) => {
+                        console.log('[ChatComponent] Rendering message:', msg);
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[85%] rounded-lg flex items-start gap-2 ${
+                                msg.isCurrentUser
+                                  ? 'bg-[#49BBBD] text-white'
+                                  : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
+                              } ${!msg.isRead ? 'border-l-4 border-l-yellow-400' : ''}`}
+                            >
+                              {!msg.isCurrentUser && (
+                                <div className="flex-shrink-0 p-2">
+                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                    {msg.profilePic ? (
+                                      <img
+                                        src={msg.profilePic}
+                                        alt={msg.sender}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-gray-600 text-xs font-medium">
+                                        {getInitials(msg.sender)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               )}
+                              <div className="p-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-xs">
+                                    {msg.isCurrentUser ? 'You' : msg.sender}
+                                    {msg.role === 'instructor' && !msg.isCurrentUser && ' (Instructor)'}
+                                  </span>
+                                  <span
+                                    className={`text-xs ${
+                                      msg.isCurrentUser ? 'text-gray-200' : 'text-gray-400'
+                                    }`}
+                                  >
+                                    {msg.timestamp}
+                                  </span>
+                                </div>
+                                <p className="text-sm mt-1">{msg.message}</p>
+                              </div>
                             </div>
                           </div>
-                        )}
-                        <div className="p-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-xs">
-                              {msg.isCurrentUser ? 'You' : msg.sender}
-                            </span>
-                            <span
-                              className={`text-xs ${
-                                msg.isCurrentUser ? 'text-gray-200' : 'text-gray-400'
-                              }`}
-                            >
-                              {msg.timestamp}
-                            </span>
-                          </div>
-                          <p className="text-sm mt-1">{msg.message}</p>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  ))
+                ) : (
+                  <div className="flex flex-col justify-center items-center h-full text-gray-500">
+                    <svg
+                      className="h-12 w-12 text-gray-400 mb-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16h6m-7 4h8a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    <p className="text-sm font-medium">No messages yet.</p>
+                    <p className="text-xs text-gray-400 mt-1">Start the conversation below!</p>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
