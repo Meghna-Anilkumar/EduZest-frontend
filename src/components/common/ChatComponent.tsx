@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Paperclip } from 'lucide-react';
+import { MessageCircle, X, Send, Reply, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { IChat } from '../../redux/actions/chatActions';
@@ -10,11 +10,18 @@ interface ChatMessage {
   sender: string;
   message: string;
   timestamp: string;
-  date: string; // Add date field for grouping
+  date: string;
   role: 'instructor' | 'student';
   profilePic?: string;
   isRead?: boolean;
   isCurrentUser: boolean;
+  replyTo?: {
+    id: string;
+    message: string;
+    sender: string;
+    role: 'instructor' | 'student';
+    profilePic?: string;
+  } | null;
 }
 
 interface OnlineUser {
@@ -33,7 +40,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]); // Track online users
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [showAllUsers, setShowAllUsers] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,13 +51,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const userData = useSelector((state: RootState) => state.user.userData);
   const { socket, isConnected } = useSocket();
-
-  useEffect(() => {
-    console.log('[ChatComponent] WebSocket connection status:', isConnected ? 'Connected' : 'Disconnected');
-    console.log('[ChatComponent] Socket instance:', socket?.id || 'No socket');
-    console.log('[ChatComponent] User ID:', userData?._id);
-    console.log('[ChatComponent] Course ID:', courseId);
-  }, [isConnected, socket, userData?._id, courseId]);
 
   const formatDate = (date: Date): string => {
     const today = new Date();
@@ -70,7 +72,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const mapIChatToChatMessage = useCallback(
     (chat: IChat): ChatMessage => {
-      console.log('[ChatComponent] Mapping chat, senderId:', chat.senderId);
       const senderId = typeof chat.senderId === 'string' ? chat.senderId : chat.senderId._id;
       const senderName = typeof chat.senderId === 'string' ? 'Unknown' : (chat.senderId.name || 'Anonymous');
       const senderRole =
@@ -80,19 +81,28 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       const messageDate = chat.timestamp ? new Date(chat.timestamp) : new Date();
       const formattedDate = formatDate(messageDate);
 
-      const mappedMessage: ChatMessage = {
+      const replyTo = chat.replyTo
+        ? {
+            id: chat.replyTo._id,
+            message: chat.replyTo.message,
+            sender: typeof chat.replyTo.senderId === 'string' ? 'Unknown' : (chat.replyTo.senderId?.name || 'Anonymous'),
+            role: typeof chat.replyTo.senderId !== 'string' && chat.replyTo.senderId?.role === 'instructor' ? 'instructor' : 'student',
+            profilePic: typeof chat.replyTo.senderId === 'string' ? undefined : (chat.replyTo.senderId?.profile?.profilePic || '')
+          }
+        : null;
+
+      return {
         id: chat._id,
         sender: senderName,
         message: chat.message,
         timestamp: messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: formattedDate, // Add formatted date for grouping
+        date: formattedDate,
         role: senderRole,
         profilePic,
         isRead: true,
         isCurrentUser: senderId === userData?._id,
+        replyTo
       };
-      console.log('[ChatComponent] Mapped message:', mappedMessage);
-      return mappedMessage;
     },
     [userData?._id]
   );
@@ -105,66 +115,47 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   useEffect(() => {
     if (!socket || !isConnected || !userData?._id || !courseId) {
-      console.log('[ChatComponent] Socket not ready:', {
-        socket: !!socket,
-        isConnected,
-        userId: !!userData?._id,
-        courseId,
-      });
       return;
     }
 
-    console.log('[ChatComponent] Setting up socket listeners');
     socket.emit('authenticate', { userId: userData._id });
 
     const handleAuthenticated = () => {
-      console.log('[ChatComponent] Authenticated with WebSocket, userId:', userData._id);
       setTimeout(() => {
-        console.log('[ChatComponent] Emitting joinCourse event for:', courseId);
         socket.emit('joinCourse', courseId);
       }, 100);
     };
 
     const handleJoined = () => {
-      console.log('[ChatComponent] Joined course chat:', courseId);
       if (!hasJoinedRef.current) {
-        console.log('[ChatComponent] Emitting getMessages event');
         socket.emit('getMessages', { courseId, page: 1 });
         hasJoinedRef.current = true;
       }
     };
 
     const handleMessages = (data: { success: boolean; data: IChat[] }) => {
-      console.log('[ChatComponent] Received messages:', data);
       if (data.success && data.data) {
         const newMessages = data.data.map(mapIChatToChatMessage);
         setMessages((prev) => {
           const existingIds = new Set(prev.map((msg) => msg.id));
           const filteredMessages = newMessages.filter((msg) => !existingIds.has(msg.id));
-          console.log('[ChatComponent] Adding messages to state:', filteredMessages);
           return [...filteredMessages, ...prev];
         });
         setUnreadCount(0);
         shouldScrollToBottomRef.current = true;
-      } else {
-        console.error('[ChatComponent] Failed to fetch messages:', data);
       }
     };
 
     const handleNewMessage = (message: IChat) => {
-      console.log('[ChatComponent] Received new message:', JSON.stringify(message, null, 2));
       const senderId = typeof message.senderId === 'string' ? message.senderId : message.senderId._id;
       const isCurrentUserMessage = senderId === userData?._id;
 
       const newMessage = mapIChatToChatMessage(message);
-      console.log('[ChatComponent] Mapped new message:', newMessage);
 
       setMessages((prev) => {
         if (prev.some((msg) => msg.id === newMessage.id)) {
-          console.log('[ChatComponent] Duplicate message ID:', newMessage.id);
           return prev;
         }
-        console.log('[ChatComponent] Adding new message to state:', newMessage);
         return [...prev, newMessage];
       });
 
@@ -176,11 +167,11 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     };
 
     const handleError = (data: { message: string }) => {
-      console.error('[ChatComponent] WebSocket error:', data.message);
+      // Silent error handling - could be connected to a toast notification system
     };
 
     const handleOnlineUsers = (users: OnlineUser[]) => {
-      setOnlineUsers(users.filter((user) => user.userId !== userData?._id)); // Exclude current user
+      setOnlineUsers(users.filter((user) => user.userId !== userData?._id));
     };
 
     socket.on('authenticated', handleAuthenticated);
@@ -191,7 +182,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     socket.on('onlineUsers', handleOnlineUsers);
 
     return () => {
-      console.log('[ChatComponent] Cleaning up socket listeners');
       socket.off('authenticated', handleAuthenticated);
       socket.off('joined', handleJoined);
       socket.off('messages', handleMessages);
@@ -208,17 +198,13 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       setTimeout(() => scrollToBottom('auto'), 100);
     } else {
       hasJoinedRef.current = false;
-      setOnlineUsers([]); // Reset online users when chat is closed
+      setOnlineUsers([]);
+      setShowAllUsers(false);
     }
   }, [isChatOpen]);
 
-  useEffect(() => {
-    console.log('[ChatComponent] Messages state updated:', messages);
-  }, [messages]);
-
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     if (messagesEndRef.current) {
-      console.log('[ChatComponent] Scrolling to bottom');
       messagesEndRef.current.scrollIntoView({ behavior });
     }
   }, []);
@@ -232,25 +218,17 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const handleSendMessage = () => {
     if (inputValue.trim() && courseId && socket && isConnected) {
-      console.log('[ChatComponent] Sending message:', {
+      socket.emit('sendMessage', {
         courseId,
         message: inputValue,
-        socketId: socket.id,
-        isConnected,
+        replyTo: replyingTo?.id
       });
-      socket.emit('sendMessage', { courseId, message: inputValue });
       setInputValue('');
+      setReplyingTo(null);
       shouldScrollToBottomRef.current = true;
       if (inputRef.current) {
         inputRef.current.focus();
       }
-    } else {
-      console.error('[ChatComponent] Cannot send message:', {
-        hasInput: !!inputValue.trim(),
-        courseId,
-        socket: !!socket,
-        isConnected,
-      });
     }
   };
 
@@ -272,6 +250,25 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const minimizeChat = () => {
     setIsMinimized(!isMinimized);
+    setShowAllUsers(false);
+  };
+
+  const toggleShowAllUsers = () => {
+    setShowAllUsers(!showAllUsers);
+  };
+
+  const handleReply = (message: ChatMessage) => {
+    setReplyingTo(message);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
   const getInitials = (name: string) => {
@@ -288,7 +285,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     shouldScrollToBottomRef.current = isNearBottom();
   };
 
-  // Group messages by date for rendering
   const groupedMessages = messages.reduce((acc, msg) => {
     const date = msg.date;
     if (!acc[date]) {
@@ -304,8 +300,79 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     return dateA.getTime() - dateB.getTime();
   });
 
+  // For compact display - show just 3 users
+  const visibleUsers = onlineUsers.slice(0, 3);
+  const remainingUsersCount = onlineUsers.length - visibleUsers.length;
+
   return (
     <>
+      <style>
+        {`
+          .highlight {
+            animation: highlight 1s ease-in-out;
+          }
+          @keyframes highlight {
+            0% { background-color: rgba(73, 187, 189, 0.2); }
+            100% { background-color: transparent; }
+          }
+          
+          .message-text {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+          }
+          
+          .chat-container {
+            max-width: calc(100vw - 2rem);
+          }
+          
+          @media (min-width: 768px) {
+            .chat-container {
+              max-width: 32rem;
+            }
+          }
+          
+          @media (min-width: 1024px) {
+            .chat-container {
+              max-width: 36rem;
+            }
+          }
+          
+          .online-users-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            max-width: 100%;
+            overflow: hidden;
+          }
+          
+          .online-user {
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0;
+          }
+
+          .users-modal {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 250px;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 50;
+            max-height: 300px;
+            overflow-y: auto;
+          }
+
+          .user-list-transition {
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+          }
+        `}
+      </style>
       <button
         onClick={toggleChat}
         className="fixed bottom-6 right-6 bg-[#213f41] text-white p-4 rounded-full shadow-lg hover:bg-[#225051] transition-all duration-200 z-50 flex items-center justify-center group"
@@ -324,41 +391,96 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
       {isChatOpen && (
         <div
-          className={`fixed right-6 bg-white rounded-lg shadow-xl flex flex-col z-50 transition-all duration-300 ${
-            isMinimized ? 'bottom-6 w-72 h-12' : 'bottom-6 w-full md:w-96 h-[500px] max-h-[80vh]'
+          className={`fixed right-6 bg-white rounded-lg shadow-xl flex flex-col z-50 transition-all duration-300 chat-container ${
+            isMinimized ? 'bottom-6 w-72 h-12' : 'bottom-6 w-full md:w-96 lg:w-144 h-[500px] max-h-[80vh]'
           }`}
           style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}
         >
-          <div className="bg-[#49BBBD] text-white p-3 rounded-t-lg flex justify-between items-center">
+          <div className="bg-[#49BBBD] text-white p-3 rounded-t-lg flex justify-between items-center relative">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center text-[#49BBBD] font-bold text-sm">
                 CS
               </div>
               {!isMinimized && (
-                <div>
+                <div className="max-w-[calc(100%-4rem)]">
                   <h3 className="font-semibold">Course Discussion</h3>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex items-center gap-1 mt-1">
                     {onlineUsers.length > 0 ? (
-                      onlineUsers.map((user) => (
-                        <div
-                          key={user.userId}
-                          className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                            user.role.toLowerCase() === 'instructor'
-                              ? 'bg-blue-200 text-blue-800'
-                              : 'bg-gray-200 text-gray-800'
-                          }`}
-                        >
-                          <span className="h-3 w-3 rounded-full bg-green-400 inline-block"></span>
-                          <span>{user.name}</span>
-                          {user.role.toLowerCase() === 'instructor' && (
-                            <span className="text-[10px] font-medium">(Instructor)</span>
-                          )}
+                      <>
+                        <div className="online-users-container">
+                          {visibleUsers.map((user) => (
+                            <div
+                              key={user.userId}
+                              className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 online-user ${
+                                user.role.toLowerCase() === 'instructor'
+                                  ? 'bg-blue-200 text-blue-800'
+                                  : 'bg-gray-200 text-gray-800'
+                              }`}
+                            >
+                              <span className="h-3 w-3 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
+                              <span className="truncate max-w-16">{user.name}</span>
+                              {user.role.toLowerCase() === 'instructor' && (
+                                <span className="text-[10px] font-medium flex-shrink-0">(Instructor)</span>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))
+                        {remainingUsersCount > 0 && (
+                          <button 
+                            onClick={toggleShowAllUsers}
+                            className="flex items-center text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors cursor-pointer"
+                          >
+                            <span>+{remainingUsersCount}</span>
+                            {showAllUsers ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <p className="text-xs text-gray-100 opacity-80">No other participants online</p>
                     )}
                   </div>
+                  
+                  {showAllUsers && onlineUsers.length > 0 && (
+                    <div className="users-modal">
+                      <div className="p-3 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <h3 className="font-medium text-gray-800">Online Users ({onlineUsers.length})</h3>
+                          </div>
+                          <button 
+                            onClick={toggleShowAllUsers}
+                            className="text-gray-500 hover:bg-gray-100 p-1 rounded-full"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-2 max-h-60 overflow-y-auto">
+                        {onlineUsers.map((user) => (
+                          <div 
+                            key={user.userId}
+                            className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition-colors"
+                          >
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 text-xs">
+                              {getInitials(user.name)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{user.name}</p>
+                              <div className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center ${
+                                user.role.toLowerCase() === 'instructor'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                <span className="h-2 w-2 rounded-full bg-green-400 mr-1"></span>
+                                {user.role}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -401,57 +523,89 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                           {date}
                         </span>
                       </div>
-                      {groupedMessages[date].map((msg) => {
-                        console.log('[ChatComponent] Rendering message:', msg);
-                        return (
+                      {groupedMessages[date].map((msg) => (
+                        <div
+                          key={msg.id}
+                          id={`message-${msg.id}`}
+                          className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-in-out hover:scale-[1.01]`}
+                        >
                           <div
-                            key={msg.id}
-                            className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                            className={`max-w-[85%] rounded-lg flex items-start gap-2 ${
+                              msg.isCurrentUser
+                                ? 'bg-[#49BBBD] text-white'
+                                : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
+                            } ${!msg.isRead ? 'border-l-4 border-l-yellow-400' : ''}`}
                           >
-                            <div
-                              className={`max-w-[85%] rounded-lg flex items-start gap-2 ${
-                                msg.isCurrentUser
-                                  ? 'bg-[#49BBBD] text-white'
-                                  : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
-                              } ${!msg.isRead ? 'border-l-4 border-l-yellow-400' : ''}`}
-                            >
-                              {!msg.isCurrentUser && (
-                                <div className="flex-shrink-0 p-2">
-                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                                    {msg.profilePic ? (
-                                      <img
-                                        src={msg.profilePic}
-                                        alt={msg.sender}
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <span className="text-gray-600 text-xs font-medium">
-                                        {getInitials(msg.sender)}
-                                      </span>
-                                    )}
-                                  </div>
+                            {!msg.isCurrentUser && (
+                              <div className="flex-shrink-0 p-2">
+                                <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                  {msg.profilePic ? (
+                                    <img
+                                      src={msg.profilePic}
+                                      alt={msg.sender}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-600 text-xs font-medium">
+                                      {getInitials(msg.sender)}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-                              <div className="p-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-xs">
+                              </div>
+                            )}
+                            <div className="p-2 flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <span className="font-medium text-xs truncate">
                                     {msg.isCurrentUser ? 'You' : msg.sender}
                                     {msg.role === 'instructor' && !msg.isCurrentUser && ' (Instructor)'}
                                   </span>
                                   <span
                                     className={`text-xs ${
                                       msg.isCurrentUser ? 'text-gray-200' : 'text-gray-400'
-                                    }`}
+                                    } whitespace-nowrap`}
                                   >
                                     {msg.timestamp}
                                   </span>
                                 </div>
-                                <p className="text-sm mt-1">{msg.message}</p>
+                                <button
+                                  onClick={() => handleReply(msg)}
+                                  className={`p-1 rounded-full hover:bg-gray-200 transition-all duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${
+                                    msg.isCurrentUser ? 'text-gray-200 hover:bg-gray-300/50' : 'text-gray-500'
+                                  }`}
+                                  title="Reply to this message"
+                                >
+                                  <Reply className="h-4 w-4" />
+                                </button>
                               </div>
+                              {msg.replyTo && (
+                                <div
+                                  className={`p-2 mt-1 rounded-lg cursor-pointer hover:bg-opacity-80 ${
+                                    msg.isCurrentUser ? 'bg-white/20' : 'bg-gray-100'
+                                  }`}
+                                  onClick={() => {
+                                    const element = document.getElementById(`message-${msg.replyTo!.id}`);
+                                    if (element) {
+                                      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      element.classList.add('highlight');
+                                      setTimeout(() => element.classList.remove('highlight'), 2000);
+                                    }
+                                  }}
+                                >
+                                  <p className={`text-xs font-semibold ${msg.isCurrentUser ? 'text-gray-100' : 'text-gray-700'}`}>
+                                    Replying to {msg.replyTo.sender}
+                                    {msg.replyTo.role === 'instructor' && ' (Instructor)'}
+                                  </p>
+                                  <p className={`text-xs ${msg.isCurrentUser ? 'text-gray-200' : 'text-gray-600'} truncate`}>
+                                    {msg.replyTo.message.length > 50 ? `${msg.replyTo.message.substring(0, 47)}...` : msg.replyTo.message}
+                                  </p>
+                                </div>
+                              )}
+                              <p className="text-sm mt-1 message-text">{msg.message}</p>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   ))
                 ) : (
@@ -477,7 +631,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div className="px-4 py-1 border-t border-gray-100 flex justify-center gap-2">
+              <div className="px-4 py-1 border-t border-gray-100 flex flex-wrap justify-center gap-2">
                 {emojis.map((emoji) => (
                   <button
                     key={emoji}
@@ -490,10 +644,29 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
               </div>
 
               <div className="p-3 bg-white border-t border-gray-200 rounded-b-lg">
+                {replyingTo && (
+                  <div className="mb-2 p-2 bg-gray-100 rounded-lg flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-700 truncate">
+                        Replying to {replyingTo.sender}
+                        {replyingTo.role === 'instructor' && ' (Instructor)'}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        {replyingTo.message.length > 50 ? `${replyingTo.message.substring(0, 47)}...` : replyingTo.message}
+                      </p>
+                    </div>
+                    <button
+                      onClick={cancelReply}
+                      className="text-gray-500 hover:text-red-500 p-1 rounded-full flex-shrink-0"
+                      title="Cancel reply"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 bg-gray-50 rounded-lg p-1">
-                  <button className="text-gray-400 hover:text-[#49BBBD] p-1 rounded-full transition-colors">
-                    <Paperclip className="h-5 w-5" />
-                  </button>
                   <input
                     ref={inputRef}
                     type="text"
@@ -501,13 +674,13 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 p-2 bg-transparent focus:outline-none text-sm"
+                    className="flex-1 p-2 bg-transparent focus:outline-none text-sm min-w-0"
                     autoFocus
                   />
                   <button
                     onClick={handleSendMessage}
                     disabled={!inputValue.trim()}
-                    className={`p-2 rounded-full transition-colors ${
+                    className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                       inputValue.trim()
                         ? 'bg-[#49BBBD] text-white hover:bg-[#3aa9ab]'
                         : 'bg-gray-200 text-gray-400 cursor-not-allowed'

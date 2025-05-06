@@ -35,6 +35,18 @@ export interface IChat {
   timestamp: string;
   createdAt: string;
   updatedAt: string;
+  replyTo?: {
+    _id: string;
+    message: string;
+    senderId: {
+      _id: string;
+      name: string;
+      role: string;
+      profile?: {
+        profilePic?: string;
+      };
+    };
+  } | null;
 }
 
 interface GetMessagesParams {
