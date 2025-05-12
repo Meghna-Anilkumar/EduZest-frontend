@@ -127,7 +127,6 @@ const PaymentsHistory: React.FC = () => {
 
   const paymentOverview = {
     totalAmountPaid: payments?.data?.reduce((sum, p) => sum + p.amount, 0) || 0,
-    totalPayment: payments?.data?.length > 0 ? payments?.data[0].amount : 0,
     pendingPayments: payments?.data?.filter((p) => p.status === "pending").length || 0,
   };
 
@@ -168,14 +167,10 @@ const PaymentsHistory: React.FC = () => {
             <SearchBar onSearchChange={handleSearchChange} />
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Total Amount Paid</h3>
                 <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.totalAmountPaid}</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-700">Total Payment</h3>
-                <p className="text-2xl font-bold text-gray-900">₹{paymentOverview.totalPayment}</p>
               </div>
               <div className="p-4 bg-yellow-50 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-700">Pending Payments</h3>

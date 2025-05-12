@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Paperclip, Reply } from 'lucide-react';
+import { Send, Reply } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../redux/store';
 import { useSocket } from '../context/socketContext';
@@ -572,9 +572,6 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
           </div>
         )}
         <div className="flex items-center gap-3 bg-gray-100 rounded-full p-2 shadow-sm">
-          <button className="text-gray-500 hover:text-[#49BBBD] p-2 rounded-full transition-colors">
-            <Paperclip className="h-5 w-5" />
-          </button>
           <input
             ref={inputRef}
             type="text"

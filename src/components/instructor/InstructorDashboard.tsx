@@ -18,10 +18,10 @@ import {
   Legend,
 } from "chart.js";
 
-// Register Chart.js components
+
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-// Define the CourseStats interface
+
 interface CourseStats {
   courseId: string;
   title: string;
@@ -70,7 +70,7 @@ const InstructorDashboard: React.FC = () => {
       try {
         await dispatch(fetchUserData()).unwrap();
         const statsResponse = await dispatch(getInstructorCourseStatsAction()).unwrap();
-        console.log("Course Stats:", statsResponse.data); // Debug log
+        console.log("Course Stats:", statsResponse.data); 
         setCourseStats(statsResponse.data);
       } catch (err: any) {
         setError(err.message || "Failed to fetch course statistics");
@@ -85,28 +85,27 @@ const InstructorDashboard: React.FC = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Pagination logic
   const totalPages = Math.ceil(courseStats.length / itemsPerPage);
   const paginatedStats = courseStats.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   );
 
-  // Chart data for total enrollments and total revenue
+
   const chartData = {
-    labels: courseStats.map((course) => course.title), // Course titles as x-axis labels
+    labels: courseStats.map((course) => course.title),
     datasets: [
       {
         label: "Total Enrollments",
         data: courseStats.map((course) => course.totalEnrollments),
-        backgroundColor: "rgba(75, 192, 192, 0.5)", // Teal color
+        backgroundColor: "rgba(75, 192, 192, 0.5)", 
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,
       },
       {
         label: "Total Revenue ($)",
         data: courseStats.map((course) => course.totalRevenue),
-        backgroundColor: "rgba(255, 99, 132, 0.5)", // Pink color
+        backgroundColor: "rgba(255, 99, 132, 0.5)", 
         borderColor: "rgba(255, 99, 132, 1)",
         borderWidth: 1,
       },
@@ -114,10 +113,10 @@ const InstructorDashboard: React.FC = () => {
   };
   console.log("Chart Data:", chartData);
 
-  // Chart options with fixed dimensions to prevent resizing issues
+ 
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: false, // This allows us to control the size with the parent container
+    maintainAspectRatio: false, 
     plugins: {
       legend: {
         position: "top" as const,

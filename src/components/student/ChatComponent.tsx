@@ -167,7 +167,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     };
 
     const handleError = (data: { message: string }) => {
-      // Silent error handling - could be connected to a toast notification system
+
     };
 
     const handleOnlineUsers = (users: OnlineUser[]) => {

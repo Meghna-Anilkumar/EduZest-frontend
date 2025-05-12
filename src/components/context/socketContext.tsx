@@ -31,8 +31,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     newSocket.on('connect', () => {
       console.log('[SocketContext] WebSocket connected:', newSocket.id);
+      newSocket.emit('authenticate', { userId: userData._id });
       setIsConnected(true);
     });
+    
 
     newSocket.on('connect_error', (error) => {
       console.error('[SocketContext] Connection error:', error.message);

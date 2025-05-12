@@ -27,7 +27,7 @@ import {
   Lock,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
-import ChatComponent from "../common/ChatComponent";
+import ChatComponent from "./ChatComponent";
 
 interface ILesson {
   _id: string;
@@ -117,7 +117,7 @@ const CourseDetails: React.FC = () => {
   const [assessmentErrors, setAssessmentErrors] = useState<{
     [moduleTitle: string]: string | null;
   }>({});
-  const [isChatOpen, setIsChatOpen] = useState(false); // State for chat modal
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastProgressUpdate = useRef<number>(0);
 
@@ -287,10 +287,8 @@ const CourseDetails: React.FC = () => {
     const module = course.modules[moduleIndex];
     const lessonIndex = module.lessons.findIndex((l) => l._id === lesson._id);
 
-    // Always allow access to the first lesson of any accessible module
     if (lessonIndex === 0) return true;
 
-    // For other lessons, check if previous lesson in same module is completed
     const previousLesson = module.lessons[lessonIndex - 1];
     const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
     return previousProgress?.isCompleted || false;
@@ -344,7 +342,6 @@ const CourseDetails: React.FC = () => {
       setSelectedLesson(lesson);
       setVideoError(null);
     } else {
-      // Provide feedback on why the lesson is locked
       setVideoError("This lesson is locked. Complete previous lessons to unlock it.");
     }
   };
@@ -390,7 +387,6 @@ const CourseDetails: React.FC = () => {
 
   const totalLessons = course?.modules.reduce((acc, module) => acc + module.lessons.length, 0) || 0;
 
-  // Render a module section with its lessons
   const renderModuleSection = (module: IModule, index: number) => {
     const isAccessible = isModuleAccessible(index);
 
@@ -765,7 +761,7 @@ const CourseDetails: React.FC = () => {
           </div>
         </main>
       </div>
-      {/* Include the CourseChatComponent with courseId prop */}
+
       {courseId && <ChatComponent courseId={courseId} />}
     </div>
   );

@@ -216,7 +216,7 @@ const AssessmentsPage: React.FC = () => {
             <div className="flex justify-between h-16 items-center">
               <div className="flex items-center">
                 <button
-                  onClick={() => navigate(`/instructor/courses/${courseId}`)}
+                  onClick={() => navigate(`/instructor/courseDetails/${courseId}`)}
                   className="text-gray-600 hover:text-gray-800 mr-4"
                 >
                   <svg
