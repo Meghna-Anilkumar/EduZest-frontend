@@ -45,7 +45,6 @@ const Header = () => {
     { href: "/home", text: "Home" },
     { href: "/all-courses", text: "All Courses" },
     { href: "/teach", text: "Teach" },
-    { href: "/about", text: "About" },
     { href: "/contact", text: "Contact" },
     // { href: "/my-account", text: "My Account" },
   ];

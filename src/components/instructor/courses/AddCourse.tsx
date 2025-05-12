@@ -5,12 +5,11 @@ import * as Yup from "yup";
 import Sidebar from "../InstructorSidebar";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCategoriesAction } from "../../../redux/actions/categoryActions";
-import { fetchUserData } from "../../../redux/actions/auth/fetchUserdataAction"; 
+import { fetchUserData } from "../../../redux/actions/auth/fetchUserdataAction";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { useCourseForm } from "../../context/CourseFormContext";
-import InstructorNavbar from "../InstructorNavbar"; 
+import InstructorNavbar from "../InstructorNavbar";
 
-// Validation schema
 const CourseSchema = Yup.object().shape({
   title: Yup.string()
     .min(5, "Course title must be at least 5 characters")
@@ -51,23 +50,20 @@ const AddCoursePage: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
-  // Fetch categories and user data from Redux store
-  const { data: categories, error: categoryError } = useSelector((state: RootState) => state.category);
+  const { data: categories, error: categoryError } = useSelector(
+    (state: RootState) => state.category
+  );
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the course form context
   const { formData, updateFormData, resetFormData } = useCourseForm();
 
-  // Check if there's courseData in the navigation state (e.g., when coming back from AddLessonsPage)
   const courseDataFromNavigation = location.state?.courseData;
 
   useEffect(() => {
-    // Fetch categories when the component mounts
     dispatch(getAllCategoriesAction({ page: 1, limit: 100 }));
 
-    // Fetch user data
     const fetchData = async () => {
       if (!isAuthenticated) {
         return;
@@ -84,16 +80,21 @@ const AddCoursePage: React.FC = () => {
     };
     fetchData();
 
-    // Restore form data if navigating back with courseData
     if (courseDataFromNavigation) {
-      console.log("Restoring courseData from navigation state:", courseDataFromNavigation);
+      console.log(
+        "Restoring courseData from navigation state:",
+        courseDataFromNavigation
+      );
       updateFormData({
         title: courseDataFromNavigation.title || "",
         description: courseDataFromNavigation.description || "",
         categoryRef: courseDataFromNavigation.categoryRef || "",
         language: courseDataFromNavigation.language || "",
         level: courseDataFromNavigation.level || "",
-        pricing: courseDataFromNavigation.pricing || { type: "free", amount: 0 },
+        pricing: courseDataFromNavigation.pricing || {
+          type: "free",
+          amount: 0,
+        },
         thumbnail: courseDataFromNavigation.thumbnail || null,
         thumbnailPreview: courseDataFromNavigation.thumbnailPreview || null,
         isSubmitted: false,
@@ -101,7 +102,10 @@ const AddCoursePage: React.FC = () => {
     }
   }, [dispatch, courseDataFromNavigation, updateFormData, isAuthenticated]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    setFieldValue: any
+  ) => {
     const file = event.currentTarget.files?.[0];
     if (file) {
       console.log("Thumbnail file selected:", file.name);
@@ -127,19 +131,27 @@ const AddCoursePage: React.FC = () => {
         setCurrentPage={setCurrentPage}
       />
 
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? "ml-64" : "ml-20"}`}>
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          sidebarOpen ? "ml-64" : "ml-20"
+        }`}
+      >
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16 items-center">
-              <h1 className="text-2xl font-semibold text-gray-900">Create New Course</h1>
-              <InstructorNavbar loading={loading} error={error} /> {/* Add InstructorNavbar */}
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Create New Course
+              </h1>
+              <InstructorNavbar loading={loading} error={error} />{" "}
             </div>
           </div>
         </header>
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="bg-white shadow-md rounded-lg px-8 py-6">
-            {categoryError && <div className="mb-4 text-red-600">{categoryError}</div>}
+            {categoryError && (
+              <div className="mb-4 text-red-600">{categoryError}</div>
+            )}
             <Formik
               initialValues={{
                 title: formData.title || "",
@@ -164,7 +176,10 @@ const AddCoursePage: React.FC = () => {
                   level: values.level,
                   pricing: {
                     type: values.pricing.type,
-                    amount: values.pricing.type === "paid" ? Number(values.pricing.amount) : 0,
+                    amount:
+                      values.pricing.type === "paid"
+                        ? Number(values.pricing.amount)
+                        : 0,
                   },
                   thumbnail: values.thumbnail,
                   thumbnailPreview: formData.thumbnailPreview,
@@ -179,7 +194,10 @@ const AddCoursePage: React.FC = () => {
 
                 const navigationPath = "/instructor/courses/addLesson";
                 console.log("Navigating to:", navigationPath);
-                console.log("Passing courseData in navigation state:", courseData);
+                console.log(
+                  "Passing courseData in navigation state:",
+                  courseData
+                );
                 navigate(navigationPath, { state: { courseData } });
               }}
             >
@@ -202,7 +220,10 @@ const AddCoursePage: React.FC = () => {
                     {/* Left column */}
                     <div className="md:col-span-2 space-y-6">
                       <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="title"
+                          className="block text-sm font-medium text-gray-700"
+                        >
                           Course Title
                         </label>
                         <Field
@@ -216,11 +237,18 @@ const AddCoursePage: React.FC = () => {
                           }`}
                           placeholder="Enter an engaging title for your course"
                         />
-                        <ErrorMessage name="title" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage
+                          name="title"
+                          component="div"
+                          className="mt-1 text-sm text-red-600"
+                        />
                       </div>
 
                       <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                        <label
+                          htmlFor="description"
+                          className="block text-sm font-medium text-gray-700"
+                        >
                           Description
                         </label>
                         <Field
@@ -235,13 +263,20 @@ const AddCoursePage: React.FC = () => {
                           }`}
                           placeholder="Provide a detailed description of your course"
                         />
-                        <ErrorMessage name="description" component="div" className="mt-1 text-sm text-red-600" />
+                        <ErrorMessage
+                          name="description"
+                          component="div"
+                          className="mt-1 text-sm text-red-600"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Category */}
                         <div>
-                          <label htmlFor="categoryRef" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="categoryRef"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Category
                           </label>
                           <Field
@@ -256,19 +291,28 @@ const AddCoursePage: React.FC = () => {
                           >
                             <option value="">Select a category</option>
                             {categories
-                              ?.filter((category: Category) => category.isActive)
+                              ?.filter(
+                                (category: Category) => category.isActive
+                              )
                               .map((category: Category) => (
                                 <option key={category._id} value={category._id}>
                                   {category.categoryName}
                                 </option>
                               ))}
                           </Field>
-                          <ErrorMessage name="categoryRef" component="div" className="mt-1 text-sm text-red-600" />
+                          <ErrorMessage
+                            name="categoryRef"
+                            component="div"
+                            className="mt-1 text-sm text-red-600"
+                          />
                         </div>
 
                         {/* Language */}
                         <div>
-                          <label htmlFor="language" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="language"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Language
                           </label>
                           <Field
@@ -290,12 +334,19 @@ const AddCoursePage: React.FC = () => {
                             <option value="mandarin">Mandarin</option>
                             <option value="arabic">Arabic</option>
                           </Field>
-                          <ErrorMessage name="language" component="div" className="mt-1 text-sm text-red-600" />
+                          <ErrorMessage
+                            name="language"
+                            component="div"
+                            className="mt-1 text-sm text-red-600"
+                          />
                         </div>
 
                         {/* Level */}
                         <div>
-                          <label htmlFor="level" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="level"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Level
                           </label>
                           <Field
@@ -314,7 +365,11 @@ const AddCoursePage: React.FC = () => {
                             <option value="advanced">Advanced</option>
                             <option value="all">All Levels</option>
                           </Field>
-                          <ErrorMessage name="level" component="div" className="mt-1 text-sm text-red-600" />
+                          <ErrorMessage
+                            name="level"
+                            component="div"
+                            className="mt-1 text-sm text-red-600"
+                          />
                         </div>
                       </div>
                     </div>
@@ -322,7 +377,9 @@ const AddCoursePage: React.FC = () => {
                     {/* Right column */}
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">Course Thumbnail</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Course Thumbnail
+                        </label>
                         <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                           <div className="space-y-1 text-center">
                             {formData.thumbnailPreview ? (
@@ -360,23 +417,31 @@ const AddCoursePage: React.FC = () => {
                                   name="thumbnail"
                                   type="file"
                                   className="sr-only"
-                                  onChange={(e) => handleFileChange(e, setFieldValue)}
+                                  onChange={(e) =>
+                                    handleFileChange(e, setFieldValue)
+                                  }
                                   accept="image/*"
                                 />
                               </label>
                               <p className="pl-1">or drag and drop</p>
                             </div>
-                            <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, GIF up to 5MB
+                            </p>
                           </div>
                         </div>
                         {touched.thumbnail && errors.thumbnail && (
-                          <div className="mt-1 text-sm text-red-600">{errors.thumbnail}</div>
+                          <div className="mt-1 text-sm text-red-600">
+                            {errors.thumbnail}
+                          </div>
                         )}
                       </div>
 
                       <div>
                         <fieldset>
-                          <legend className="block text-sm font-medium text-gray-700">Pricing</legend>
+                          <legend className="block text-sm font-medium text-gray-700">
+                            Pricing
+                          </legend>
                           <div className="mt-4 space-y-4">
                             <div className="flex items-center">
                               <Field
@@ -386,7 +451,10 @@ const AddCoursePage: React.FC = () => {
                                 value="free"
                                 className="h-4 w-4 text-[#49BBBD] border-gray-300 focus:ring-[#49BBBD]"
                               />
-                              <label htmlFor="free" className="ml-3 block text-sm font-medium text-gray-700">
+                              <label
+                                htmlFor="free"
+                                className="ml-3 block text-sm font-medium text-gray-700"
+                              >
                                 Free
                               </label>
                             </div>
@@ -398,7 +466,10 @@ const AddCoursePage: React.FC = () => {
                                 value="paid"
                                 className="h-4 w-4 text-[#49BBBD] border-gray-300 focus:ring-[#49BBBD]"
                               />
-                              <label htmlFor="paid" className="ml-3 block text-sm font-medium text-gray-700">
+                              <label
+                                htmlFor="paid"
+                                className="ml-3 block text-sm font-medium text-gray-700"
+                              >
                                 Paid
                               </label>
                             </div>
@@ -408,7 +479,10 @@ const AddCoursePage: React.FC = () => {
 
                       {values.pricing.type === "paid" && (
                         <div>
-                          <label htmlFor="pricing.amount" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="pricing.amount"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Price ($)
                           </label>
                           <Field
@@ -436,7 +510,9 @@ const AddCoursePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        console.log("Cancel button clicked, resetting form data");
+                        console.log(
+                          "Cancel button clicked, resetting form data"
+                        );
                         resetFormData();
                         navigate("/instructor/courses");
                       }}

@@ -18,6 +18,7 @@ export interface LoginData{
 
 
 export interface IUserdata {
+  _id:string;
   email: string;
   name: string;
   isVerified?: boolean;
@@ -53,6 +54,7 @@ export interface IUserdata {
   };
   aboutMe: string;
   isRequested: string; 
+  isApproved:boolean
   socialMedia?: {
     linkedin?: string;
     github?: string;

@@ -14,7 +14,7 @@ export const getAllStudentsAction = createAsyncThunk(
     ) => {
       try {
         const url = adminEndpoints.getAllStudents(page, limit, search);
-        console.log("Fetching students with URL:", url); // Debug log
+        console.log("Fetching students with URL:", url); 
         const response = await serverAdmin.get(url);
         return response.data;
       } catch (error: any) {
@@ -109,3 +109,54 @@ export const getAllInstructorsAction = createAsyncThunk(
       }
     }
   );
+
+
+  export const getAdminPayoutsAction = createAsyncThunk(
+    "admin/getAdminPayouts",
+    async (
+      { 
+        page, 
+        limit, 
+        search, 
+        sortField, 
+        sortOrder 
+      }: { 
+        page: number; 
+        limit: number; 
+        search?: string; 
+        sortField?: string; 
+        sortOrder?: "asc" | "desc" 
+      }, 
+      { rejectWithValue }
+    ) => {
+      try {
+        const url = adminEndpoints.getAdminPayouts(page, limit, search, sortField, sortOrder);
+        console.log("Fetching admin payouts with URL:", url);
+        const response = await serverAdmin.get(url);
+        console.log("Action response:", response.data);
+        return response.data;
+      } catch (error: any) {
+        console.error("Get admin payouts action Error: ", error);
+        const e: AxiosError = error as AxiosError;
+        return rejectWithValue(e.response?.data || e.message);
+      }
+    }
+);
+
+
+export const getDashboardStatsAction = createAsyncThunk(
+  "admin/getDashboardStats",
+  async ({ period = "day" }: { period?: "day" | "month" | "year" }, { rejectWithValue }) => {
+    try {
+      const url = adminEndpoints.dashboardStats();
+      console.log("Fetching dashboard stats with URL:", url);
+      const response = await serverAdmin.get(url, { params: { period } });
+      console.log("Action response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Get dashboard stats action Error: ", error);
+      const e: AxiosError = error as AxiosError;
+      return rejectWithValue(e.response?.data || e.message);
+    }
+  }
+);

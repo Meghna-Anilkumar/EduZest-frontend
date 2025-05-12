@@ -1,7 +1,7 @@
 
 
 export interface ILesson {
- 
+  
   lessonNumber: string;
   title: string;
   description: string;
@@ -63,4 +63,15 @@ export interface ICourse {
   createdAt: string;
   updatedAt: string;
   __v?: number;
+}
+
+
+export interface FilterOptions {
+  level?: "beginner" | "intermediate" | "advanced";
+  pricingType?: "free" | "paid";
+}
+
+export interface SortOptions {
+  field: "price" | "updatedAt" | "studentsEnrolled";
+  order: "asc" | "desc";
 }

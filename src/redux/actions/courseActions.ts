@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { userEndPoints } from "../../services/endPoints/endPoints"; 
 import { serverUser } from "../../services"; 
 import { AxiosError } from "axios";
-import { ICourse } from "../../interface/ICourse";
+import { ICourse ,FilterOptions,SortOptions} from "../../interface/ICourse";
 
 
 export const createCourseAction = createAsyncThunk(
@@ -41,15 +41,34 @@ export const getAllCoursesByInstructorAction = createAsyncThunk(
 export const getAllActiveCoursesAction = createAsyncThunk(
   "courses/getAllActiveCourses",
   async (
-    { page, limit, search }: { page: number; limit: number; search?: string },
+    {
+      page,
+      limit,
+      search,
+      filters,
+      sort,
+    }: {
+      page: number;
+      limit: number;
+      search?: string;
+      filters?: FilterOptions;
+      sort?: SortOptions;
+    },
     { rejectWithValue }
   ) => {
     try {
       const response = await serverUser.get(userEndPoints.getAllActiveCourses, {
-        params: { page, limit, search },
-        withCredentials: true, // Include cookies (e.g., userJWT token) for authentication
+        params: {
+          page,
+          limit,
+          search,
+          ...filters,
+          sortField: sort?.field,
+          sortOrder: sort?.order,
+        },
+        withCredentials: true,
       });
-      return response.data.data; // Return the courses data
+      return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });
@@ -64,6 +83,7 @@ export const getCourseByIdAction = createAsyncThunk(
       const response = await serverUser.get(`${userEndPoints.getCourseById}/${courseId}`, {
         withCredentials: true, 
       });
+      console.log("API Response:", response.data);
       return response.data.data; 
     } catch (error) {
       const err = error as AxiosError;
@@ -72,10 +92,38 @@ export const getCourseByIdAction = createAsyncThunk(
   }
 );
 
+export const streamVideoAction = createAsyncThunk(
+  'course/streamVideo',
+  async (
+    { courseId, videoKey }: { courseId: string; videoKey: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      // Instead of fetching the video and converting to blob,
+      // just return the API endpoint URL
+      const encodedVideoKey = encodeURIComponent(videoKey);
+      
+      // Construct the API URL that your video player will use directly
+      const videoUrl = `${serverUser.defaults.baseURL}${userEndPoints.streamVideo.replace(':courseId', courseId)}?videoKey=${encodedVideoKey}`;
+      
+      console.log('Video streaming URL:', { videoUrl, videoKey });
+      
+      return { videoUrl, videoKey };
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error('Failed to prepare video stream:', {
+        videoKey,
+        message: err.message,
+      });
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
 export const editCourseAction = createAsyncThunk<
-  ICourse, // Return type
-  { courseId: string; formData: FormData | Partial<ICourse> }, // Argument type
-  { rejectValue: { message: string } } // ThunkAPI reject value type
+  ICourse, 
+  { courseId: string; formData: FormData | Partial<ICourse> }, 
+  { rejectValue: { message: string } } 
 >(
   "course/editCourse",
   async (
@@ -103,3 +151,28 @@ export const editCourseAction = createAsyncThunk<
     }
   }
 );
+
+
+export const getCourseByInstructorAction = createAsyncThunk<
+  ICourse, // Return type
+  string, // Argument type (courseId)
+  { rejectValue: { message: string } } // ThunkAPI reject value type
+>(
+  "instructor/getCourseByInstructor",
+  async (courseId: string, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.get(
+        `${userEndPoints.getCourseByInstructor}/${courseId}`,
+        {
+          withCredentials: true,
+        }
+      );
+      return response.data.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+

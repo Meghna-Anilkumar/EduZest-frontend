@@ -9,7 +9,7 @@ import Pagination from "../common/Pagination";
 import { RiMenuLine } from "react-icons/ri";
 import { SearchBar } from "../common/SearchBar";
 import { StudentModal } from "./StudentView";
-import { IUserdata } from "../../interface/user/IUserData";
+import { IUserdata } from "../../interface/IUserData";
 import {
   Dialog,
   DialogTitle,
@@ -19,7 +19,7 @@ import {
   Button,
 } from "@mui/material";
 
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
+const Sidebar = lazy(() => import("../common/admin/AdminSidebar"));
 
 interface Student extends IUserdata {
   _id: string;

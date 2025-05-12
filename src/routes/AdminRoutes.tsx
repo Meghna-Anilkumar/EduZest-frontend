@@ -8,7 +8,7 @@ import AdminStudents from "../components/admin/AdminStudents";
 import RequestsPage from "../pages/admin/RequestsPage";
 import CategoryManagement from "../components/admin/CategoryPage";
 import AdminInstructors from "../components/admin/AdminInstructors";
-
+import AdminTransactionsPage from "../components/admin/AdminTransactions";
 
 const AdminRoutes: React.FC = () => {
   return (
@@ -23,7 +23,7 @@ const AdminRoutes: React.FC = () => {
           <Route path="/instructors" element={<AdminInstructors />} />
           <Route path="/requests" element={<RequestsPage />} />
           <Route path="/categories" element={<CategoryManagement />} />
-          
+          <Route path="/transactions" element={<AdminTransactionsPage/>}/>
         </Route>
       </Routes>
     </Suspense>

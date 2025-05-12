@@ -2,7 +2,8 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { serverUser } from "../../services";
 import { userEndPoints } from "../../services/endPoints/endPoints";
 import { ResponseData } from "../../interface/Interface";
-
+import { AppDispatch } from "../store";
+import { userSetIsAuthenticated,setUserData } from "../reducers/userReducer";
 
 export interface ResetPasswordData {
   email: string,
@@ -89,6 +90,37 @@ export const updateStudentProfileThunk = createAsyncThunk(
   }
 );
 
+
+export const switchToInstructorThunk = createAsyncThunk<
+  ResponseData,
+  string, // Expect userId as a string
+  { dispatch: AppDispatch; rejectValue: string | ResponseData }
+>(
+  "auth/switchToInstructor",
+  async (userId: string, { dispatch, rejectWithValue }) => {
+    try {
+      console.log("Switching to Instructor for userId:", userId);
+      const response = await serverUser.post(userEndPoints.switchToInstructor, { userId });
+
+      console.log("Switch to instructor response:", response.data);
+
+      const result = response.data as ResponseData;
+
+      if (result.success && result.redirectURL === "/login") {
+        dispatch(userSetIsAuthenticated(false));
+        dispatch(setUserData(null));
+        localStorage.clear();
+      }
+
+      return result;
+    } catch (error: any) {
+      console.error("Error switching to instructor:", error.response?.data);
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to switch to instructor role"
+      );
+    }
+  }
+);
 
 
 export const updateInstructorProfileThunk = createAsyncThunk(
@@ -193,3 +225,39 @@ export const refreshSignedUrlThunk = createAsyncThunk<
   }
 );
 
+
+export const getInstructorPayoutsAction = createAsyncThunk(
+  "instructor/getInstructorPayouts",
+  async (
+    {
+      instructorId,
+      page,
+      limit,
+      search,
+      sortField,
+      sortOrder,
+    }: {
+      instructorId: string;
+      page: number;
+      limit: number;
+      search?: string;
+      sortField?: string;
+      sortOrder?: "asc" | "desc";
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      if (!instructorId) {
+        throw new Error("Instructor ID is required");
+      }
+      const url = userEndPoints.getInstructorPayouts(page, limit, search, sortField, sortOrder);
+      console.log("Fetching instructor payouts with URL:", url);
+      const response = await serverUser.get(url); // No headers
+      console.log("Action response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Get instructor payouts action Error:", error.response?.data);
+      return rejectWithValue(error.response?.data || "Failed to fetch instructor payouts");
+    }
+  }
+);

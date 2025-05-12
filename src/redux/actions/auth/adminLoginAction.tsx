@@ -1,5 +1,5 @@
 import { ResponseData } from "../../../interface/Interface";
-import { LoginData } from "../../../interface/user/IUserData";
+import { LoginData } from "../../../interface/IUserData";
 import { AsyncThunk, createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from "axios";
 import { serverAdmin} from "../../../services";

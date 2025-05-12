@@ -21,20 +21,22 @@ const Sidebar: React.FC<SidebarProps> = ({
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     // Check initially
     checkIfMobile();
-    
+
     // Add event listener
     window.addEventListener("resize", checkIfMobile);
-    
+
     // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
   const linkClasses = (page: string) =>
     `px-4 py-4 flex items-center text-gray-300 hover:bg-gray-900 hover:text-white transition-colors rounded-l-xl ${
-      currentPage === page ? "bg-gray-900 text-white border-r-4 border-[#49BBBD]" : ""
+      currentPage === page
+        ? "bg-gray-900 text-white border-r-4 border-[#49BBBD]"
+        : ""
     }`;
 
   return (
@@ -111,12 +113,12 @@ const Sidebar: React.FC<SidebarProps> = ({
               )}
             </a>
             <a
-              href="/instructor/exams"
-              className={linkClasses("exams")}
+              href="/instructor/transactions"
+              className={linkClasses("transactions")}
               onClick={(e) => {
                 e.preventDefault();
-                setCurrentPage("exams");
-                navigate("/instructor/exams");
+                setCurrentPage("transactions");
+                navigate("/instructor/transactions");
               }}
             >
               <svg
@@ -130,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
                 />
               </svg>
               {open && (
@@ -139,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     open ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  Exams
+                  Transactions
                 </span>
               )}
             </a>
@@ -149,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 setCurrentPage("courses");
-                navigate("/instructor/courses"); // Add navigation
+                navigate("/instructor/courses");
               }}
             >
               <svg
@@ -182,7 +184,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               onClick={(e) => {
                 e.preventDefault();
                 setCurrentPage("chat");
-                navigate("/instructor/chat"); // Add navigation
+                navigate("/instructor/chat");
               }}
             >
               <svg
@@ -212,7 +214,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
         {/* Bottom section with accent color */}
-        <div className={`mt-auto p-4 bg-[#49BBBD] bg-opacity-20 ${open ? "text-center" : ""}`}>
+        <div
+          className={`mt-auto p-4 bg-[#49BBBD] bg-opacity-20 ${
+            open ? "text-center" : ""
+          }`}
+        >
           {open ? (
             <div className="text-white text-sm">© 2025 Instructor Portal</div>
           ) : (

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../../../redux/store'; // Adjust the path to your store
+import { AppDispatch } from '../../../redux/store'; 
 import { editCourseAction } from '../../../redux/actions/courseActions';
 
 interface Course {

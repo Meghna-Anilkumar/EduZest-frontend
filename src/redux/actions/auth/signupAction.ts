@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { AxiosError } from 'axios'
-import { UserSignUpData } from "../../../interface/user/IUserData";
+import { UserSignUpData } from "../../../interface/IUserData";
 import { ResponseData } from "../../../interface/Interface";
 import { serverUser } from "../../../services";
 import { userEndPoints } from "../../../services/endPoints/endPoints";
