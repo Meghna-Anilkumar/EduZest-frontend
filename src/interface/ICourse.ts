@@ -6,6 +6,7 @@ export interface ILesson {
   title: string;
   description: string;
   video: string;
+  videoKey?:string;
   duration?: string;
   objectives?: string[];
 }

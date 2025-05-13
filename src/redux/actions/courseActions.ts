@@ -147,7 +147,9 @@ export const editCourseAction = createAsyncThunk<
       return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -170,7 +172,9 @@ export const getCourseByInstructorAction = createAsyncThunk<
       return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );

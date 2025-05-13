@@ -75,15 +75,14 @@ const AssessmentForm: React.FC<AssessmentFormProps> = ({ assessment, onSave, onC
 
     const newAssessment: IAssessment = {
       _id: assessment?._id,
-      id: assessment?.id || `a${Date.now()}`,
       courseId,
       moduleTitle: assessment?.moduleTitle || '',
       title,
       description,
       questions,
-      totalMarks, // Include calculated totalMarks
-      createdAt: assessment?.createdAt || new Date(),
-      updatedAt: new Date(),
+      totalMarks,
+      createdAt: assessment?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     onSave(newAssessment);
   };

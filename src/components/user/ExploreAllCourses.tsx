@@ -8,7 +8,14 @@ import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
 import { SearchBar } from "../common/SearchBar";
 import Pagination from "../common/Pagination";
 
-const Header = lazy(() => import("../common/users/Header"));
+interface HeaderProps {
+  className?: string;
+}
+const Header = lazy(() =>
+  import("../common/users/Header").then((module) => ({
+    default: module.default as React.ComponentType<HeaderProps>,
+  }))
+);
 
 interface DisplayCourse {
   id: string;

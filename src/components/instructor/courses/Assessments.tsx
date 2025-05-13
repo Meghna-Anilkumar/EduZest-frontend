@@ -123,7 +123,9 @@ const AssessmentsPage: React.FC = () => {
         // Update local state with the updated assessment
         setAssessments(
           assessments.map((a) =>
-            a._id === result._id ? { ...result, updatedAt: new Date() } : a
+            a._id === result._id
+              ? { ...result, updatedAt: new Date().toISOString() }
+              : a
           )
         );
         toast.success("Assessment updated successfully");
@@ -216,7 +218,9 @@ const AssessmentsPage: React.FC = () => {
             <div className="flex justify-between h-16 items-center">
               <div className="flex items-center">
                 <button
-                  onClick={() => navigate(`/instructor/courseDetails/${courseId}`)}
+                  onClick={() =>
+                    navigate(`/instructor/courseDetails/${courseId}`)
+                  }
                   className="text-gray-600 hover:text-gray-800 mr-4"
                 >
                   <svg
@@ -321,7 +325,6 @@ const AssessmentsPage: React.FC = () => {
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4a1 1 0 011 1v1H9V4a1 1 0 011-1z"
                           />
                         </svg>
-               
                       </button>
                     </div>
                   </div>

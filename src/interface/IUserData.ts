@@ -1,5 +1,6 @@
 export interface UserSignUpData {
-  username: string;
+  name?: string;
+  username?: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -25,7 +26,7 @@ export interface IUserdata {
   qualification?: string;
   phone?: number;
   profile?: {
-    dob?: Date;
+    dob?: Date|string;
     firstName?: string;
     gender?: "Male" | "Female" | "Other" | string;
     lastName?: string;

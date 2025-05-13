@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
 import ChatComponent from "./ChatComponent";
+import { IAssessment } from "../../interface/IAssessment";
 
 interface ILesson {
   _id: string;
@@ -69,22 +70,6 @@ interface LessonProgress {
   progress: number;
   isCompleted: boolean;
   lastWatched: string;
-}
-
-interface IAssessment {
-  _id: string;
-  courseId: string;
-  moduleTitle: string;
-  title: string;
-  description: string;
-  questions: {
-    _id: string;
-    text: string;
-    options: string[];
-    correctAnswer: number;
-  }[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface IAssessmentsResponse {

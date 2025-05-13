@@ -1,13 +1,20 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Reply } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../redux/store';
-import { useSocket } from '../context/socketContext';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Reply } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "../../redux/store";
+import { useSocket } from "../context/socketContext";
 
 interface IChat {
   _id: string;
   courseId: string | { toString: () => string };
-  senderId: string | { _id: string; name: string; role: string; profile?: { profilePic?: string } };
+  senderId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        role: string;
+        profile?: { profilePic?: string };
+      };
   message: string;
   timestamp?: Date | string;
   createdAt?: Date;
@@ -16,7 +23,12 @@ interface IChat {
   replyTo?: {
     _id: string;
     message: string;
-    senderId: { _id: string; name: string; role: string; profile?: { profilePic?: string } };
+    senderId: {
+      _id: string;
+      name: string;
+      role: string;
+      profile?: { profilePic?: string };
+    };
   } | null;
 }
 
@@ -26,7 +38,7 @@ interface ChatMessage {
   message: string;
   timestamp: string;
   date: string;
-  role: 'instructor' | 'student';
+  role: "instructor" | "student";
   profilePic?: string;
   isRead?: boolean;
   isCurrentUser: boolean;
@@ -35,7 +47,7 @@ interface ChatMessage {
     id: string;
     message: string;
     sender: string;
-    role: 'instructor' | 'student';
+    role: "instructor" | "student";
     profilePic?: string;
   } | null;
 }
@@ -43,7 +55,7 @@ interface ChatMessage {
 interface OnlineUser {
   userId: string;
   name: string;
-  role: 'instructor' | 'student';
+  role: "instructor" | "student";
 }
 
 interface CourseChatDisplayProps {
@@ -51,7 +63,7 @@ interface CourseChatDisplayProps {
 }
 
 const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +74,7 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const hasJoinedRef = useRef(false);
   const shouldScrollToBottomRef = useRef(true);
-  const currentCourseIdRef = useRef<string>('');
+  const currentCourseIdRef = useRef<string>("");
   const messagesRef = useRef<ChatMessage[]>([]);
 
   const userData = useSelector((state: RootState) => state.user.userData);
@@ -79,7 +91,7 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
         setMessages(parsedMessages);
         messagesRef.current = parsedMessages;
       } catch (e) {
-        console.error('Error parsing saved messages:', e);
+        console.error("Error parsing saved messages:", e);
       }
     }
   }, [courseId]);
@@ -99,34 +111,59 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     const isToday = date.toDateString() === today.toDateString();
     const isYesterday = date.toDateString() === yesterday.toDateString();
 
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const mapIChatToChatMessage = useCallback(
     (chat: IChat): ChatMessage => {
-      const senderId = typeof chat.senderId === 'string' ? chat.senderId : chat.senderId?._id;
-      const senderName = typeof chat.senderId === 'string' ? 'Unknown' : chat.senderId?.name || 'Anonymous';
-      const senderRole: 'instructor' | 'student' = typeof chat.senderId !== 'string' && chat.senderId?.role === 'instructor' ? 'instructor' : 'student';
-      const senderProfilePic = typeof chat.senderId === 'string' ? undefined : chat.senderId?.profile?.profilePic;
-      const normalizedCourseId = typeof chat.courseId === 'string' ? chat.courseId : chat.courseId.toString();
+      const senderId =
+        typeof chat.senderId === "string" ? chat.senderId : chat.senderId?._id;
+      const senderName =
+        typeof chat.senderId === "string"
+          ? "Unknown"
+          : chat.senderId?.name || "Anonymous";
+      const senderRole: "instructor" | "student" =
+        typeof chat.senderId !== "string" &&
+        chat.senderId?.role === "instructor"
+          ? "instructor"
+          : "student";
+      const senderProfilePic =
+        typeof chat.senderId === "string"
+          ? undefined
+          : chat.senderId?.profile?.profilePic;
+      const normalizedCourseId =
+        typeof chat.courseId === "string"
+          ? chat.courseId
+          : chat.courseId.toString();
 
-      const messageDate = chat.timestamp ? new Date(chat.timestamp) : new Date();
+      const messageDate = chat.timestamp
+        ? new Date(chat.timestamp)
+        : new Date();
       const formattedDate = formatDate(messageDate);
 
       const replyTo = chat.replyTo
         ? {
             id: chat.replyTo._id,
             message: chat.replyTo.message,
-            sender: typeof chat.replyTo.senderId === 'string' ? 'Unknown' : chat.replyTo.senderId?.name || 'Anonymous',
-            role: typeof chat.replyTo.senderId !== 'string' && chat.replyTo.senderId?.role === 'instructor' ? 'instructor' : 'student',
-            profilePic: typeof chat.replyTo.senderId === 'string' ? undefined : chat.replyTo.senderId?.profile?.profilePic
+            sender:
+              typeof chat.replyTo.senderId === "string"
+                ? "Unknown"
+                : chat.replyTo.senderId?.name || "Anonymous",
+            role: (typeof chat.replyTo.senderId !== "string" &&
+            chat.replyTo.senderId?.role === "instructor"
+              ? "instructor"
+              : "student") as "instructor" | "student",
+            profilePic:
+              typeof chat.replyTo.senderId === "string"
+                ? undefined
+                : chat.replyTo.senderId?.profile?.profilePic,
           }
         : null;
 
@@ -134,14 +171,17 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
         id: chat._id,
         sender: senderName,
         message: chat.message,
-        timestamp: messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: messageDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         date: formattedDate,
         role: senderRole,
         profilePic: senderProfilePic,
         isRead: chat.isRead ?? true,
         isCurrentUser: senderId === userData?._id,
         courseId: normalizedCourseId,
-        replyTo
+        replyTo,
       };
     },
     [userData?._id]
@@ -158,7 +198,7 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
 
   useEffect(() => {
     if (shouldScrollToBottomRef.current && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
     }
   }, [messages]);
 
@@ -170,9 +210,9 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     const handleAuthenticated = () => {
       const joinCourse = () => {
         if (previousCourseId && previousCourseId !== courseId) {
-          socket.emit('leaveCourse', previousCourseId);
+          socket.emit("leaveCourse", previousCourseId);
         }
-        socket.emit('joinCourse', courseId);
+        socket.emit("joinCourse", courseId);
         previousCourseId = courseId;
       };
       joinCourse();
@@ -184,22 +224,32 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     const handleJoined = (data: { courseId: string }) => {
       if (data.courseId === courseId) {
         hasJoinedRef.current = true;
-        socket.emit('getMessages', { courseId, page: 1 });
+        socket.emit("getMessages", { courseId, page: 1 });
       }
     };
 
     const handleMessages = (data: { success: boolean; data: IChat[] }) => {
-      if (data.success && Array.isArray(data.data) && currentCourseIdRef.current === courseId) {
+      if (
+        data.success &&
+        Array.isArray(data.data) &&
+        currentCourseIdRef.current === courseId
+      ) {
         const newMessages = data.data
           .filter((chat) => {
-            const chatCourseId = typeof chat.courseId === 'string' ? chat.courseId : chat.courseId.toString();
+            const chatCourseId =
+              typeof chat.courseId === "string"
+                ? chat.courseId
+                : chat.courseId.toString();
             return chatCourseId === courseId;
           })
           .map(mapIChatToChatMessage);
 
         if (newMessages.length > 0) {
           setMessages(newMessages);
-          localStorage.setItem(`messages_${courseId}`, JSON.stringify(newMessages));
+          localStorage.setItem(
+            `messages_${courseId}`,
+            JSON.stringify(newMessages)
+          );
           messagesRef.current = newMessages;
         } else if (messagesRef.current.length === 0) {
           setMessages([]);
@@ -211,7 +261,7 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
         if (messagesRef.current.length > 0) {
           setIsLoading(false);
         } else {
-          setError('Failed to fetch messages');
+          setError("Failed to fetch messages");
           setIsLoading(false);
         }
       }
@@ -219,19 +269,25 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
 
     const handleNewMessage = (message: IChat) => {
       if (!message || !message._id) return;
-      const messageCourseId = typeof message.courseId === 'string' ? message.courseId : message.courseId.toString();
+      const messageCourseId =
+        typeof message.courseId === "string"
+          ? message.courseId
+          : message.courseId.toString();
       if (messageCourseId !== courseId) return;
 
       const newMessage = mapIChatToChatMessage(message);
 
       setMessages((prev) => {
-        const updated = prev.some((msg) => msg.id === newMessage.id) ? prev : [...prev, newMessage];
+        const updated = prev.some((msg) => msg.id === newMessage.id)
+          ? prev
+          : [...prev, newMessage];
         localStorage.setItem(`messages_${courseId}`, JSON.stringify(updated));
         messagesRef.current = updated;
         return updated;
       });
 
-      shouldScrollToBottomRef.current = newMessage.isCurrentUser || isNearBottom();
+      shouldScrollToBottomRef.current =
+        newMessage.isCurrentUser || isNearBottom();
     };
 
     const handleError = (data: { message: string }) => {
@@ -239,10 +295,13 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     };
 
     const handleReconnect = () => {
-      socket.emit('authenticate', { userId: userData._id });
+      socket.emit("authenticate", { userId: userData._id });
       if (courseId) {
-        socket.emit('joinCourse', courseId);
-        setTimeout(() => socket.emit('getMessages', { courseId, page: 1 }), 300);
+        socket.emit("joinCourse", courseId);
+        setTimeout(
+          () => socket.emit("getMessages", { courseId, page: 1 }),
+          300
+        );
       }
     };
 
@@ -250,25 +309,25 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
       setOnlineUsers(users.filter((user) => user.userId !== userData?._id));
     };
 
-    socket.off('authenticated').on('authenticated', handleAuthenticated);
-    socket.off('joined').on('joined', handleJoined);
-    socket.off('messages').on('messages', handleMessages);
-    socket.off('newMessage').on('newMessage', handleNewMessage);
-    socket.off('error').on('error', handleError);
-    socket.off('reconnect').on('reconnect', handleReconnect);
-    socket.off('onlineUsers').on('onlineUsers', handleOnlineUsers);
+    socket.off("authenticated").on("authenticated", handleAuthenticated);
+    socket.off("joined").on("joined", handleJoined);
+    socket.off("messages").on("messages", handleMessages);
+    socket.off("newMessage").on("newMessage", handleNewMessage);
+    socket.off("error").on("error", handleError);
+    socket.off("reconnect").on("reconnect", handleReconnect);
+    socket.off("onlineUsers").on("onlineUsers", handleOnlineUsers);
 
-    socket.emit('authenticate', { userId: userData._id });
+    socket.emit("authenticate", { userId: userData._id });
 
     return () => {
-      socket.off('authenticated', handleAuthenticated);
-      socket.off('joined', handleJoined);
-      socket.off('messages', handleMessages);
-      socket.off('newMessage', handleNewMessage);
-      socket.off('error', handleError);
-      socket.off('reconnect', handleReconnect);
-      socket.off('onlineUsers', handleOnlineUsers);
-      if (previousCourseId) socket.emit('leaveCourse', previousCourseId);
+      socket.off("authenticated", handleAuthenticated);
+      socket.off("joined", handleJoined);
+      socket.off("messages", handleMessages);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("error", handleError);
+      socket.off("reconnect", handleReconnect);
+      socket.off("onlineUsers", handleOnlineUsers);
+      if (previousCourseId) socket.emit("leaveCourse", previousCourseId);
       hasJoinedRef.current = false;
     };
   }, [socket, isConnected, userData?._id, courseId, mapIChatToChatMessage]);
@@ -277,28 +336,31 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     if (!messagesContainerRef.current) return true;
     const container = messagesContainerRef.current;
     const threshold = 100;
-    return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <=
+      threshold
+    );
   }, []);
 
   const handleSendMessage = () => {
     if (inputValue.trim() && courseId && socket && isConnected) {
-      socket.emit('sendMessage', {
+      socket.emit("sendMessage", {
         courseId,
         message: inputValue,
-        replyTo: replyingTo?.id
+        replyTo: replyingTo?.id,
       });
-      setInputValue('');
+      setInputValue("");
       setReplyingTo(null);
       shouldScrollToBottomRef.current = true;
       if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
       }
       inputRef.current?.focus();
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -316,13 +378,13 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((word) => word[0])
-      .join('')
+      .join("")
       .toUpperCase();
   };
 
-  const emojis = ['👍', '👋', '🙌', '🎓', '📝', '❓', '🤔'];
+  const emojis = ["👍", "👋", "🙌", "🎓", "📝", "❓", "🤔"];
 
   const handleScroll = () => {
     shouldScrollToBottomRef.current = isNearBottom();
@@ -338,13 +400,23 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
   }, {} as Record<string, ChatMessage[]>);
 
   const sortedDates = Object.keys(groupedMessages).sort((a, b) => {
-    const dateA = a === 'Today' ? new Date() : a === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(a);
-    const dateB = b === 'Today' ? new Date() : b === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(b);
+    const dateA =
+      a === "Today"
+        ? new Date()
+        : a === "Yesterday"
+        ? new Date(new Date().setDate(new Date().getDate() - 1))
+        : new Date(a);
+    const dateB =
+      b === "Today"
+        ? new Date()
+        : b === "Yesterday"
+        ? new Date(new Date().setDate(new Date().getDate() - 1))
+        : new Date(b);
     return dateA.getTime() - dateB.getTime();
   });
 
-  const course = courses?.find(c => c._id === courseId);
-  const courseName = course?.title || 'Course Discussion';
+  const course = courses?.find((c) => c._id === courseId);
+  const courseName = course?.title || "Course Discussion";
   const courseInitial = courseName.charAt(0).toUpperCase();
 
   return (
@@ -374,16 +446,24 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                   <div
                     key={user.userId}
                     className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 ${
-                      user.role === 'instructor' ? 'bg-blue-200 text-blue-800' : 'bg-gray-200 text-gray-800'
+                      user.role === "instructor"
+                        ? "bg-blue-200 text-blue-800"
+                        : "bg-gray-200 text-gray-800"
                     }`}
                   >
                     <span className="h-3 w-3 rounded-full bg-green-400 inline-block"></span>
                     <span>{user.name}</span>
-                    {user.role === 'instructor' && <span className="text-[10px] font-medium">(Instructor)</span>}
+                    {user.role === "instructor" && (
+                      <span className="text-[10px] font-medium">
+                        (Instructor)
+                      </span>
+                    )}
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-gray-100 opacity-80">No other participants online</p>
+                <p className="text-xs text-gray-100 opacity-80">
+                  No other participants online
+                </p>
               )}
             </div>
           </div>
@@ -404,7 +484,9 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
         {isLoading && !messages.length ? (
           <div className="flex justify-center items-center h-32">
             <div className="w-8 h-8 border-4 border-t-transparent border-[#49BBBD] rounded-full animate-spin"></div>
-            <span className="ml-3 text-gray-500 text-sm">Loading messages...</span>
+            <span className="ml-3 text-gray-500 text-sm">
+              Loading messages...
+            </span>
           </div>
         ) : messages.length > 0 ? (
           sortedDates.map((date) => (
@@ -418,23 +500,32 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                 <div
                   key={msg.id}
                   id={`message-${msg.id}`}
-                  className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-in-out hover:scale-[1.01]`}
+                  className={`flex ${
+                    msg.isCurrentUser ? "justify-end" : "justify-start"
+                  } group transition-all duration-200 ease-in-out hover:scale-[1.01]`}
                 >
                   <div
                     className={`max-w-[80%] rounded-2xl flex items-start gap-3 p-3 shadow-sm transition-shadow duration-200 hover:shadow-md
-                      ${msg.isCurrentUser
-                        ? 'bg-[#49BBBD] text-white'
-                        : msg.role === 'instructor'
-                        ? 'bg-blue-50 text-gray-900 border border-blue-100'
-                        : 'bg-white text-gray-900 border border-gray-100'
+                      ${
+                        msg.isCurrentUser
+                          ? "bg-[#49BBBD] text-white"
+                          : msg.role === "instructor"
+                          ? "bg-blue-50 text-gray-900 border border-blue-100"
+                          : "bg-white text-gray-900 border border-gray-100"
                       }
-                      ${!msg.isRead && !msg.isCurrentUser ? 'border-l-4 border-l-yellow-400' : ''}`}
+                      ${
+                        !msg.isRead && !msg.isCurrentUser
+                          ? "border-l-4 border-l-yellow-400"
+                          : ""
+                      }`}
                   >
                     {!msg.isCurrentUser && (
                       <div className="flex-shrink-0">
                         <div
                           className={`h-9 w-9 rounded-full ${
-                            msg.role === 'instructor' ? 'bg-blue-200' : 'bg-gray-200'
+                            msg.role === "instructor"
+                              ? "bg-blue-200"
+                              : "bg-gray-200"
                           } flex items-center justify-center overflow-hidden shadow-sm`}
                         >
                           {msg.profilePic ? (
@@ -446,7 +537,9 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                           ) : (
                             <span
                               className={`${
-                                msg.role === 'instructor' ? 'text-blue-700' : 'text-gray-700'
+                                msg.role === "instructor"
+                                  ? "text-blue-700"
+                                  : "text-gray-700"
                               } text-sm font-semibold`}
                             >
                               {getInitials(msg.sender)}
@@ -460,14 +553,22 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                         <div className="flex items-center gap-2">
                           <span
                             className={`font-semibold text-xs ${
-                              msg.role === 'instructor' && !msg.isCurrentUser ? 'text-blue-700' : 'text-gray-800'
-                            } ${msg.isCurrentUser ? 'text-gray-100' : ''}`}
+                              msg.role === "instructor" && !msg.isCurrentUser
+                                ? "text-blue-700"
+                                : "text-gray-800"
+                            } ${msg.isCurrentUser ? "text-gray-100" : ""}`}
                           >
-                            {msg.isCurrentUser ? 'You' : msg.sender}
-                            {msg.role === 'instructor' && !msg.isCurrentUser && ' (Instructor)'}
+                            {msg.isCurrentUser ? "You" : msg.sender}
+                            {msg.role === "instructor" &&
+                              !msg.isCurrentUser &&
+                              " (Instructor)"}
                           </span>
                           <span
-                            className={`text-xs ${msg.isCurrentUser ? 'text-gray-200' : 'text-gray-500'}`}
+                            className={`text-xs ${
+                              msg.isCurrentUser
+                                ? "text-gray-200"
+                                : "text-gray-500"
+                            }`}
                           >
                             {msg.timestamp}
                           </span>
@@ -475,7 +576,9 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                         <button
                           onClick={() => handleReply(msg)}
                           className={`p-1 rounded-full hover:bg-gray-200 transition-all duration-200 opacity-0 group-hover:opacity-100 ${
-                            msg.isCurrentUser ? 'text-gray-200 hover:bg-gray-300/50' : 'text-gray-500'
+                            msg.isCurrentUser
+                              ? "text-gray-200 hover:bg-gray-300/50"
+                              : "text-gray-500"
                           }`}
                           title="Reply to this message"
                         >
@@ -485,27 +588,52 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
                       {msg.replyTo && (
                         <div
                           className={`p-2 mt-1 rounded-lg cursor-pointer hover:bg-opacity-80 ${
-                            msg.isCurrentUser ? 'bg-white/20' : 'bg-gray-100'
+                            msg.isCurrentUser ? "bg-white/20" : "bg-gray-100"
                           }`}
                           onClick={() => {
-                            const element = document.getElementById(`message-${msg.replyTo!.id}`);
+                            const element = document.getElementById(
+                              `message-${msg.replyTo!.id}`
+                            );
                             if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              element.classList.add('highlight');
-                              setTimeout(() => element.classList.remove('highlight'), 2000);
+                              element.scrollIntoView({
+                                behavior: "smooth",
+                                block: "center",
+                              });
+                              element.classList.add("highlight");
+                              setTimeout(
+                                () => element.classList.remove("highlight"),
+                                2000
+                              );
                             }
                           }}
                         >
-                          <p className={`text-xs font-semibold ${msg.isCurrentUser ? 'text-gray-100' : 'text-gray-700'}`}>
+                          <p
+                            className={`text-xs font-semibold ${
+                              msg.isCurrentUser
+                                ? "text-gray-100"
+                                : "text-gray-700"
+                            }`}
+                          >
                             Replying to {msg.replyTo.sender}
-                            {msg.replyTo.role === 'instructor' && ' (Instructor)'}
+                            {msg.replyTo.role === "instructor" &&
+                              " (Instructor)"}
                           </p>
-                          <p className={`text-xs ${msg.isCurrentUser ? 'text-gray-200' : 'text-gray-600'} truncate`}>
-                            {msg.replyTo.message.length > 50 ? `${msg.replyTo.message.substring(0, 47)}...` : msg.replyTo.message}
+                          <p
+                            className={`text-xs ${
+                              msg.isCurrentUser
+                                ? "text-gray-200"
+                                : "text-gray-600"
+                            } truncate`}
+                          >
+                            {msg.replyTo.message.length > 50
+                              ? `${msg.replyTo.message.substring(0, 47)}...`
+                              : msg.replyTo.message}
                           </p>
                         </div>
                       )}
-                      <p className="text-sm mt-1 leading-relaxed">{msg.message}</p>
+                      <p className="text-sm mt-1 leading-relaxed">
+                        {msg.message}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -529,7 +657,9 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
               />
             </svg>
             <p className="text-sm font-medium">No messages yet.</p>
-            <p className="text-xs text-gray-400 mt-1">Start the conversation below!</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Start the conversation below!
+            </p>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -554,10 +684,12 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
             <div>
               <p className="text-xs font-semibold text-gray-700">
                 Replying to {replyingTo.sender}
-                {replyingTo.role === 'instructor' && ' (Instructor)'}
+                {replyingTo.role === "instructor" && " (Instructor)"}
               </p>
               <p className="text-xs text-gray-600 truncate">
-                {replyingTo.message.length > 50 ? `${replyingTo.message.substring(0, 47)}...` : replyingTo.message}
+                {replyingTo.message.length > 50
+                  ? `${replyingTo.message.substring(0, 47)}...`
+                  : replyingTo.message}
               </p>
             </div>
             <button
@@ -565,8 +697,18 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
               className="text-gray-500 hover:text-red-500 p-1 rounded-full"
               title="Cancel reply"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -587,8 +729,8 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
             disabled={!inputValue.trim()}
             className={`p-2 rounded-full transition-all duration-200 ${
               inputValue.trim()
-                ? 'bg-[#49BBBD] text-white hover:bg-[#3aa9ab] hover:scale-105'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? "bg-[#49BBBD] text-white hover:bg-[#3aa9ab] hover:scale-105"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
             aria-label="Send message"
           >

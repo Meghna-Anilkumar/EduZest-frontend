@@ -33,7 +33,9 @@ ChartJS.register(
   Filler
 );
 
-const Sidebar = lazy(() => import("../../components/common/admin/AdminSidebar"));
+const Sidebar = lazy(
+  () => import("../../components/common/admin/AdminSidebar")
+);
 
 interface DashboardStats {
   totalStudents: number;
@@ -112,7 +114,10 @@ export const AdminDashboard: React.FC = () => {
 
         setDashboardData((prev) => ({ ...prev, loading: true }));
         const result = await dispatch(
-          getDashboardStatsAction({ period, signal: controller.signal })
+          getDashboardStatsAction({ period, signal: controller.signal } as {
+            period: "month" | "day" | "year";
+            signal: AbortSignal;
+          })
         ).unwrap();
         const newStats = result.data as DashboardStats;
 
@@ -259,25 +264,33 @@ export const AdminDashboard: React.FC = () => {
             {/* Statistics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-700">Total Students</h2>
+                <h2 className="text-xl font-semibold text-gray-700">
+                  Total Students
+                </h2>
                 <p className="text-3xl font-bold text-blue-600">
                   {dashboardData.stats?.totalStudents || 0}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-700">Total Instructors</h2>
+                <h2 className="text-xl font-semibold text-gray-700">
+                  Total Instructors
+                </h2>
                 <p className="text-3xl font-bold text-green-600">
                   {dashboardData.stats?.totalInstructors || 0}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-700">Active Courses</h2>
+                <h2 className="text-xl font-semibold text-gray-700">
+                  Active Courses
+                </h2>
                 <p className="text-3xl font-bold text-purple-600">
                   {dashboardData.stats?.activeCourses || 0}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-700">Total Revenue</h2>
+                <h2 className="text-xl font-semibold text-gray-700">
+                  Total Revenue
+                </h2>
                 <p className="text-3xl font-bold text-yellow-600">
                   ₹{dashboardData.stats?.totalRevenue?.toFixed(2) || "0.00"}
                 </p>
@@ -289,7 +302,9 @@ export const AdminDashboard: React.FC = () => {
               {/* Student Growth */}
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-700">Student Growth</h2>
+                  <h2 className="text-xl font-semibold text-gray-700">
+                    Student Growth
+                  </h2>
                   <div className="flex space-x-2">
                     <button
                       className={`px-3 py-1 rounded ${
@@ -323,7 +338,9 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Track student enrollment over time</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Track student enrollment over time
+                </p>
                 <div className="h-64">
                   <Line data={studentGrowthData} options={chartOptions} />
                 </div>
@@ -332,7 +349,9 @@ export const AdminDashboard: React.FC = () => {
               {/* Revenue Overview */}
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-700">Revenue Overview</h2>
+                  <h2 className="text-xl font-semibold text-gray-700">
+                    Revenue Overview
+                  </h2>
                   <div className="flex space-x-2">
                     <button
                       className={`px-3 py-1 rounded ${
@@ -366,7 +385,9 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Financial performance metrics</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Financial performance metrics
+                </p>
                 <div className="h-64">
                   <Line data={revenueOverviewData} options={chartOptions} />
                 </div>

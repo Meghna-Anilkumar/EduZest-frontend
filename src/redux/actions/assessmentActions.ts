@@ -48,7 +48,9 @@ export const getAllAssessmentsForCourseAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAllAssessmentsForCourseAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -73,7 +75,9 @@ export const createAssessmentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("createAssessmentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -100,7 +104,9 @@ export const getAssessmentsByCourseAndModuleAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAssessmentsByCourseAndModuleAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -127,7 +133,9 @@ export const editAssessmentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("editAssessmentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -154,7 +162,9 @@ export const deleteAssessmentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("deleteAssessmentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -181,7 +191,9 @@ export const getAssessmentsForStudentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAssessmentsForStudentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -208,7 +220,9 @@ export const getAssessmentByIdAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAssessmentByIdAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -252,7 +266,9 @@ export const submitAssessmentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("submitAssessmentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -280,7 +296,9 @@ export const getAssessmentByIdForStudentAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAssessmentByIdForStudentAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -314,7 +332,9 @@ export const getAssessmentResultAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getAssessmentResultAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );
@@ -342,7 +362,9 @@ export const getCourseProgressAction = createAsyncThunk<
     } catch (error) {
       const err = error as AxiosError;
       console.error("getCourseProgressAction: Error:", err.response?.data || err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(
+        err.response?.data as { message: string } || { message: err.message }
+      );
     }
   }
 );

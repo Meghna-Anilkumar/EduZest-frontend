@@ -14,7 +14,14 @@ import { clearError } from "../../redux/reducers/courseReducer";
 import CheckoutForm from "./CheckoutForm";
 import ReviewsSection from "./ReviewsSection";
 
-const Header = lazy(() => import("../common/users/Header"));
+interface HeaderProps {
+  className?: string;
+}
+const Header = lazy(() =>
+  import("../common/users/Header").then((module) => ({
+    default: module.default as React.ComponentType<HeaderProps>,
+  }))
+);
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -43,7 +50,7 @@ interface Course {
   }>;
   trial: {
     video?: string;
-    videoKey?: string; 
+    videoKey?: string;
   };
   attachments?: { title?: string; url?: string };
   isRequested: boolean;
@@ -70,7 +77,8 @@ const CourseDetailsPage = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
-  const [isCheckingEnrollment, setIsCheckingEnrollment] = useState<boolean>(true);
+  const [isCheckingEnrollment, setIsCheckingEnrollment] =
+    useState<boolean>(true);
 
   useEffect(() => {
     if (id) {
@@ -124,7 +132,9 @@ const CourseDetailsPage = () => {
     }, 0);
     return acc + moduleDuration;
   }, 0);
-  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m`;
+  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${
+    totalDuration % 60
+  }m`;
 
   const totalModules = course.modules.length;
 
@@ -164,7 +174,6 @@ const CourseDetailsPage = () => {
   const handleGoToCourse = () => {
     navigate(`/student/learn/${course._id}`);
   };
-
 
   const confirmEnrollment = async () => {
     setShowModal(false);
@@ -311,9 +320,15 @@ const CourseDetailsPage = () => {
                   <video
                     controls
                     preload="metadata"
-                    src={`/api/courses/${course._id}/stream?videoKey=${encodeURIComponent(course.trial.videoKey)}`}
+                    src={`/api/courses/${
+                      course._id
+                    }/stream?videoKey=${encodeURIComponent(
+                      course.trial.videoKey
+                    )}`}
                     className="w-full mt-4 rounded-lg"
-                    onError={(e) => console.error("Trial video playback error:", e)}
+                    onError={(e) =>
+                      console.error("Trial video playback error:", e)
+                    }
                   >
                     Your browser does not support the video tag.
                   </video>

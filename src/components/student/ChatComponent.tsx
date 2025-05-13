@@ -81,12 +81,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       const messageDate = chat.timestamp ? new Date(chat.timestamp) : new Date();
       const formattedDate = formatDate(messageDate);
 
+      const getReplyRole = (senderId: string | { _id: string; name?: string; role?: string; profile?: { profilePic?: string } }): 'instructor' | 'student' => {
+        return typeof senderId !== 'string' && senderId?.role === 'instructor' ? 'instructor' : 'student';
+      };
+
       const replyTo = chat.replyTo
         ? {
             id: chat.replyTo._id,
             message: chat.replyTo.message,
             sender: typeof chat.replyTo.senderId === 'string' ? 'Unknown' : (chat.replyTo.senderId?.name || 'Anonymous'),
-            role: typeof chat.replyTo.senderId !== 'string' && chat.replyTo.senderId?.role === 'instructor' ? 'instructor' : 'student',
+            role: getReplyRole(chat.replyTo.senderId),
             profilePic: typeof chat.replyTo.senderId === 'string' ? undefined : (chat.replyTo.senderId?.profile?.profilePic || '')
           }
         : null;
@@ -167,7 +171,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     };
 
     const handleError = (data: { message: string }) => {
-
+      // Handle error
     };
 
     const handleOnlineUsers = (users: OnlineUser[]) => {

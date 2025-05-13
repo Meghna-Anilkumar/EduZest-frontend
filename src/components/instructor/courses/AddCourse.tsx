@@ -175,7 +175,7 @@ const AddCoursePage: React.FC = () => {
                   language: values.language,
                   level: values.level,
                   pricing: {
-                    type: values.pricing.type,
+                    type: values.pricing.type as "free" | "paid",
                     amount:
                       values.pricing.type === "paid"
                         ? Number(values.pricing.amount)
@@ -212,7 +212,10 @@ const AddCoursePage: React.FC = () => {
                       categoryRef: values.categoryRef,
                       language: values.language,
                       level: values.level,
-                      pricing: values.pricing,
+                      pricing: {
+                        type: values.pricing.type as "free" | "paid",
+                        amount: values.pricing.amount,
+                      },
                     });
                   }}
                 >
@@ -432,7 +435,7 @@ const AddCoursePage: React.FC = () => {
                         </div>
                         {touched.thumbnail && errors.thumbnail && (
                           <div className="mt-1 text-sm text-red-600">
-                            {errors.thumbnail}
+                            {errors.thumbnail as string}
                           </div>
                         )}
                       </div>

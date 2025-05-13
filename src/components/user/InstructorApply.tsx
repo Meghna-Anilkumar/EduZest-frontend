@@ -547,7 +547,7 @@ const InstructorApplicationForm = () => {
                       </div>
                       {errors.profilePic && (
                         <div className="text-red-500 text-sm mt-2 text-center">
-                          {errors.profilePic}
+                          {errors.profilePic.toString()}
                         </div>
                       )}
                       {!profilePreview && !errors.profilePic && (
@@ -880,7 +880,7 @@ const InstructorApplicationForm = () => {
                       />
                       {errors.cv && (
                         <div className="text-red-500 text-sm mt-1">
-                          {errors.cv}
+                          {errors.cv.toString()}
                         </div>
                       )}
                     </div>

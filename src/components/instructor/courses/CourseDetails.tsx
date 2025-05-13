@@ -13,11 +13,13 @@ import EditCourseModal from "./EditCourseModal";
 import { ICourse } from "../../../interface/ICourse";
 
 interface Lesson {
+ _id?: string;
   lessonNumber: string;
   title: string;
   description: string;
   objectives?: string[];
   video: string;
+  videoKey?: string;
   duration?: string;
 }
 

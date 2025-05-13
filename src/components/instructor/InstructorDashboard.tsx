@@ -16,11 +16,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  FontSpec,
 } from "chart.js";
 
-
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
 
 interface CourseStats {
   courseId: string;
@@ -70,7 +69,7 @@ const InstructorDashboard: React.FC = () => {
       try {
         await dispatch(fetchUserData()).unwrap();
         const statsResponse = await dispatch(getInstructorCourseStatsAction()).unwrap();
-        console.log("Course Stats:", statsResponse.data); 
+        console.log("Course Stats:", statsResponse.data);
         setCourseStats(statsResponse.data);
       } catch (err: any) {
         setError(err.message || "Failed to fetch course statistics");
@@ -91,21 +90,20 @@ const InstructorDashboard: React.FC = () => {
     page * itemsPerPage
   );
 
-
   const chartData = {
     labels: courseStats.map((course) => course.title),
     datasets: [
       {
         label: "Total Enrollments",
         data: courseStats.map((course) => course.totalEnrollments),
-        backgroundColor: "rgba(75, 192, 192, 0.5)", 
+        backgroundColor: "rgba(75, 192, 192, 0.5)",
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,
       },
       {
         label: "Total Revenue ($)",
         data: courseStats.map((course) => course.totalRevenue),
-        backgroundColor: "rgba(255, 99, 132, 0.5)", 
+        backgroundColor: "rgba(255, 99, 132, 0.5)",
         borderColor: "rgba(255, 99, 132, 1)",
         borderWidth: 1,
       },
@@ -113,10 +111,19 @@ const InstructorDashboard: React.FC = () => {
   };
   console.log("Chart Data:", chartData);
 
- 
+  const titleFont: Partial<FontSpec> = {
+    size: 16,
+    weight: "bold",
+  };
+
+  const axisTitleFont: Partial<FontSpec> = {
+    size: 14,
+    weight: "bold",
+  };
+
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: false, 
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         position: "top" as const,
@@ -129,10 +136,7 @@ const InstructorDashboard: React.FC = () => {
       title: {
         display: true,
         text: "Course-wise Enrollments and Revenue",
-        font: {
-          size: 16,
-          weight: "bold",
-        },
+        font: titleFont,
         padding: {
           top: 10,
           bottom: 20,
@@ -155,10 +159,7 @@ const InstructorDashboard: React.FC = () => {
         title: {
           display: true,
           text: "Value",
-          font: {
-            size: 14,
-            weight: "bold",
-          },
+          font: axisTitleFont,
         },
         ticks: {
           font: {
@@ -170,10 +171,7 @@ const InstructorDashboard: React.FC = () => {
         title: {
           display: true,
           text: "Courses",
-          font: {
-            size: 14,
-            weight: "bold",
-          },
+          font: axisTitleFont,
         },
         ticks: {
           font: {
@@ -333,8 +331,8 @@ const InstructorDashboard: React.FC = () => {
                               <div className="flex items-center">
                                 <span className="mr-2">{course.completionRate}%</span>
                                 <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                                  <div 
-                                    className="bg-blue-600 h-2.5 rounded-full" 
+                                  <div
+                                    className="bg-blue-600 h-2.5 rounded-full"
                                     style={{ width: `${course.completionRate}%` }}
                                   ></div>
                                 </div>
@@ -347,8 +345,8 @@ const InstructorDashboard: React.FC = () => {
                               <div className="flex items-center">
                                 <span className="mr-2">{course.averageProgress}%</span>
                                 <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                                  <div 
-                                    className="bg-green-600 h-2.5 rounded-full" 
+                                  <div
+                                    className="bg-green-600 h-2.5 rounded-full"
                                     style={{ width: `${course.averageProgress}%` }}
                                   ></div>
                                 </div>

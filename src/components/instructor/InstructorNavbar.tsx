@@ -5,7 +5,8 @@ import { RootState } from "../../redux/store";
 
 interface InstructorNavbarProps {
   loading: boolean;
-  error: string | null;
+  error: string;
+  className?: string;
 }
 
 const InstructorNavbar: React.FC<InstructorNavbarProps> = ({ loading, error }) => {

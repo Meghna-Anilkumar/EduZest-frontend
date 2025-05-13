@@ -546,6 +546,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               title: values.title,
               description: values.description,
               duration: values.duration || undefined,
+              video: "",
             };
             console.log("Adding new lesson:", {
               newLessonData,

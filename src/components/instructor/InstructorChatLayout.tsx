@@ -9,6 +9,7 @@ interface ChatLayoutProps {
   children: React.ReactNode;
 }
 
+
 const ChatLayout: React.FC<ChatLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState('chat');

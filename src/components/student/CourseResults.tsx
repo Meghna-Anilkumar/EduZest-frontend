@@ -35,7 +35,6 @@ interface CourseProgress {
   totalAssessments: number;
   passedAssessments: number;
   progress: number;
-  completedAt?: string;
 }
 
 interface IInstructorRef {
@@ -47,7 +46,7 @@ interface IInstructorRef {
 interface ICourse {
   _id: string;
   title: string;
-  instructorRef?: IInstructorRef; // Updated to match the actual response structure
+  instructorRef?: IInstructorRef;
 }
 
 const CourseResults: React.FC = () => {
@@ -98,10 +97,8 @@ const CourseResults: React.FC = () => {
         ).unwrap();
         setProgress(progressResult);
 
-        const completedAt = progressResult.completedAt
-          ? new Date(progressResult.completedAt)
-          : new Date();
-        setCompletionDate(formatCertificateDate(completedAt));
+        const completionDate = formatCertificateDate(new Date());
+        setCompletionDate(completionDate);
 
         const assessmentsResult = await dispatch(
           getAllAssessmentsForCourseAction({
@@ -127,7 +124,7 @@ const CourseResults: React.FC = () => {
 
         const courseResult = await dispatch(getCourseByIdAction(courseId)).unwrap();
         setCourseName(courseResult.title || "Unknown Course");
-        setInstructorName(courseResult.instructorRef?.name || "Unknown Instructor"); // Access nested instructorRef.name
+        setInstructorName(courseResult.instructorRef?.name || "Unknown Instructor");
       } catch (err: any) {
         setError(err.message || "Failed to load course results.");
       } finally {
