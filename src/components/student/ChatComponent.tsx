@@ -1,9 +1,17 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send, Reply, ChevronDown, ChevronUp, Users } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../redux/store';
-import { IChat } from '../../redux/actions/chatActions';
-import { useSocket } from '../context/socketContext';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Reply,
+  ChevronDown,
+  ChevronUp,
+  Users,
+} from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "../../redux/store";
+import { IChat } from "../../redux/actions/chatActions";
+import { useSocket } from "../context/socketContext";
 
 interface ChatMessage {
   id: string;
@@ -11,7 +19,7 @@ interface ChatMessage {
   message: string;
   timestamp: string;
   date: string;
-  role: 'instructor' | 'student';
+  role: "instructor" | "student";
   profilePic?: string;
   isRead?: boolean;
   isCurrentUser: boolean;
@@ -19,7 +27,7 @@ interface ChatMessage {
     id: string;
     message: string;
     sender: string;
-    role: 'instructor' | 'student';
+    role: "instructor" | "student";
     profilePic?: string;
   } | null;
 }
@@ -27,7 +35,7 @@ interface ChatMessage {
 interface OnlineUser {
   userId: string;
   name: string;
-  role: 'Student' | 'Instructor' | 'Admin';
+  role: "Student" | "Instructor" | "Admin";
 }
 
 interface ChatComponentProps {
@@ -36,13 +44,15 @@ interface ChatComponentProps {
 
 const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMinimized, setIsMinimized] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [showAllUsers, setShowAllUsers] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false); // New state for blocked status
+  const [blockMessage, setBlockMessage] = useState<string | null>(null); // New state for block/unblock message
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,38 +70,68 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     const isToday = date.toDateString() === today.toDateString();
     const isYesterday = date.toDateString() === yesterday.toDateString();
 
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
+    if (isToday) return "Today";
+    if (isYesterday) return "Yesterday";
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const mapIChatToChatMessage = useCallback(
     (chat: IChat): ChatMessage => {
-      const senderId = typeof chat.senderId === 'string' ? chat.senderId : chat.senderId._id;
-      const senderName = typeof chat.senderId === 'string' ? 'Unknown' : (chat.senderId.name || 'Anonymous');
+      const senderId =
+        typeof chat.senderId === "string" ? chat.senderId : chat.senderId._id;
+      const senderName =
+        typeof chat.senderId === "string"
+          ? "Unknown"
+          : chat.senderId.name || "Anonymous";
       const senderRole =
-        typeof chat.senderId === 'string' ? 'student' : chat.senderId.role === 'instructor' ? 'instructor' : 'student';
-      const profilePic = typeof chat.senderId === 'string' ? undefined : (chat.senderId.profile?.profilePic || '');
+        typeof chat.senderId === "string"
+          ? "student"
+          : chat.senderId.role === "instructor"
+          ? "instructor"
+          : "student";
+      const profilePic =
+        typeof chat.senderId === "string"
+          ? undefined
+          : chat.senderId.profile?.profilePic || "";
 
-      const messageDate = chat.timestamp ? new Date(chat.timestamp) : new Date();
+      const messageDate = chat.timestamp
+        ? new Date(chat.timestamp)
+        : new Date();
       const formattedDate = formatDate(messageDate);
 
-      const getReplyRole = (senderId: string | { _id: string; name?: string; role?: string; profile?: { profilePic?: string } }): 'instructor' | 'student' => {
-        return typeof senderId !== 'string' && senderId?.role === 'instructor' ? 'instructor' : 'student';
+      const getReplyRole = (
+        senderId:
+          | string
+          | {
+              _id: string;
+              name?: string;
+              role?: string;
+              profile?: { profilePic?: string };
+            }
+      ): "instructor" | "student" => {
+        return typeof senderId !== "string" && senderId?.role === "instructor"
+          ? "instructor"
+          : "student";
       };
 
       const replyTo = chat.replyTo
         ? {
             id: chat.replyTo._id,
             message: chat.replyTo.message,
-            sender: typeof chat.replyTo.senderId === 'string' ? 'Unknown' : (chat.replyTo.senderId?.name || 'Anonymous'),
+            sender:
+              typeof chat.replyTo.senderId === "string"
+                ? "Unknown"
+                : chat.replyTo.senderId?.name || "Anonymous",
             role: getReplyRole(chat.replyTo.senderId),
-            profilePic: typeof chat.replyTo.senderId === 'string' ? undefined : (chat.replyTo.senderId?.profile?.profilePic || '')
+            profilePic:
+              typeof chat.replyTo.senderId === "string"
+                ? undefined
+                : chat.replyTo.senderId?.profile?.profilePic || "",
           }
         : null;
 
@@ -99,13 +139,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
         id: chat._id,
         sender: senderName,
         message: chat.message,
-        timestamp: messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        timestamp: messageDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         date: formattedDate,
         role: senderRole,
         profilePic,
         isRead: true,
         isCurrentUser: senderId === userData?._id,
-        replyTo
+        replyTo,
       };
     },
     [userData?._id]
@@ -113,7 +156,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   useEffect(() => {
     if (isChatOpen && !isMinimized && shouldScrollToBottomRef.current) {
-      scrollToBottom('auto');
+      scrollToBottom("auto");
     }
   }, [messages, isChatOpen, isMinimized]);
 
@@ -122,17 +165,17 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       return;
     }
 
-    socket.emit('authenticate', { userId: userData._id });
+    socket.emit("authenticate", { userId: userData._id });
 
     const handleAuthenticated = () => {
       setTimeout(() => {
-        socket.emit('joinCourse', courseId);
+        socket.emit("joinCourse", courseId);
       }, 100);
     };
 
     const handleJoined = () => {
       if (!hasJoinedRef.current) {
-        socket.emit('getMessages', { courseId, page: 1 });
+        socket.emit("getMessages", { courseId, page: 1 });
         hasJoinedRef.current = true;
       }
     };
@@ -142,7 +185,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
         const newMessages = data.data.map(mapIChatToChatMessage);
         setMessages((prev) => {
           const existingIds = new Set(prev.map((msg) => msg.id));
-          const filteredMessages = newMessages.filter((msg) => !existingIds.has(msg.id));
+          const filteredMessages = newMessages.filter(
+            (msg) => !existingIds.has(msg.id)
+          );
           return [...filteredMessages, ...prev];
         });
         setUnreadCount(0);
@@ -151,7 +196,10 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     };
 
     const handleNewMessage = (message: IChat) => {
-      const senderId = typeof message.senderId === 'string' ? message.senderId : message.senderId._id;
+      const senderId =
+        typeof message.senderId === "string"
+          ? message.senderId
+          : message.senderId._id;
       const isCurrentUserMessage = senderId === userData?._id;
 
       const newMessage = mapIChatToChatMessage(message);
@@ -178,28 +226,65 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       setOnlineUsers(users.filter((user) => user.userId !== userData?._id));
     };
 
-    socket.on('authenticated', handleAuthenticated);
-    socket.on('joined', handleJoined);
-    socket.on('messages', handleMessages);
-    socket.on('newMessage', handleNewMessage);
-    socket.on('error', handleError);
-    socket.on('onlineUsers', handleOnlineUsers);
+    const handleBlockedFromChat = (data: {
+      courseId: string;
+      message: string;
+    }) => {
+      if (data.courseId === courseId) {
+        setIsBlocked(true);
+        setBlockMessage(
+          "You have been removed from this course chat. Please contact your instructor for support."
+        );
+        socket.emit("leaveCourse", courseId);
+        hasJoinedRef.current = false;
+      }
+    };
+
+    const handleUnblockedFromChat = (data: {
+      courseId: string;
+      message: string;
+    }) => {
+      if (data.courseId === courseId) {
+        setIsBlocked(false);
+        setBlockMessage("You have been added back to this course chat.");
+        socket.emit("joinCourse", courseId);
+        setTimeout(() => setBlockMessage(null), 5000); // Clear message after 5 seconds
+      }
+    };
+
+    socket.on("authenticated", handleAuthenticated);
+    socket.on("joined", handleJoined);
+    socket.on("messages", handleMessages);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("error", handleError);
+    socket.on("onlineUsers", handleOnlineUsers);
+    socket.on("blockedFromChat", handleBlockedFromChat);
+    socket.on("unblockedFromChat", handleUnblockedFromChat);
 
     return () => {
-      socket.off('authenticated', handleAuthenticated);
-      socket.off('joined', handleJoined);
-      socket.off('messages', handleMessages);
-      socket.off('newMessage', handleNewMessage);
-      socket.off('error', handleError);
-      socket.off('onlineUsers', handleOnlineUsers);
+      socket.off("authenticated", handleAuthenticated);
+      socket.off("joined", handleJoined);
+      socket.off("messages", handleMessages);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("error", handleError);
+      socket.off("onlineUsers", handleOnlineUsers);
+      socket.off("blockedFromChat", handleBlockedFromChat);
+      socket.off("unblockedFromChat", handleUnblockedFromChat);
       hasJoinedRef.current = false;
     };
-  }, [socket, isConnected, userData?._id, courseId, mapIChatToChatMessage, isChatOpen]);
+  }, [
+    socket,
+    isConnected,
+    userData?._id,
+    courseId,
+    mapIChatToChatMessage,
+    isChatOpen,
+  ]);
 
   useEffect(() => {
     if (isChatOpen) {
       shouldScrollToBottomRef.current = true;
-      setTimeout(() => scrollToBottom('auto'), 100);
+      setTimeout(() => scrollToBottom("auto"), 100);
     } else {
       hasJoinedRef.current = false;
       setOnlineUsers([]);
@@ -207,7 +292,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     }
   }, [isChatOpen]);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior });
     }
@@ -217,17 +302,20 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     if (!messagesContainerRef.current) return true;
     const container = messagesContainerRef.current;
     const threshold = 100;
-    return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+    return (
+      container.scrollHeight - container.scrollTop - container.clientHeight <=
+      threshold
+    );
   }, []);
 
   const handleSendMessage = () => {
-    if (inputValue.trim() && courseId && socket && isConnected) {
-      socket.emit('sendMessage', {
+    if (inputValue.trim() && courseId && socket && isConnected && !isBlocked) {
+      socket.emit("sendMessage", {
         courseId,
         message: inputValue,
-        replyTo: replyingTo?.id
+        replyTo: replyingTo?.id,
       });
-      setInputValue('');
+      setInputValue("");
       setReplyingTo(null);
       shouldScrollToBottomRef.current = true;
       if (inputRef.current) {
@@ -237,7 +325,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -277,13 +365,13 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((word) => word[0])
-      .join('')
+      .join("")
       .toUpperCase();
   };
 
-  const emojis = ['👍', '👋', '🙌', '🎓', '📝', '❓', '🤔'];
+  const emojis = ["👍", "👋", "🙌", "🎓", "📝", "❓", "🤔"];
 
   const handleScroll = () => {
     shouldScrollToBottomRef.current = isNearBottom();
@@ -299,8 +387,18 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   }, {} as Record<string, ChatMessage[]>);
 
   const sortedDates = Object.keys(groupedMessages).sort((a, b) => {
-    const dateA = a === 'Today' ? new Date() : a === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(a);
-    const dateB = b === 'Today' ? new Date() : b === 'Yesterday' ? new Date(new Date().setDate(new Date().getDate() - 1)) : new Date(b);
+    const dateA =
+      a === "Today"
+        ? new Date()
+        : a === "Yesterday"
+        ? new Date(new Date().setDate(new Date().getDate() - 1))
+        : new Date(a);
+    const dateB =
+      b === "Today"
+        ? new Date()
+        : b === "Yesterday"
+        ? new Date(new Date().setDate(new Date().getDate() - 1))
+        : new Date(b);
     return dateA.getTime() - dateB.getTime();
   });
 
@@ -375,6 +473,15 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
           .user-list-transition {
             transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
           }
+
+          .block-message {
+            animation: slideIn 0.3s ease-in-out;
+          }
+
+          @keyframes slideIn {
+            0% { transform: translateY(-10px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+          }
         `}
       </style>
       <button
@@ -389,16 +496,18 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
           </span>
         )}
         <span className="absolute opacity-0 group-hover:opacity-100 -top-10 bg-gray-800 text-white text-xs py-1 px-2 rounded transition-opacity duration-200">
-          Course Chat {unreadCount > 0 ? `(${unreadCount} new)` : ''}
+          Course Chat {unreadCount > 0 ? `(${unreadCount} new)` : ""}
         </span>
       </button>
 
       {isChatOpen && (
         <div
           className={`fixed right-6 bg-white rounded-lg shadow-xl flex flex-col z-50 transition-all duration-300 chat-container ${
-            isMinimized ? 'bottom-6 w-72 h-12' : 'bottom-6 w-full md:w-96 lg:w-144 h-[500px] max-h-[80vh]'
+            isMinimized
+              ? "bottom-6 w-72 h-12"
+              : "bottom-6 w-full md:w-96 lg:w-144 h-[500px] max-h-[80vh]"
           }`}
-          style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}
+          style={{ boxShadow: "0 10px 25px rgba(0,0,0,0.15)" }}
         >
           <div className="bg-[#49BBBD] text-white p-3 rounded-t-lg flex justify-between items-center relative">
             <div className="flex items-center gap-2">
@@ -416,43 +525,55 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                             <div
                               key={user.userId}
                               className={`text-xs px-2 py-1 rounded-full flex items-center gap-1 online-user ${
-                                user.role.toLowerCase() === 'instructor'
-                                  ? 'bg-blue-200 text-blue-800'
-                                  : 'bg-gray-200 text-gray-800'
+                                user.role.toLowerCase() === "instructor"
+                                  ? "bg-blue-200 text-blue-800"
+                                  : "bg-gray-200 text-gray-800"
                               }`}
                             >
                               <span className="h-3 w-3 rounded-full bg-green-400 inline-block flex-shrink-0"></span>
-                              <span className="truncate max-w-16">{user.name}</span>
-                              {user.role.toLowerCase() === 'instructor' && (
-                                <span className="text-[10px] font-medium flex-shrink-0">(Instructor)</span>
+                              <span className="truncate max-w-16">
+                                {user.name}
+                              </span>
+                              {user.role.toLowerCase() === "instructor" && (
+                                <span className="text-[10px] font-medium flex-shrink-0">
+                                  (Instructor)
+                                </span>
                               )}
                             </div>
                           ))}
                         </div>
                         {remainingUsersCount > 0 && (
-                          <button 
+                          <button
                             onClick={toggleShowAllUsers}
                             className="flex items-center text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors cursor-pointer"
                           >
                             <span>+{remainingUsersCount}</span>
-                            {showAllUsers ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+                            {showAllUsers ? (
+                              <ChevronUp className="h-3 w-3 ml-1" />
+                            ) : (
+                              <ChevronDown className="h-3 w-3 ml-1" />
+                            )}
                           </button>
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-gray-100 opacity-80">No other participants online</p>
+                      <p className="text-xs text-gray-100 opacity-80">
+                        No other participants online
+                      </p>
                     )}
                   </div>
-                  
+
                   {showAllUsers && onlineUsers.length > 0 && (
                     <div className="users-modal">
                       <div className="p-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
-                            <h3 className="font-medium text-gray-800">Online Users ({onlineUsers.length})</h3>
+                            <h3 className="font-medium text-gray-800">
+                              Online Users ({onlineUsers.length})
+                            </h3>
                           </div>
-                          <button 
+                          <button
                             onClick={toggleShowAllUsers}
                             className="text-gray-500 hover:bg-gray-100 p-1 rounded-full"
                           >
@@ -462,7 +583,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                       </div>
                       <div className="p-2 max-h-60 overflow-y-auto">
                         {onlineUsers.map((user) => (
-                          <div 
+                          <div
                             key={user.userId}
                             className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-md transition-colors"
                           >
@@ -470,12 +591,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                               {getInitials(user.name)}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate">{user.name}</p>
-                              <div className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center ${
-                                user.role.toLowerCase() === 'instructor'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-600'
-                              }`}>
+                              <p className="font-medium text-sm truncate">
+                                {user.name}
+                              </p>
+                              <div
+                                className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center ${
+                                  user.role.toLowerCase() === "instructor"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
                                 <span className="h-2 w-2 rounded-full bg-green-400 mr-1"></span>
                                 {user.role}
                               </div>
@@ -492,13 +617,28 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
               <button
                 onClick={minimizeChat}
                 className="text-white hover:bg-[#3aa9ab] p-1 rounded-full"
-                aria-label={isMinimized ? 'Expand chat' : 'Minimize chat'}
+                aria-label={isMinimized ? "Expand chat" : "Minimize chat"}
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   {isMinimized ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 15l7-7 7 7"
+                    />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   )}
                 </svg>
               </button>
@@ -514,6 +654,12 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
           {!isMinimized && (
             <>
+              {blockMessage && (
+                <div className="p-3 text-sm font-medium text-center bg-yellow-100 text-yellow-800 rounded-lg mx-3 mt-2 block-message">
+                  {blockMessage}
+                </div>
+              )}
+
               <div
                 ref={messagesContainerRef}
                 className="flex-1 p-3 overflow-y-auto space-y-3 bg-gray-50"
@@ -531,14 +677,20 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                         <div
                           key={msg.id}
                           id={`message-${msg.id}`}
-                          className={`flex ${msg.isCurrentUser ? 'justify-end' : 'justify-start'} group transition-all duration-200 ease-in-out hover:scale-[1.01]`}
+                          className={`flex ${
+                            msg.isCurrentUser ? "justify-end" : "justify-start"
+                          } group transition-all duration-200 ease-in-out hover:scale-[1.01]`}
                         >
                           <div
                             className={`max-w-[85%] rounded-lg flex items-start gap-2 ${
                               msg.isCurrentUser
-                                ? 'bg-[#49BBBD] text-white'
-                                : 'bg-white text-gray-800 border border-gray-100 shadow-sm'
-                            } ${!msg.isRead ? 'border-l-4 border-l-yellow-400' : ''}`}
+                                ? "bg-[#49BBBD] text-white"
+                                : "bg-white text-gray-800 border border-gray-100 shadow-sm"
+                            } ${
+                              !msg.isRead
+                                ? "border-l-4 border-l-yellow-400"
+                                : ""
+                            }`}
                           >
                             {!msg.isCurrentUser && (
                               <div className="flex-shrink-0 p-2">
@@ -561,12 +713,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                   <span className="font-medium text-xs truncate">
-                                    {msg.isCurrentUser ? 'You' : msg.sender}
-                                    {msg.role === 'instructor' && !msg.isCurrentUser && ' (Instructor)'}
+                                    {msg.isCurrentUser ? "You" : msg.sender}
+                                    {msg.role === "instructor" &&
+                                      !msg.isCurrentUser &&
+                                      " (Instructor)"}
                                   </span>
                                   <span
                                     className={`text-xs ${
-                                      msg.isCurrentUser ? 'text-gray-200' : 'text-gray-400'
+                                      msg.isCurrentUser
+                                        ? "text-gray-200"
+                                        : "text-gray-400"
                                     } whitespace-nowrap`}
                                   >
                                     {msg.timestamp}
@@ -575,7 +731,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                                 <button
                                   onClick={() => handleReply(msg)}
                                   className={`p-1 rounded-full hover:bg-gray-200 transition-all duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${
-                                    msg.isCurrentUser ? 'text-gray-200 hover:bg-gray-300/50' : 'text-gray-500'
+                                    msg.isCurrentUser
+                                      ? "text-gray-200 hover:bg-gray-300/50"
+                                      : "text-gray-500"
                                   }`}
                                   title="Reply to this message"
                                 >
@@ -585,27 +743,58 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                               {msg.replyTo && (
                                 <div
                                   className={`p-2 mt-1 rounded-lg cursor-pointer hover:bg-opacity-80 ${
-                                    msg.isCurrentUser ? 'bg-white/20' : 'bg-gray-100'
+                                    msg.isCurrentUser
+                                      ? "bg-white/20"
+                                      : "bg-gray-100"
                                   }`}
                                   onClick={() => {
-                                    const element = document.getElementById(`message-${msg.replyTo!.id}`);
+                                    const element = document.getElementById(
+                                      `message-${msg.replyTo!.id}`
+                                    );
                                     if (element) {
-                                      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                      element.classList.add('highlight');
-                                      setTimeout(() => element.classList.remove('highlight'), 2000);
+                                      element.scrollIntoView({
+                                        behavior: "smooth",
+                                        block: "center",
+                                      });
+                                      element.classList.add("highlight");
+                                      setTimeout(
+                                        () =>
+                                          element.classList.remove("highlight"),
+                                        2000
+                                      );
                                     }
                                   }}
                                 >
-                                  <p className={`text-xs font-semibold ${msg.isCurrentUser ? 'text-gray-100' : 'text-gray-700'}`}>
+                                  <p
+                                    className={`text-xs font-semibold ${
+                                      msg.isCurrentUser
+                                        ? "text-gray-100"
+                                        : "text-gray-700"
+                                    }`}
+                                  >
                                     Replying to {msg.replyTo.sender}
-                                    {msg.replyTo.role === 'instructor' && ' (Instructor)'}
+                                    {msg.replyTo.role === "instructor" &&
+                                      " (Instructor)"}
                                   </p>
-                                  <p className={`text-xs ${msg.isCurrentUser ? 'text-gray-200' : 'text-gray-600'} truncate`}>
-                                    {msg.replyTo.message.length > 50 ? `${msg.replyTo.message.substring(0, 47)}...` : msg.replyTo.message}
+                                  <p
+                                    className={`text-xs ${
+                                      msg.isCurrentUser
+                                        ? "text-gray-200"
+                                        : "text-gray-600"
+                                    } truncate`}
+                                  >
+                                    {msg.replyTo.message.length > 50
+                                      ? `${msg.replyTo.message.substring(
+                                          0,
+                                          47
+                                        )}...`
+                                      : msg.replyTo.message}
                                   </p>
                                 </div>
                               )}
-                              <p className="text-sm mt-1 message-text">{msg.message}</p>
+                              <p className="text-sm mt-1 message-text">
+                                {msg.message}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -629,7 +818,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                       />
                     </svg>
                     <p className="text-sm font-medium">No messages yet.</p>
-                    <p className="text-xs text-gray-400 mt-1">Start the conversation below!</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Start the conversation below!
+                    </p>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -640,7 +831,10 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                   <button
                     key={emoji}
                     onClick={() => setInputValue((prev) => prev + emoji)}
-                    className="text-gray-600 hover:bg-gray-100 p-1 rounded transition-colors"
+                    className={`text-gray-600 hover:bg-gray-100 p-1 rounded transition-colors ${
+                      isBlocked ? "cursor-not-allowed opacity-50" : ""
+                    }`}
+                    disabled={isBlocked}
                   >
                     {emoji}
                   </button>
@@ -648,15 +842,17 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
               </div>
 
               <div className="p-3 bg-white border-t border-gray-200 rounded-b-lg">
-                {replyingTo && (
+                {replyingTo && !isBlocked && (
                   <div className="mb-2 p-2 bg-gray-100 rounded-lg flex items-center justify-between">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-gray-700 truncate">
                         Replying to {replyingTo.sender}
-                        {replyingTo.role === 'instructor' && ' (Instructor)'}
+                        {replyingTo.role === "instructor" && " (Instructor)"}
                       </p>
                       <p className="text-xs text-gray-600 truncate">
-                        {replyingTo.message.length > 50 ? `${replyingTo.message.substring(0, 47)}...` : replyingTo.message}
+                        {replyingTo.message.length > 50
+                          ? `${replyingTo.message.substring(0, 47)}...`
+                          : replyingTo.message}
                       </p>
                     </div>
                     <button
@@ -664,8 +860,18 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                       className="text-gray-500 hover:text-red-500 p-1 rounded-full flex-shrink-0"
                       title="Cancel reply"
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>
@@ -677,17 +883,24 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    placeholder="Type your message..."
-                    className="flex-1 p-2 bg-transparent focus:outline-none text-sm min-w-0"
-                    autoFocus
+                    placeholder={
+                      isBlocked
+                        ? "You are blocked from sending messages"
+                        : "Type your message..."
+                    }
+                    className={`flex-1 p-2 bg-transparent focus:outline-none text-sm min-w-0 ${
+                      isBlocked ? "cursor-not-allowed text-gray-400" : ""
+                    }`}
+                    autoFocus={!isBlocked}
+                    disabled={isBlocked}
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={!inputValue.trim()}
+                    disabled={!inputValue.trim() || isBlocked}
                     className={`p-2 rounded-full transition-colors flex-shrink-0 ${
-                      inputValue.trim()
-                        ? 'bg-[#49BBBD] text-white hover:bg-[#3aa9ab]'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      inputValue.trim() && !isBlocked
+                        ? "bg-[#49BBBD] text-white hover:bg-[#3aa9ab]"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
                     }`}
                     aria-label="Send message"
                   >
@@ -696,7 +909,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                 </div>
                 <div className="mt-2 px-2">
                   <p className="text-xs text-gray-400">
-                    Press Enter to send, Shift+Enter for new line
+                    {isBlocked
+                      ? "Contact your instructor to regain chat access."
+                      : "Press Enter to send, Shift+Enter for new line"}
                   </p>
                 </div>
               </div>

@@ -5,9 +5,9 @@ import { getAllCoursesByInstructorAction } from "../../redux/actions/courseActio
 import { getChatGroupMetadataThunk } from "../../redux/actions/chatActions";
 import CourseChatDisplay from "./CourseChatDisplay";
 import { useSocket } from "../context/socketContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
-// Define IChatGroupMetadata interface locally
+
 interface IChatGroupMetadata {
   _id: string;
   courseId: string;
@@ -40,17 +40,16 @@ const InstructorChatGroups: React.FC = () => {
   const error = useSelector((state: RootState) => state.course.error);
   const { socket } = useSocket();
 
-  // Responsive state
   const [isMobile, setIsMobile] = useState(false);
   const [showChatList, setShowChatList] = useState(true);
 
-  // Initialize selectedCourseId from localStorage
+
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(() => {
     const savedCourseId = localStorage.getItem("selectedCourseId");
     return savedCourseId || null;
   });
 
-  // Initialize chatGroupMetadata from localStorage if available
+
   const [chatGroupMetadata, setChatGroupMetadata] = useState<IChatGroupMetadata[]>(() => {
     const savedMetadata = localStorage.getItem(METADATA_STORAGE_KEY);
     try {
@@ -64,13 +63,13 @@ const InstructorChatGroups: React.FC = () => {
   const [chatError, setChatError] = useState<string | null>(null);
   const [metadataFetchAttempted, setMetadataFetchAttempted] = useState(false);
 
-  // Check screen size on mount and resize
+
   useEffect(() => {
     const checkIfMobile = () => {
       const isMobileView = window.innerWidth < 768;
       setIsMobile(isMobileView);
       
-      // On mobile, if a course is selected, show the chat instead of the list
+
       if (isMobileView && selectedCourseId) {
         setShowChatList(false);
       } else {
@@ -78,34 +77,32 @@ const InstructorChatGroups: React.FC = () => {
       }
     };
 
-    // Check initially
+
     checkIfMobile();
 
-    // Add event listener
+
     window.addEventListener("resize", checkIfMobile);
 
-    // Cleanup
+
     return () => window.removeEventListener("resize", checkIfMobile);
   }, [selectedCourseId]);
 
-  // Fetch courses when component mounts
+
   useEffect(() => {
     if (userData?._id) {
       dispatch(getAllCoursesByInstructorAction({ page: 1, limit: 100 }));
     }
   }, [dispatch, userData?._id]);
 
-  // Save chatGroupMetadata to localStorage whenever it changes
+
   useEffect(() => {
     if (chatGroupMetadata.length > 0) {
       localStorage.setItem(METADATA_STORAGE_KEY, JSON.stringify(chatGroupMetadata));
     }
   }, [chatGroupMetadata]);
 
-  // Fetch chat group metadata when courses are loaded
   useEffect(() => {
     const fetchChatGroupMetadata = async () => {
-      // Only fetch if we have user data, courses, and haven't tried fetching yet
       if (userData?._id && courses.length > 0 && !metadataFetchAttempted) {
         setChatLoading(true);
         setChatError(null);
@@ -118,14 +115,15 @@ const InstructorChatGroups: React.FC = () => {
           if (response.success) {
             const metadata = response.data as IChatGroupMetadata[];
             setChatGroupMetadata(metadata);
-            
-            // If no course is selected or selected course is not in courses list, select first course
-            if ((!selectedCourseId || !courses.some(course => course._id === selectedCourseId)) && courses.length > 0) {
+   
+            if (
+              (!selectedCourseId || !courses.some(course => course._id === selectedCourseId)) &&
+              courses.length > 0
+            ) {
               const firstCourseId = courses[0]._id;
               setSelectedCourseId(firstCourseId);
               localStorage.setItem("selectedCourseId", firstCourseId);
-              
-              // On mobile, switch to chat view when first course is selected
+
               if (isMobile) {
                 setShowChatList(false);
               }
@@ -268,6 +266,26 @@ const InstructorChatGroups: React.FC = () => {
     return '';
   };
 
+  // Sort courses by last message timestamp
+  const sortedCourses = [...courses].sort((a, b) => {
+    const metadataA = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === a._id.toString()
+    );
+    const metadataB = chatGroupMetadata.find(
+      (m) => m.courseId.toString() === b._id.toString()
+    );
+    
+    const timeA = metadataA?.lastMessage?.timestamp
+      ? new Date(metadataA.lastMessage.timestamp).getTime()
+      : 0;
+    const timeB = metadataB?.lastMessage?.timestamp
+      ? new Date(metadataB.lastMessage.timestamp).getTime()
+      : 0;
+    
+    // Sort in descending order (latest first)
+    return timeB - timeA;
+  });
+
   // Find the current course name for mobile header
   const currentCourseName = selectedCourseId 
     ? courses.find(course => course._id === selectedCourseId)?.title || 'Course Chat'
@@ -313,17 +331,17 @@ const InstructorChatGroups: React.FC = () => {
             <p className="p-6 text-gray-500 text-sm italic">No courses found.</p>
           )}
           <ul className="py-2 space-y-1 flex-1 overflow-y-auto">
-            {courses.map((course) => (
+            {sortedCourses.map((course) => (
               <li
                 key={course._id}
                 onClick={() => handleCourseClick(course._id)}
-                className={`mx-2 p-3 rounded-lg cursor-pointer transition-all duration-200 ease-in-out
+                className={`mx-2 p-3 rounded-lg cursor-pointer transition-all duration-200 ease-in-out relative overflow-hidden
                   ${
                     selectedCourseId === course._id
-                      ? "bg-[#49BBBD]/5 border-l-4 border-[#49BBBD] shadow"
+                      ? "bg-[#49BBBD]/10 border-l-4 border-[#49BBBD] shadow-md ring-2 ring-[#49BBBD]/50"
                       : "bg-white shadow-sm"
                   }
-                  hover:shadow hover:bg-[#49BBBD]/5 group relative overflow-hidden`}
+                  hover:shadow hover:bg-[#49BBBD]/5 group`}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-[#49BBBD]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="flex items-center gap-3 relative z-10">

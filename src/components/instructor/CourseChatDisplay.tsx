@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Reply } from "lucide-react";
+import { Send, Reply, Users } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import { useSocket } from "../context/socketContext";
+import ParticipantsModal from "./ParticipantsModal";
 
-interface IChat {
+export interface IChat {
   _id: string;
   courseId: string | { toString: () => string };
   senderId:
@@ -32,7 +33,7 @@ interface IChat {
   } | null;
 }
 
-interface ChatMessage {
+export interface ChatMessage {
   id: string;
   sender: string;
   message: string;
@@ -52,10 +53,18 @@ interface ChatMessage {
   } | null;
 }
 
-interface OnlineUser {
+export interface OnlineUser {
   userId: string;
   name: string;
   role: "instructor" | "student";
+}
+
+export interface Participant {
+  userId: string;
+  name: string;
+  role: "instructor" | "student";
+  profilePic?: string | null;
+  isChatBlocked: boolean; 
 }
 
 interface CourseChatDisplayProps {
@@ -69,6 +78,8 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
   const [error, setError] = useState<string | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -80,6 +91,7 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
   const userData = useSelector((state: RootState) => state.user.userData);
   const courses = useSelector((state: RootState) => state.course.data);
   const { socket, isConnected } = useSocket();
+  const isInstructor = userData?.role === "Instructor";
 
   useEffect(() => {
     currentCourseIdRef.current = courseId;
@@ -102,6 +114,68 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
       messagesRef.current = messages;
     }
   }, [messages, courseId]);
+
+  useEffect(() => {
+    if (socket && isConnected && courseId) {
+      socket.emit("getParticipants", { courseId });
+    }
+  }, [courseId, socket, isConnected]);
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const handleParticipants = (data: { success: boolean; data: Participant[] }) => {
+      if (data.success && Array.isArray(data.data)) {
+        setParticipants(data.data.filter((p) => p.userId !== userData?._id));
+      } else {
+        setParticipants([]);
+      }
+    };
+
+    const handleBlockedFromChat = (data: { courseId: string; message: string }) => {
+      if (data.courseId === courseId) {
+        setError(data.message);
+        socket.emit("leaveCourse", courseId);
+      }
+    };
+
+    const handleUnblockedFromChat = (data: { courseId: string; message: string }) => {
+      if (data.courseId === courseId) {
+        setError(null);
+        socket.emit("joinCourse", courseId);
+      }
+    };
+
+    const handleParticipantBlocked = (data: { userId: string }) => {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.userId === data.userId ? { ...p, isChatBlocked: true } : p
+        )
+      );
+    };
+
+    const handleParticipantUnblocked = (data: { userId: string }) => {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.userId === data.userId ? { ...p, isChatBlocked: false } : p
+        )
+      );
+    };
+
+    socket.on("participants", handleParticipants);
+    socket.on("blockedFromChat", handleBlockedFromChat);
+    socket.on("unblockedFromChat", handleUnblockedFromChat);
+    socket.on("participantBlocked", handleParticipantBlocked);
+    socket.on("participantUnblocked", handleParticipantUnblocked);
+
+    return () => {
+      socket.off("participants", handleParticipants);
+      socket.off("blockedFromChat", handleBlockedFromChat);
+      socket.off("unblockedFromChat", handleUnblockedFromChat);
+      socket.off("participantBlocked", handleParticipantBlocked);
+      socket.off("participantUnblocked", handleParticipantUnblocked);
+    };
+  }, [socket, isConnected, userData?._id, courseId]);
 
   const formatDate = (date: Date): string => {
     const today = new Date();
@@ -390,6 +464,10 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
     shouldScrollToBottomRef.current = isNearBottom();
   };
 
+  const toggleParticipantsModal = () => {
+    setShowParticipants(!showParticipants);
+  };
+
   const groupedMessages = messages.reduce((acc, msg) => {
     const date = msg.date;
     if (!acc[date]) {
@@ -468,7 +546,24 @@ const CourseChatDisplay: React.FC<CourseChatDisplayProps> = ({ courseId }) => {
             </div>
           </div>
         </div>
+        <button
+          onClick={toggleParticipantsModal}
+          className="p-2 rounded-full bg-white text-[#49BBBD] hover:bg-gray-100 transition-all duration-200"
+          title="Show all participants"
+        >
+          <Users className="h-5 w-5" />
+        </button>
       </div>
+
+      <ParticipantsModal
+        participants={participants}
+        onlineUsers={onlineUsers}
+        isOpen={showParticipants}
+        onClose={toggleParticipantsModal}
+        isInstructor={isInstructor}
+        courseId={courseId}
+        socket={socket}
+      />
 
       {error && (
         <div className="p-4 text-red-600 text-sm font-medium text-center bg-red-50 rounded-lg mx-4 mt-2">
