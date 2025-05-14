@@ -51,8 +51,8 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [showAllUsers, setShowAllUsers] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false); // New state for blocked status
-  const [blockMessage, setBlockMessage] = useState<string | null>(null); // New state for block/unblock message
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockMessage, setBlockMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -173,10 +173,21 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       }, 100);
     };
 
-    const handleJoined = () => {
-      if (!hasJoinedRef.current) {
-        socket.emit("getMessages", { courseId, page: 1 });
-        hasJoinedRef.current = true;
+    const handleJoined = (data: { success: boolean; isBlocked?: boolean }) => {
+      if (data.success && !hasJoinedRef.current) {
+        if (data.isBlocked) {
+          setIsBlocked(true);
+          setBlockMessage(
+            "You have been removed from this course chat. Please contact your instructor for support."
+          );
+          socket.emit("leaveCourse", courseId);
+          hasJoinedRef.current = false;
+        } else {
+          socket.emit("getMessages", { courseId, page: 1 });
+          hasJoinedRef.current = true;
+          setIsBlocked(false);
+          setBlockMessage(null);
+        }
       }
     };
 
@@ -219,7 +230,14 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     };
 
     const handleError = (data: { message: string }) => {
-      // Handle error
+      if (data.message === "You are blocked from this course chat") {
+        setIsBlocked(true);
+        setBlockMessage(
+          "You have been removed from this course chat. Please contact your instructor for support."
+        );
+        socket.emit("leaveCourse", courseId);
+        hasJoinedRef.current = false;
+      }
     };
 
     const handleOnlineUsers = (users: OnlineUser[]) => {
@@ -248,7 +266,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
         setIsBlocked(false);
         setBlockMessage("You have been added back to this course chat.");
         socket.emit("joinCourse", courseId);
-        setTimeout(() => setBlockMessage(null), 5000); // Clear message after 5 seconds
+        setTimeout(() => setBlockMessage(null), 5000);
       }
     };
 
@@ -285,12 +303,17 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     if (isChatOpen) {
       shouldScrollToBottomRef.current = true;
       setTimeout(() => scrollToBottom("auto"), 100);
+      if (isBlocked) {
+        setBlockMessage(
+          "You have been removed from this course chat. Please contact your instructor for support."
+        );
+      }
     } else {
       hasJoinedRef.current = false;
       setOnlineUsers([]);
       setShowAllUsers(false);
     }
-  }, [isChatOpen]);
+  }, [isChatOpen, isBlocked]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (messagesEndRef.current) {
@@ -402,7 +425,6 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     return dateA.getTime() - dateB.getTime();
   });
 
-  // For compact display - show just 3 users
   const visibleUsers = onlineUsers.slice(0, 3);
   const remainingUsersCount = onlineUsers.length - visibleUsers.length;
 
