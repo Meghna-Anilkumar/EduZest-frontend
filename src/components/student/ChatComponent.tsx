@@ -53,6 +53,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockMessage, setBlockMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +64,30 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const userData = useSelector((state: RootState) => state.user.userData);
   const { socket, isConnected } = useSocket();
+
+  useEffect(() => {
+    const savedMessages = localStorage.getItem(`chat_${courseId}`);
+    if (savedMessages) {
+      setMessages(JSON.parse(savedMessages));
+    }
+  }, [courseId]);
+
+
+  useEffect(() => {
+    localStorage.setItem(`chat_${courseId}`, JSON.stringify(messages));
+  }, [messages, courseId]);
+
+
+  useEffect(() => {
+    setMessages([]);
+    setCurrentPage(1);
+    setHasMoreMessages(true);
+    hasJoinedRef.current = false;
+    setUnreadCount(0);
+    setOnlineUsers([]);
+    setShowAllUsers(false);
+    localStorage.removeItem(`chat_${courseId}`);
+  }, [courseId]);
 
   const formatDate = (date: Date): string => {
     const today = new Date();
@@ -107,12 +134,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       const getReplyRole = (
         senderId:
           | string
-          | {
-              _id: string;
-              name?: string;
-              role?: string;
-              profile?: { profilePic?: string };
-            }
+          | { _id: string; name?: string; role?: string; profile?: { profilePic?: string } }
       ): "instructor" | "student" => {
         return typeof senderId !== "string" && senderId?.role === "instructor"
           ? "instructor"
@@ -191,18 +213,39 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       }
     };
 
-    const handleMessages = (data: { success: boolean; data: IChat[] }) => {
+    const handleMessages = (data: {
+      success: boolean;
+      data?: IChat[];
+      totalPages?: number;
+      error?: string;
+    }) => {
+      setIsLoading(false);
       if (data.success && data.data) {
         const newMessages = data.data.map(mapIChatToChatMessage);
+        const container = messagesContainerRef.current;
+        const previousScrollHeight = container?.scrollHeight || 0;
+
         setMessages((prev) => {
           const existingIds = new Set(prev.map((msg) => msg.id));
           const filteredMessages = newMessages.filter(
             (msg) => !existingIds.has(msg.id)
           );
-          return [...filteredMessages, ...prev];
+          return currentPage === 1
+            ? [...filteredMessages, ...prev]
+            : [...filteredMessages, ...prev];
         });
+
+        if (container && currentPage > 1) {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop += newScrollHeight - previousScrollHeight;
+        }
+
+        setCurrentPage((prev) => prev + 1);
+        setHasMoreMessages(data.totalPages ? currentPage < data.totalPages : false);
         setUnreadCount(0);
-        shouldScrollToBottomRef.current = true;
+        shouldScrollToBottomRef.current = currentPage === 1;
+      } else {
+        setBlockMessage(data.error || "Failed to load messages.");
       }
     };
 
@@ -244,10 +287,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       setOnlineUsers(users.filter((user) => user.userId !== userData?._id));
     };
 
-    const handleBlockedFromChat = (data: {
-      courseId: string;
-      message: string;
-    }) => {
+    const handleBlockedFromChat = (data: { courseId: string; message: string }) => {
       if (data.courseId === courseId) {
         setIsBlocked(true);
         setBlockMessage(
@@ -258,10 +298,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       }
     };
 
-    const handleUnblockedFromChat = (data: {
-      courseId: string;
-      message: string;
-    }) => {
+    const handleUnblockedFromChat = (data: { courseId: string; message: string }) => {
       if (data.courseId === courseId) {
         setIsBlocked(false);
         setBlockMessage("You have been added back to this course chat.");
@@ -297,23 +334,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     courseId,
     mapIChatToChatMessage,
     isChatOpen,
+    currentPage,
   ]);
 
   useEffect(() => {
-    if (isChatOpen) {
-      shouldScrollToBottomRef.current = true;
-      setTimeout(() => scrollToBottom("auto"), 100);
-      if (isBlocked) {
-        setBlockMessage(
-          "You have been removed from this course chat. Please contact your instructor for support."
-        );
-      }
-    } else {
-      hasJoinedRef.current = false;
-      setOnlineUsers([]);
-      setShowAllUsers(false);
+    if (isChatOpen && socket && isConnected && !isBlocked) {
+      socket.emit("getMessages", { courseId, page: 1 });
+      setCurrentPage(1);
+      setHasMoreMessages(true);
     }
-  }, [isChatOpen, isBlocked]);
+  }, [isChatOpen, socket, isConnected, courseId, isBlocked]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     if (messagesEndRef.current) {
@@ -398,6 +428,16 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
 
   const handleScroll = () => {
     shouldScrollToBottomRef.current = isNearBottom();
+    if (
+      messagesContainerRef.current &&
+      messagesContainerRef.current.scrollTop < 50 &&
+      hasMoreMessages &&
+      !isBlocked &&
+      !isLoading
+    ) {
+      setIsLoading(true);
+      socket.emit("getMessages", { courseId, page: currentPage });
+    }
   };
 
   const groupedMessages = messages.reduce((acc, msg) => {
@@ -503,6 +543,12 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
           @keyframes slideIn {
             0% { transform: translateY(-10px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
+          }
+
+          .loading-spinner {
+            display: flex;
+            justify-content: center;
+            padding: 1rem;
           }
         `}
       </style>
@@ -687,6 +733,30 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
                 className="flex-1 p-3 overflow-y-auto space-y-3 bg-gray-50"
                 onScroll={handleScroll}
               >
+                {isLoading && (
+                  <div className="loading-spinner">
+                    <svg
+                      className="animate-spin h-5 w-5 text-gray-500"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8v-8H4z"
+                      ></path>
+                    </svg>
+                  </div>
+                )}
                 {sortedDates.length > 0 ? (
                   sortedDates.map((date) => (
                     <div key={date} className="space-y-3">
