@@ -488,14 +488,37 @@ const AddLessonsPage: React.FC = () => {
                   state: { message: "Course created successfully!" },
                 });
               } catch (error: any) {
-                toast.error(
+                const errorMessage =
                   error.message ||
-                    "An error occurred while creating the course.",
-                  {
+                  "An error occurred while creating the course.";
+
+                // Check for the specific error and redirect to AddCoursePage
+                if (
+                  errorMessage.includes(
+                    "course with this title and level exists already"
+                  )
+                ) {
+                  toast.error(errorMessage, {
                     position: "top-right",
                     autoClose: 3000,
-                  }
-                );
+                  });
+
+                  navigate("/instructor/courses", {
+                    state: {
+                      courseData: {
+                        ...courseData,
+                        thumbnail: thumbnailFile,
+                        thumbnailPreview,
+                      },
+                      error: errorMessage,
+                    },
+                  });
+                } else {
+                  toast.error(errorMessage, {
+                    position: "top-right",
+                    autoClose: 3000,
+                  });
+                }
               } finally {
                 setSubmitting(false);
               }

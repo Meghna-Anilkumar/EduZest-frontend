@@ -11,9 +11,11 @@ import InstructorNavbar from "../InstructorNavbar";
 import ModuleViewModal from "./ModuleModal";
 import EditCourseModal from "./EditCourseModal";
 import { ICourse } from "../../../interface/ICourse";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Lesson {
- _id?: string;
+  _id?: string;
   lessonNumber: string;
   title: string;
   description: string;
@@ -68,12 +70,21 @@ const CourseDetailsPage: React.FC = () => {
           }
         } catch (err) {
           console.error("Error fetching course by ID:", err);
+          toast.error("Failed to load course details.");
         }
       }
     };
 
     fetchCourseData();
   }, [dispatch, courseId, isAuthenticated, navigate, courseDetails]);
+
+  // Clear error after displaying it
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch({ type: "course/clearError" }); // Clear error in Redux
+    }
+  }, [error, dispatch]);
 
   const normalizeVideoUrls = (modules: Module[]) => {
     return modules.map((module) => ({
@@ -87,26 +98,22 @@ const CourseDetailsPage: React.FC = () => {
 
   const handleSaveLesson = async (updatedLesson: Lesson, videoFile?: File) => {
     if (!courseDetails || !selectedModule) return;
-  
+
     setIsUploading(true);
     try {
-      // Find the module and lesson indices
       const moduleIndex = courseDetails.modules.findIndex(
         (module) => module.moduleTitle === selectedModule.moduleTitle
       );
       const lessonIndex = selectedModule.lessons.findIndex(
         (lesson) => lesson.lessonNumber === updatedLesson.lessonNumber
       );
-  
-      // Use lesson._id for existing lessons, or generate a new key for new lessons
+
       const lessonKey = updatedLesson._id
         ? updatedLesson._id
         : `new-lesson-${moduleIndex}-${lessonIndex}`;
-  
-      // Create video mapping
+
       const videoMapping = videoFile ? { [lessonKey]: 0 } : {};
-  
-      // Update the lesson in the modules array
+
       const updatedModules = courseDetails.modules.map((module, idx) =>
         idx === moduleIndex
           ? {
@@ -115,15 +122,15 @@ const CourseDetailsPage: React.FC = () => {
                 lIdx === lessonIndex
                   ? {
                       ...updatedLesson,
-                      video: videoFile ? "" : lesson.video, // Clear video if new file is uploaded (backend will set new key)
-                      videoKey: videoFile ? "" : lesson.videoKey, // Clear videoKey if new file is uploaded
+                      video: videoFile ? "" : lesson.video,
+                      videoKey: videoFile ? "" : lesson.videoKey,
                     }
                   : lesson
               ),
             }
           : module
       );
-  
+
       const normalizedModules = normalizeVideoUrls(updatedModules);
       const formData = new FormData();
       formData.append(
@@ -134,20 +141,21 @@ const CourseDetailsPage: React.FC = () => {
         formData.append("videos", videoFile);
         formData.append("videoMapping", JSON.stringify(videoMapping));
       }
-  
+
       console.log("Saving lesson with:", {
         updatedLesson,
         videoMapping,
         videoFile: videoFile?.name,
       });
-  
+
       await dispatch(
         editCourseAction({ courseId: courseDetails._id, formData })
       ).unwrap();
+      toast.success("Lesson updated successfully!");
       setSelectedModule(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating lesson:", error);
-      alert("Failed to update lesson. Please try again.");
+      toast.error(error.message || "Failed to update lesson. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -172,14 +180,12 @@ const CourseDetailsPage: React.FC = () => {
             (module) => module.moduleTitle === updatedModule.moduleTitle
           );
 
-      // Create video mapping for new lessons
       const videoMapping: { [key: string]: number } = {};
       if (videoFile && lessonIndex !== undefined) {
         const lessonKey = `new-lesson-${moduleIndex}-${lessonIndex}`;
-        videoMapping[lessonKey] = 0; // Single video file, index 0
+        videoMapping[lessonKey] = 0;
       }
 
-      // Log video mapping
       console.log("Constructed videoMapping:", videoMapping);
 
       if (moduleIndex !== -1) {
@@ -200,7 +206,6 @@ const CourseDetailsPage: React.FC = () => {
         formData.append("videoMapping", JSON.stringify(videoMapping));
       }
 
-      // Log FormData contents
       console.log("FormData contents:", {
         courseData: formData.get("courseData")?.toString(),
         videoMapping: formData.get("videoMapping")?.toString(),
@@ -210,15 +215,17 @@ const CourseDetailsPage: React.FC = () => {
       await dispatch(
         editCourseAction({ courseId: courseDetails._id, formData })
       ).unwrap();
+      toast.success("Module updated successfully!");
       setSelectedModule(null);
       setIsAddingNewModule(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating module:", error);
-      alert("Failed to update module. Please try again.");
+      toast.error(error.message || "Failed to update module. Please try again.");
     } finally {
       setIsUploading(false);
     }
   };
+
   const handleRemoveModule = async (moduleTitle: string) => {
     if (!courseDetails) return;
 
@@ -237,10 +244,11 @@ const CourseDetailsPage: React.FC = () => {
       await dispatch(
         editCourseAction({ courseId: courseDetails._id, formData })
       ).unwrap();
+      toast.success("Module removed successfully!");
       setSelectedModule(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error removing module:", error);
-      alert("Failed to remove module. Please try again.");
+      toast.error(error.message || "Failed to remove module. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -260,11 +268,12 @@ const CourseDetailsPage: React.FC = () => {
         editCourseAction({ courseId: updatedCourse._id, formData })
       ).unwrap();
       if (response) {
+        toast.success("Course updated successfully!");
         setIsEditCourseModalOpen(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating course:", error);
-      alert("Failed to update course. Please try again.");
+      toast.error(error.message || "Failed to update course. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -275,21 +284,17 @@ const CourseDetailsPage: React.FC = () => {
   };
 
   const handleAssessments = (moduleTitle: string) => {
-    navigate(`/instructor/courses/${courseId}/modules/${encodeURIComponent(moduleTitle)}/assessments`);
+    navigate(
+      `/instructor/courses/${courseId}/modules/${encodeURIComponent(
+        moduleTitle
+      )}/assessments`
+    );
   };
 
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-[#49BBBD]">Loading course details...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-red-500">Error loading course: {error}</div>
       </div>
     );
   }
@@ -319,6 +324,7 @@ const CourseDetailsPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
+      <ToastContainer position="top-right" autoClose={3000} />
       <Sidebar
         open={sidebarOpen}
         currentPage="courses"
@@ -526,16 +532,6 @@ const CourseDetailsPage: React.FC = () => {
                   >
                     Edit Course
                   </button>
-                  {/* <button
-                    className={`w-full border ${
-                      courseDetails.isPublished
-                        ? 'border-red-500 text-red-500 hover:bg-red-500'
-                        : 'border-green-500 text-green-500 hover:bg-green-500'
-                    } py-2 rounded-md hover:text-white transition-colors`}
-                    disabled={isUploading}
-                  >
-                    {courseDetails.isPublished ? 'Unpublish Course' : 'Publish Course'}
-                  </button> */}
                 </div>
               </div>
             </div>

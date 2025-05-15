@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { AppDispatch } from '../../../redux/store'; 
+import { AppDispatch } from '../../../redux/store';
 import { editCourseAction } from '../../../redux/actions/courseActions';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; 
 
 interface Course {
   _id: string;
@@ -44,6 +46,11 @@ const EditCourseModal: React.FC<EditCourseModalProps> = ({ course, onClose, onSa
   };
 
   const handleSave = async () => {
+    if (!editedCourse.title.trim()) {
+      toast.error('Course title is required.');
+      return;
+    }
+
     setIsUploading(true);
     try {
       const formData = new FormData();
@@ -59,15 +66,16 @@ const EditCourseModal: React.FC<EditCourseModalProps> = ({ course, onClose, onSa
       console.log('editCourseAction response:', response);
 
       if (response) {
+        toast.success('Course updated successfully!');
         onSave(response);
-        setThumbnailFile(null);
         onClose();
       } else {
         throw new Error('Failed to update course');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating course:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update course. Please try again.');
+      const errorMessage = error.message || 'Failed to update course. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsUploading(false);
     }
@@ -75,6 +83,7 @@ const EditCourseModal: React.FC<EditCourseModalProps> = ({ course, onClose, onSa
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl p-6 m-4 overflow-auto">
         <div className="flex justify-between items-center border-b pb-4 mb-4">
           <h2 className="text-xl font-bold text-gray-800">Edit Course</h2>

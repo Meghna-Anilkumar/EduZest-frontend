@@ -1,6 +1,5 @@
-// components/InstructorCoursesPage.tsx
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchUserData } from "../../redux/actions/auth/fetchUserdataAction";
 import { getAllCoursesByInstructorAction } from "../../redux/actions/courseActions";
@@ -19,14 +18,16 @@ interface Course {
 
 const InstructorCoursesPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
-  const { data: reduxCourses, loading, error, currentPage, totalPages, totalCourses } = useSelector(
+  const { data: reduxCourses, loading, error: reduxError, currentPage, totalPages, totalCourses } = useSelector(
     (state: RootState) => state.course
   );
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [navigationError, setNavigationError] = useState<string | null>(null);
 
   const courses: Course[] = reduxCourses.map((course: any) => ({
     id: course._id,
@@ -34,6 +35,13 @@ const InstructorCoursesPage: React.FC = () => {
     thumbnail: course.thumbnail,
     modulesCount: course.modules.length,
   }));
+
+  useEffect(() => {
+    // Check for error in navigation state
+    if (location.state?.error) {
+      setNavigationError(location.state.error);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,12 +111,23 @@ const InstructorCoursesPage: React.FC = () => {
                 <h1 className="text-2xl font-semibold text-gray-900">My Courses</h1>
               </div>
               <div className="flex items-center space-x-4">
-                <InstructorNavbar loading={loading} error={error} />
+                <InstructorNavbar loading={loading} error={reduxError} />
               </div>
             </div>
           </div>
         </header>
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {/* Updated error message without Try Again button */}
+          {navigationError && (
+            <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 mr-2 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <p>{navigationError}</p>
+              </div>
+            </div>
+          )}
           <div className="mb-6 flex justify-between items-center">
             <button
               onClick={() => navigate("/instructor/courses/create")}
@@ -133,7 +152,7 @@ const InstructorCoursesPage: React.FC = () => {
             </div>
           </div>
           {loading && <p>Loading courses...</p>}
-          {error && <p className="text-red-500">{error}</p>}
+          {reduxError && <p className="text-red-500">{reduxError}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
               <div
@@ -145,7 +164,7 @@ const InstructorCoursesPage: React.FC = () => {
                     src={course.thumbnail}
                     alt={`${course.title} thumbnail`}
                     className="w-full h-full object-cover cursor-pointer"
-                    onClick={() => handleThumbnailClick(course.id)} // Navigate on click
+                    onClick={() => handleThumbnailClick(course.id)}
                   />
                 </div>
                 <div className="p-5">
@@ -164,11 +183,9 @@ const InstructorCoursesPage: React.FC = () => {
                     <span>{course.modulesCount} Modules</span>
                   </div>
                 </div>
-                {/* Removed the footer with Edit and View Details buttons */}
               </div>
             ))}
           </div>
-          {/* Updated Pagination Condition */}
           {courses.length > 0 && !loading && totalPages > 0 && (
             <div className="mt-6">
               <Pagination
