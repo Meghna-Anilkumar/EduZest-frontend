@@ -78,11 +78,10 @@ const CourseDetailsPage: React.FC = () => {
     fetchCourseData();
   }, [dispatch, courseId, isAuthenticated, navigate, courseDetails]);
 
-  // Clear error after displaying it
   useEffect(() => {
     if (error) {
       toast.error(error);
-      dispatch({ type: "course/clearError" }); // Clear error in Redux
+      dispatch({ type: "course/clearError" });
     }
   }, [error, dispatch]);
 
@@ -155,7 +154,9 @@ const CourseDetailsPage: React.FC = () => {
       setSelectedModule(null);
     } catch (error: any) {
       console.error("Error updating lesson:", error);
-      toast.error(error.message || "Failed to update lesson. Please try again.");
+      toast.error(
+        error.message || "Failed to update lesson. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -220,7 +221,9 @@ const CourseDetailsPage: React.FC = () => {
       setIsAddingNewModule(false);
     } catch (error: any) {
       console.error("Error updating module:", error);
-      toast.error(error.message || "Failed to update module. Please try again.");
+      toast.error(
+        error.message || "Failed to update module. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -248,7 +251,9 @@ const CourseDetailsPage: React.FC = () => {
       setSelectedModule(null);
     } catch (error: any) {
       console.error("Error removing module:", error);
-      toast.error(error.message || "Failed to remove module. Please try again.");
+      toast.error(
+        error.message || "Failed to remove module. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -273,7 +278,9 @@ const CourseDetailsPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Error updating course:", error);
-      toast.error(error.message || "Failed to update course. Please try again.");
+      toast.error(
+        error.message || "Failed to update course. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -397,15 +404,13 @@ const CourseDetailsPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold">Course Modules</h3>
-                  {courseDetails.modules.length === 0 && (
-                    <button
-                      onClick={handleAddModule}
-                      className="text-blue-500 hover:bg-blue-500 hover:text-white border border-blue-500 px-3 py-1 rounded-md transition-colors"
-                      disabled={isUploading}
-                    >
-                      Add Module
-                    </button>
-                  )}
+                  <button
+                    onClick={handleAddModule}
+                    className="text-[#49bbbd] hover:bg-[#49bbbd] hover:text-white border border-[#49bbbd] px-3 py-1 rounded-md transition-colors"
+                    disabled={isUploading}
+                  >
+                    Add Module
+                  </button>
                 </div>
                 {courseDetails.modules.length === 0 ? (
                   <div className="text-center text-gray-500 py-4">

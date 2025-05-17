@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as Yup from "yup";
-import { Loader } from "../../Loader";
 import { useDispatch } from "react-redux";
 import { streamVideoAction } from "../../../redux/actions/courseActions";
 import { AppDispatch } from "../../../redux/store";
+import LessonForm from "./EditLesson";
+import ModuleForm from "./EditModule";
+import ConfirmationModal from "@/components/common/ConfirmationModal";
 
 interface Lesson {
   _id?: string;
@@ -40,79 +40,6 @@ interface ModuleViewModalProps {
   courseId: string;
 }
 
-const getVideoDuration = (file: File): Promise<number> => {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-
-    video.onloadedmetadata = () => {
-      window.URL.revokeObjectURL(video.src);
-      const durationInSeconds = video.duration;
-      resolve(durationInSeconds);
-    };
-
-    video.onerror = () => reject(new Error("Error loading video metadata"));
-    video.src = window.URL.createObjectURL(file);
-  });
-};
-
-
-const lessonValidationSchema = Yup.object({
-  title: Yup.string()
-    .required("Lesson title is required")
-    .min(3, "Title must be at least 3 characters long"),
-  description: Yup.string()
-    .required("Description is required")
-    .min(10, "Description must be at least 10 characters long"),
-  videoFile: Yup.mixed<File>()
-    .required("A video file is required")
-    .test(
-      "fileType",
-      "Only video files are allowed (e.g., .mp4, .mov)",
-      (value) => {
-        if (!value) return false;
-        const allowedTypes = [
-          "video/mp4",
-          "video/mov",
-          "video/avi",
-          "video/mpeg",
-        ];
-        return allowedTypes.includes((value as File).type);
-      }
-    ),
-});
-
-const editLessonValidationSchema = Yup.object({
-  title: Yup.string()
-    .required("Lesson title is required")
-    .min(3, "Title must be at least 3 characters long"),
-  description: Yup.string()
-    .required("Description is required")
-    .min(10, "Description must be at least 10 characters long"),
-  videoFile: Yup.mixed<File>()
-    .optional()
-    .test(
-      "fileType",
-      "Only video files are allowed (e.g., .mp4, .mov)",
-      (value) => {
-        if (!value) return true;
-        const allowedTypes = [
-          "video/mp4",
-          "video/mov",
-          "video/avi",
-          "video/mpeg",
-        ];
-        return allowedTypes.includes((value as File).type);
-      }
-    ),
-});
-
-const moduleValidationSchema = Yup.object({
-  moduleTitle: Yup.string()
-    .required("Module title is required")
-    .min(3, "Module title must be at least 3 characters long"),
-});
-
 const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
   module,
   onClose,
@@ -128,28 +55,21 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
   const [isEditingModule, setIsEditingModule] = useState(false);
   const [isAddingLesson, setIsAddingLesson] = useState(false);
   const [isAddingModule, setIsAddingModule] = useState(isAddingNewModule);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  const [confirmMessage, setConfirmMessage] = useState("");
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  console.log("ModuleViewModal props:", { courseId, module });
 
   useEffect(() => {
     if (isAddingNewModule) setIsAddingModule(true);
   }, [isAddingNewModule]);
 
   useEffect(() => {
-    console.log("Video streaming useEffect:", {
-      selectedLesson,
-      courseId,
-      videoKey: selectedLesson?.videoKey,
-      videoUrl,
-    });
-
     if (videoUrl) {
-      console.log("Clearing previous videoUrl:", videoUrl);
       window.URL.revokeObjectURL(videoUrl);
       setVideoUrl(null);
     }
@@ -157,18 +77,15 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setVideoLoading(true);
 
     if (selectedLesson?.videoKey && courseId) {
-      console.log("Dispatching streamVideoAction:", {
-        courseId,
-        videoKey: selectedLesson.videoKey,
-      });
+      setIsLoading(true);
       dispatch(
         streamVideoAction({ courseId, videoKey: selectedLesson.videoKey })
       )
         .unwrap()
         .then((result: { videoUrl: string; videoKey: string }) => {
-          console.log("Video stream successful:", result);
           setVideoUrl(result.videoUrl);
           setVideoLoading(false);
+          setIsLoading(false);
         })
         .catch((error: unknown) => {
           const errorMessage =
@@ -177,15 +94,11 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               : typeof error === "object" && error && "message" in error
               ? String(error.message)
               : "Failed to load video. Please try again.";
-          console.error("Stream video error:", error);
           setVideoError(errorMessage);
           setVideoLoading(false);
+          setIsLoading(false);
         });
     } else {
-      console.log("Cannot dispatch streamVideoAction:", {
-        hasVideoKey: !!selectedLesson?.videoKey,
-        hasCourseId: !!courseId,
-      });
       setVideoLoading(false);
     }
 
@@ -198,14 +111,12 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
 
   useEffect(() => {
     if (videoUrl && videoRef.current) {
-      console.log("Loading video with URL:", videoUrl);
       videoRef.current.src = videoUrl;
       videoRef.current.load();
     }
   }, [videoUrl]);
 
   const handleLessonSelect = (lesson: Lesson) => {
-    console.log("Selected lesson:", lesson);
     setSelectedLesson(lesson);
     setIsEditingLesson(false);
     setIsAddingLesson(false);
@@ -214,10 +125,15 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setVideoUrl(null);
   };
 
-  const handleEditLesson = () => {
-    setIsEditingLesson(true);
-    setIsAddingLesson(false);
-    setIsAddingModule(false);
+  const handleConfirmEditLesson = () => {
+    setConfirmMessage("Are you sure you want to edit this lesson?");
+    setConfirmAction(() => () => {
+      setIsEditingLesson(true);
+      setIsAddingLesson(false);
+      setIsAddingModule(false);
+      setShowConfirmModal(false);
+    });
+    setShowConfirmModal(true);
   };
 
   const handleEditModule = () => {
@@ -225,26 +141,36 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setIsAddingModule(false);
   };
 
-  const handleRemoveLesson = (lessonId?: string) => {
-    if (onSaveModule && lessonId) {
-      const filteredLessons = module.lessons.filter(
-        (lesson) => lesson._id !== lessonId
-      );
-      const updatedLessons = filteredLessons.map((lesson, index) => ({
-        ...lesson,
-        lessonNumber: (index + 1).toString(),
-      }));
-      const updatedModule = { ...module, lessons: updatedLessons };
-      onSaveModule(updatedModule);
-      setSelectedLesson(null);
-    }
+  const handleConfirmRemoveLesson = (lessonId?: string) => {
+    setConfirmMessage("Are you sure you want to remove this lesson?");
+    setConfirmAction(() => () => {
+      if (onSaveModule && lessonId) {
+        const filteredLessons = module.lessons.filter(
+          (lesson) => lesson._id !== lessonId
+        );
+        const updatedLessons = filteredLessons.map((lesson, index) => ({
+          ...lesson,
+          lessonNumber: (index + 1).toString(),
+        }));
+        const updatedModule = { ...module, lessons: updatedLessons };
+        onSaveModule(updatedModule);
+        setSelectedLesson(null);
+      }
+      setShowConfirmModal(false);
+    });
+    setShowConfirmModal(true);
   };
 
-  const handleRemoveModule = () => {
-    if (onRemoveModule) {
-      onRemoveModule(module.moduleTitle);
-      onClose();
-    }
+  const handleConfirmRemoveModule = () => {
+    setConfirmMessage("Are you sure you want to remove this module?");
+    setConfirmAction(() => () => {
+      if (onRemoveModule) {
+        onRemoveModule(module.moduleTitle);
+        onClose();
+      }
+      setShowConfirmModal(false);
+    });
+    setShowConfirmModal(true);
   };
 
   const handleAddLesson = () => {
@@ -254,39 +180,33 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
     setSelectedLesson(null);
   };
 
-  const handleAddModule = () => {
-    setIsAddingModule(true);
-    setIsEditingModule(false);
-    setIsAddingLesson(false);
-    setSelectedLesson(null);
-  };
   const renderLessonDetails = () => {
     if (!selectedLesson) return null;
-  
+
     return (
-      <div className="mt-6 bg-white rounded-lg p-6 shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold text-gray-800">
+      <div className="mt-6 bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h3 className="text-2xl font-semibold text-gray-900 tracking-tight">
             Lesson {selectedLesson.lessonNumber}: {selectedLesson.title}
           </h3>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
             {!isEditingLesson && (
               <>
                 <button
-                  onClick={handleEditLesson}
-                  className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] transition-colors"
+                  onClick={handleConfirmEditLesson}
+                  className="px-5 py-2 bg-[#49BBBD] text-white rounded-lg hover:bg-[#3a9a9c] transition-all duration-200 shadow-sm w-full sm:w-auto"
                 >
                   Edit Lesson
                 </button>
                 <button
-                  onClick={() => handleRemoveLesson(selectedLesson._id)}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  onClick={() => handleConfirmRemoveLesson(selectedLesson._id)}
+                  className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-sm w-full sm:w-auto"
                 >
                   Remove Lesson
                 </button>
                 <button
                   onClick={() => setSelectedLesson(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                  className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all duration-200 shadow-sm w-full sm:w-auto"
                 >
                   Close
                 </button>
@@ -294,163 +214,44 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
             )}
           </div>
         </div>
-  
-        {isEditingLesson ? (
-          <Formik
-          initialValues={{
-            title: selectedLesson.title,
-            description: selectedLesson.description,
-            duration: selectedLesson.duration || "",
-            videoFile: undefined as File | undefined,
-          }}
-          validationSchema={editLessonValidationSchema}
-          onSubmit={async (values, { setSubmitting }) => {
-            setIsSubmitting(true);
-            if (onSaveLesson) {
-              const updatedLesson: Lesson = {
-                ...selectedLesson,
-                _id: selectedLesson._id, // Ensure _id is included
-                title: values.title,
-                description: values.description,
-                duration: values.duration || selectedLesson.duration,
-                video: selectedLesson.videoKey || "", // Use existing videoKey
-                videoKey: selectedLesson.videoKey || "",
-              };
-              await onSaveLesson(updatedLesson, values.videoFile);
-              setSelectedLesson(updatedLesson);
-              setIsEditingLesson(false);
-            }
-            setIsSubmitting(false);
-            setSubmitting(false);
-          }}
-        
-          >
-            {({ setFieldValue, isSubmitting: formikSubmitting, values }) => (
-              <Form className="space-y-6">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Lesson Title
-                  </label>
-                  <Field
-                    type="text"
-                    name="title"
-                    className="w-full border rounded-md px-4 py-2 focus:ring-2 focus:ring-[#49BBBD]"
-                  />
-                  <ErrorMessage
-                    name="title"
-                    component="div"
-                    className="text-red-500 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Description
-                  </label>
-                  <Field
-                    as="textarea"
-                    name="description"
-                    className="w-full border rounded-md px-4 py-2 h-32 focus:ring-2 focus:ring-[#49BBBD]"
-                  />
-                  <ErrorMessage
-                    name="description"
-                    component="div"
-                    className="text-red-500 text-sm mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Upload Video (optional)
-                  </label>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={async (
-                      e: React.ChangeEvent<HTMLInputElement>
-                    ) => {
-                      const file = e.target.files?.[0];
-                      setFieldValue("videoFile", file);
-                      if (file) {
-                        try {
-                          const durationInHours = await getVideoDuration(file);
-                          setFieldValue("duration", durationInHours.toFixed(2));
-                          console.log("Selected new video file:", {
-                            name: file.name,
-                            type: file.type,
-                            size: file.size,
-                            duration: durationInHours.toFixed(2),
-                          });
-                        } catch (error) {
-                          console.error("Error getting video duration:", error);
-                          setFieldValue(
-                            "duration",
-                            selectedLesson.duration || ""
-                          );
-                        }
-                      } else {
-                        setFieldValue(
-                          "duration",
-                          selectedLesson.duration || ""
-                        );
-                      }
-                    }}
-                    className="w-full border rounded-md px-4 py-2"
-                  />
-                  <ErrorMessage
-                    name="videoFile"
-                    component="div"
-                    className="text-red-500 text-sm mt-1"
-                  />
-                </div>
-                {values.duration && (
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Duration (hours)
-                    </label>
-                    <Field
-                      type="text"
-                      name="duration"
-                      className="w-full border rounded-md px-4 py-2 bg-gray-100"
-                      readOnly
-                    />
-                  </div>
-                )}
-                <div className="flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingLesson(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                    disabled={formikSubmitting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                    disabled={formikSubmitting}
-                  >
-                    {formikSubmitting ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </Form>
-            )}
-          </Formik>
-        ) : (
-          <div className="space-y-6">
+
+        {isEditingLesson && selectedLesson && (
+          <LessonForm
+            lesson={selectedLesson}
+            onSave={(updatedLesson, videoFile) => {
+              if (onSaveLesson) {
+                setIsLoading(true);
+                onSaveLesson(updatedLesson, videoFile);
+                setSelectedLesson(updatedLesson);
+                setIsEditingLesson(false);
+                setIsLoading(false);
+              }
+            }}
+            onCancel={() => setIsEditingLesson(false)}
+            isEditing={true}
+            courseId={courseId}
+          />
+        )}
+
+        {!isEditingLesson && (
+          <div className="space-y-8">
             {selectedLesson.videoKey ? (
-              <div className="relative pt-[56.25%] bg-black rounded-lg overflow-hidden">
+              <div className="relative pt-[56.25%] bg-gray-900 rounded-xl overflow-hidden shadow-md">
                 {videoLoading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                    <p className="text-gray-600">Loading video...</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75">
+                    <p className="text-white textreally text-gray-300 animate-pulse">
+                      Loading video...
+                    </p>
                   </div>
                 ) : videoError ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                    <p className="text-red-500">Error: {videoError}</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75">
+                    <p className="text-red-400">Error: {videoError}</p>
                   </div>
                 ) : videoUrl ? (
                   <video
                     ref={videoRef}
                     controls
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-contain"
                     key={selectedLesson.videoKey}
                     onError={() =>
                       setVideoError("Failed to play video. Please try again.")
@@ -460,16 +261,16 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                     Your browser does not support the video tag.
                   </video>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-200">
-                    <p className="text-gray-600">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-75">
+                    <p className="text-gray-300">
                       No video URL available for {selectedLesson.videoKey}
                     </p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-gray-100 rounded-lg p-4 text-center">
-                <p className="text-gray-600">
+              <div className="bg-gray-100 rounded-xl p-6 text-center">
+                <p className="text-gray-600 font-medium">
                   No video provided for this lesson
                 </p>
               </div>
@@ -477,8 +278,8 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
             {videoError && (
               <p className="text-red-500 text-sm mt-2">{videoError}</p>
             )}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-800 mb-2">
+            <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
+              <h4 className="font-semibold text-gray-900 mb-3 text-lg">
                 Lesson Overview
               </h4>
               <div className="flex justify-between text-sm text-gray-600">
@@ -492,356 +293,102 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               </div>
             </div>
             <div>
-              <h4 className="font-semibold text-gray-800 mb-2">Description</h4>
-              <p className="text-gray-700">{selectedLesson.description}</p>
+              <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                Description
+              </h4>
+              <p className="text-gray-700 leading-relaxed">
+                {selectedLesson.description}
+              </p>
             </div>
-            {selectedLesson.resources &&
-              selectedLesson.resources.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">
-                    Additional Resources
-                  </h4>
-                  <ul className="list-disc list-inside text-gray-700">
-                    {selectedLesson.resources.map((resource, index) => (
-                      <li key={index}>{resource}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            {selectedLesson.objectives &&
-              selectedLesson.objectives.length > 0 && (
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2">
-                    Objectives
-                  </h4>
-                  <ul className="list-disc list-inside text-gray-700">
-                    {selectedLesson.objectives.map((objective, index) => (
-                      <li key={index}>{objective}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            {selectedLesson.resources && selectedLesson.resources.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                  Additional Resources
+                </h4>
+                <ul className="list-disc list-inside text-gray-700 space-y-2">
+                  {selectedLesson.resources.map((resource, index) => (
+                    <li key={index}>{resource}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {selectedLesson.objectives && selectedLesson.objectives.length > 0 && (
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3 text-lg">
+                  Objectives
+                </h4>
+                <ul className="list-disc list-inside text-gray-700 space-y-2">
+                  {selectedLesson.objectives.map((objective, index) => (
+                    <li key={index}>{objective}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
     );
   };
 
-  const renderAddLessonForm = () => (
-    <div className="mt-6 bg-white rounded-lg p-6 shadow-md">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Lesson</h3>
-      <Formik
-        initialValues={{
-          title: "",
-          description: "",
-          duration: "",
-          videoFile: undefined as File | undefined,
-        }}
-        validationSchema={lessonValidationSchema}
-        onSubmit={async (values, { setSubmitting, resetForm }) => {
-          setIsSubmitting(true);
-          if (onSaveModule) {
-            const newLessonData: Lesson = {
-              lessonNumber: (module.lessons.length + 1).toString(),
-              title: values.title,
-              description: values.description,
-              duration: values.duration || undefined,
-              video: "",
-            };
-            console.log("Adding new lesson:", {
-              newLessonData,
-              videoFile: values.videoFile?.name,
-              lessonIndex: module.lessons.length,
-              moduleTitle: module.moduleTitle,
-              courseId,
-            });
-            const updatedModule = {
-              ...module,
-              lessons: [...module.lessons, newLessonData],
-            };
-            console.log("Calling onSaveModule with:", {
-              updatedModule,
-              videoFile: values.videoFile?.name,
-              lessonIndex: module.lessons.length,
-            });
-            await onSaveModule(
-              updatedModule,
-              undefined,
-              values.videoFile,
-              module.lessons.length
-            );
-            resetForm();
-            setIsAddingLesson(false);
-          }
-          setIsSubmitting(false);
-          setSubmitting(false);
-        }}
-      >
-        {({ setFieldValue, isSubmitting: formikSubmitting, values }) => (
-          <Form className="space-y-6">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Lesson Title
-              </label>
-              <Field
-                type="text"
-                name="title"
-                className="w-full border rounded-md px-4 py-2 focus:ring-2 focus:ring-[#49BBBD]"
-              />
-              <ErrorMessage
-                name="title"
-                component="div"
-                className="text-red-500 text-sm mt-1"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Description
-              </label>
-              <Field
-                as="textarea"
-                name="description"
-                className="w-full border rounded-md px-4 py-2 h-32 focus:ring-2 focus:ring-[#49BBBD]"
-              />
-              <ErrorMessage
-                name="description"
-                component="div"
-                className="text-red-500 text-sm mt-1"
-              />
-            </div>
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Upload Video
-              </label>
-              <input
-                type="file"
-                accept="video/*"
-                onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  setFieldValue("videoFile", file);
-                  if (file) {
-                    try {
-                      const durationInHours = await getVideoDuration(file);
-                      setFieldValue("duration", durationInHours.toFixed(2));
-                      console.log("Selected video file:", {
-                        name: file.name,
-                        type: file.type,
-                        size: file.size,
-                        duration: durationInHours.toFixed(2),
-                      });
-                    } catch (error) {
-                      console.error("Error getting video duration:", error);
-                      setFieldValue("duration", "");
-                    }
-                  } else {
-                    setFieldValue("duration", "");
-                  }
-                }}
-                className="w-full border rounded-md px-4 py-2"
-              />
-              <ErrorMessage
-                name="videoFile"
-                component="div"
-                className="text-red-500 text-sm mt-1"
-              />
-            </div>
-            {values.duration && (
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Duration (hours)
-                </label>
-                <Field
-                  type="text"
-                  name="duration"
-                  className="w-full border rounded-md px-4 py-2 bg-gray-100"
-                  readOnly
-                />
-              </div>
-            )}
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setIsAddingLesson(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                disabled={formikSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                disabled={formikSubmitting}
-              >
-                {formikSubmitting ? "Adding..." : "Add Lesson"}
-              </button>
-            </div>
-          </Form>
-        )}
-      </Formik>
-    </div>
-  );
-
-  const renderAddModuleForm = () => (
-    <div className="mt-6 bg-white rounded-lg p-6 shadow-md">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Module</h3>
-      <Formik
-        initialValues={{ moduleTitle: "" }}
-        validationSchema={moduleValidationSchema}
-        onSubmit={async (values, { setSubmitting, resetForm }) => {
-          setIsSubmitting(true);
-          if (onSaveModule) {
-            const newModule: Module = {
-              moduleTitle: values.moduleTitle,
-              lessons: [],
-            };
-            await onSaveModule(newModule);
-            resetForm();
-            setIsAddingModule(false);
-          }
-          setIsSubmitting(false);
-          setSubmitting(false);
-        }}
-      >
-        {({ isSubmitting: formikSubmitting }) => (
-          <Form className="space-y-6">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Module Title
-              </label>
-              <Field
-                type="text"
-                name="moduleTitle"
-                className="w-full border rounded-md px-4 py-2 focus:ring-2 focus:ring-[#49BBBD]"
-                placeholder="Enter module title"
-              />
-              <ErrorMessage
-                name="moduleTitle"
-                component="div"
-                className="text-red-500 text-sm mt-1"
-              />
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddingModule(false);
-                  onClose();
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                disabled={formikSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                disabled={formikSubmitting}
-              >
-                {formikSubmitting ? "Saving..." : "Save Module"}
-              </button>
-            </div>
-          </Form>
-        )}
-      </Formik>
-    </div>
-  );
-
   return (
     <>
-      {isSubmitting && <Loader />}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
-        <div className="relative w-full max-w-4xl max-h-[90vh] bg-white rounded-lg shadow-xl p-8 m-4 overflow-auto">
-          <div className="flex justify-between items-center border-b pb-4 mb-6">
+      {isLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-xl shadow-lg flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-[#49BBBD]"></div>
+            <p className="text-gray-700 font-medium">Loading...</p>
+          </div>
+        </div>
+      )}
+      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-60 overflow-y-auto p-4">
+        <div className="relative w-full max-w-5xl max-h-[90vh] bg-white rounded-2xl shadow-2xl p-8 overflow-auto">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-5 mb-8 gap-4">
             {isEditingModule ? (
-              <Formik
-                initialValues={{ moduleTitle: module.moduleTitle }}
-                validationSchema={moduleValidationSchema}
-                onSubmit={async (values, { setSubmitting }) => {
-                  setIsSubmitting(true);
+              <ModuleForm
+                module={module}
+                onSave={(updatedModule, originalModuleTitle) => {
                   if (onSaveModule) {
-                    const updatedModule = {
-                      ...module,
-                      moduleTitle: values.moduleTitle,
-                    };
-                    await onSaveModule(updatedModule, module.moduleTitle);
+                    setIsLoading(true);
+                    onSaveModule(updatedModule, originalModuleTitle);
                     setIsEditingModule(false);
+                    setIsLoading(false);
                   }
-                  setIsSubmitting(false);
-                  setSubmitting(false);
                 }}
-              >
-                {({ isSubmitting: formikSubmitting }) => (
-                  <Form className="flex items-center space-x-3 w-full">
-                    <div className="flex-1">
-                      <Field
-                        type="text"
-                        name="moduleTitle"
-                        className="text-xl font-bold text-gray-800 border rounded-md px-4 py-2 w-full focus:ring-2 focus:ring-[#49BBBD]"
-                      />
-                      <ErrorMessage
-                        name="moduleTitle"
-                        component="div"
-                        className="text-red-500 text-sm mt-1"
-                      />
-                    </div>
-                    <div className="flex space-x-3">
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] transition-colors"
-                        disabled={formikSubmitting}
-                      >
-                        Save Module
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingModule(false)}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                        disabled={formikSubmitting}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </Form>
-                )}
-              </Formik>
+                onClose={() => setIsEditingModule(false)}
+                isEditing={true}
+              />
             ) : (
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
                 {isAddingModule ? "New Module" : module.moduleTitle}
               </h2>
             )}
             {!isEditingModule && (
-              <div className="flex items-center space-x-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
                 {!isAddingModule && (
                   <>
                     <button
                       onClick={handleEditModule}
-                      className="px-4 py-2 bg-[#49BBBD] text-white rounded-md hover:bg-[#3a9a9c] transition-colors"
+                      className="px-5 py-2 bg-[#49BBBD] text-white rounded-lg hover:bg-[#3a9a9c] transition-all duration-200 shadow-sm w-full sm:w-auto"
                     >
                       Edit Module
                     </button>
                     <button
-                      onClick={handleRemoveModule}
-                      className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                      onClick={handleConfirmRemoveModule}
+                      className="px-5 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-sm w-full sm:w-auto"
                     >
                       Remove Module
                     </button>
                     <button
                       onClick={handleAddLesson}
-                      className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                      className="px-5 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all duration-200 shadow-sm w-full sm:w-auto"
                     >
                       Add Lesson
-                    </button>
-                    <button
-                      onClick={handleAddModule}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                    >
-                      Add Module
                     </button>
                   </>
                 )}
                 <button
                   onClick={onClose}
-                  className="p-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                  className="p-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-sm"
                   aria-label="Close modal"
                 >
                   <svg
@@ -862,45 +409,42 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
               </div>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="col-span-1 bg-gray-50 rounded-lg p-4 max-h-[70vh] overflow-y-auto">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="col-span-1 bg-gray-50 rounded-xl p-6 max-h-[70vh] overflow-y-auto shadow-sm">
+              <h3 className="text-xl font-semibold mb-5 text-gray-900 tracking-tight">
                 Lessons
               </h3>
               {isAddingModule ? (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-gray-500 py-6">
                   No lessons yet. Save the module to add lessons.
                 </div>
               ) : module.lessons.length === 0 ? (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-gray-500 py-6">
                   No lessons available. Add a lesson to get started.
                 </div>
               ) : (
                 <>
-                  {console.log("Rendering lessons:", module.lessons)}
                   {module.lessons.map((lesson) => (
                     <div
                       key={lesson._id || lesson.lessonNumber}
                       onClick={() => handleLessonSelect(lesson)}
-                      className={`border-b last:border-b-0 py-4 hover:bg-gray-100 transition-colors cursor-pointer rounded-md px-2 ${
+                      className={`border-b border-gray-100 last:border-b-0 py-4 hover:bg-gray-100 transition-all duration-200 cursor-pointer rounded-lg px-3 ${
                         selectedLesson?._id === lesson._id
-                          ? "bg-[#49BBBD] bg-opacity-10"
+                          ? "bg-[#49BBBD] bg-opacity-10 border-l-4 border-[#49BBBD]"
                           : ""
                       }`}
                     >
                       <div className="flex justify-between items-center">
                         <div>
                           <div className="flex items-center space-x-3">
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-gray-500 font-medium">
                               Lesson {lesson.lessonNumber}
                             </span>
-                            <span className="text-[#49BBBD] bg-[#49BBBD] bg-opacity-10 px-2 py-1 rounded-full text-xs">
-                              {lesson.duration
-                                ? `${lesson.duration} hrs`
-                                : "N/A"}
+                            <span className="text-[#49BBBD] bg-[#49BBBD] bg-opacity-10 px-2.5 py-1 rounded-full text-xs font-medium">
+                              {lesson.duration ? `${lesson.duration} hrs` : "N/A"}
                             </span>
                           </div>
-                          <h4 className="font-medium text-gray-800 mt-1">
+                          <h4 className="font-semibold text-gray-900 mt-2 text-base">
                             {lesson.title}
                           </h4>
                         </div>
@@ -912,21 +456,73 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
             </div>
             <div className="col-span-1 md:col-span-2">
               {isAddingModule ? (
-                renderAddModuleForm()
+                <ModuleForm
+                  module={{ moduleTitle: "", lessons: [] }}
+                  onSave={(newModule, _) => {
+                    if (onSaveModule) {
+                      setIsLoading(true);
+                      onSaveModule(newModule);
+                      setIsAddingModule(false);
+                      onClose();
+                      setIsLoading(false);
+                    }
+                  }}
+                  onClose={() => {
+                    setIsAddingModule(false);
+                    onClose();
+                  }}
+                  isEditing={false}
+                />
               ) : isAddingLesson ? (
-                renderAddLessonForm()
+                <LessonForm
+                  lesson={{
+                    lessonNumber: (module.lessons.length + 1).toString(),
+                    title: "",
+                    description: "",
+                    video: "",
+                  }}
+                  onSave={(newLesson, videoFile) => {
+                    if (onSaveModule) {
+                      setIsLoading(true);
+                      const updatedModule = {
+                        ...module,
+                        lessons: [...module.lessons, newLesson],
+                      };
+                      onSaveModule(
+                        updatedModule,
+                        undefined,
+                        videoFile,
+                        module.lessons.length
+                      );
+                      setIsAddingLesson(false);
+                      setIsLoading(false);
+                    }
+                  }}
+                  onCancel={() => setIsAddingLesson(false)}
+                  isEditing={false}
+                  courseId={courseId}
+                />
               ) : selectedLesson ? (
                 renderLessonDetails()
               ) : (
-                <div className="text-center text-gray-500 py-10">
-                  Select a lesson to view its details
+                <div className="text-center text-gray-500 py-12 bg-gray-50 rounded-xl">
+                  <p className="font-medium">
+                    Select a lesson to view its details
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={confirmAction}
+        message={confirmMessage}
+      />
     </>
   );
 };
+
 export default ModuleViewModal;
