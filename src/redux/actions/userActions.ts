@@ -3,7 +3,7 @@ import { serverUser } from "../../services";
 import { userEndPoints } from "../../services/endPoints/endPoints";
 import { ResponseData } from "../../interface/Interface";
 import { AppDispatch } from "../store";
-import { userSetIsAuthenticated,setUserData } from "../reducers/userReducer";
+import { userSetIsAuthenticated, setUserData } from "../reducers/userReducer";
 
 export interface ResetPasswordData {
   email: string,
@@ -236,6 +236,7 @@ export const getInstructorPayoutsAction = createAsyncThunk(
       search,
       sortField,
       sortOrder,
+      courseFilter,
     }: {
       instructorId: string;
       page: number;
@@ -243,6 +244,7 @@ export const getInstructorPayoutsAction = createAsyncThunk(
       search?: string;
       sortField?: string;
       sortOrder?: "asc" | "desc";
+      courseFilter?: string;
     },
     { rejectWithValue }
   ) => {
@@ -250,9 +252,16 @@ export const getInstructorPayoutsAction = createAsyncThunk(
       if (!instructorId) {
         throw new Error("Instructor ID is required");
       }
-      const url = userEndPoints.getInstructorPayouts(page, limit, search, sortField, sortOrder);
+      const url = userEndPoints.getInstructorPayouts(
+        page,
+        limit,
+        search,
+        sortField,
+        sortOrder,
+        courseFilter
+      );
       console.log("Fetching instructor payouts with URL:", url);
-      const response = await serverUser.get(url); // No headers
+      const response = await serverUser.get(url);
       console.log("Action response:", response.data);
       return response.data;
     } catch (error: any) {

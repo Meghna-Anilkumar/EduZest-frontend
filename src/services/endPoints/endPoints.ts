@@ -38,7 +38,7 @@ export const userEndPoints: UserEndpoints = {
     search?: string,
     sortField?: string,
     sortOrder?: "asc" | "desc",
-    instructorId?: string
+    courseFilter?: string // Add courseFilter parameter
   ) => {
     const query = new URLSearchParams({
       page: page.toString(),
@@ -46,9 +46,9 @@ export const userEndPoints: UserEndpoints = {
       ...(search && { search }),
       ...(sortField && { sortField }),
       ...(sortOrder && { sortOrder }),
-      ...(instructorId && { instructorId }),
+      ...(courseFilter && { courseFilter: encodeURIComponent(courseFilter) }), // Encode courseFilter
     }).toString();
-    return `instructor/getTransactions?${query}`;
+    return `/instructor/getTransactions?${query}`; // Ensure the path matches the backend route
   },
   getCourseStats: '/instructor/course-stats',
 
@@ -136,7 +136,8 @@ export const adminEndpoints: AdminEndpoints = {
     limit: number,
     search?: string,
     sortField?: string,
-    sortOrder?: "asc" | "desc"
+    sortOrder?: "asc" | "desc",
+    courseFilter?: string
   ) => {
     const queryParams = new URLSearchParams({
       page: page.toString(),
@@ -150,6 +151,9 @@ export const adminEndpoints: AdminEndpoints = {
     }
     if (sortOrder) {
       queryParams.append("sortOrder", sortOrder);
+    }
+    if (courseFilter) {
+      queryParams.append("courseFilter", encodeURIComponent(courseFilter));
     }
     return `/getTransactions?${queryParams.toString()}`;
   },

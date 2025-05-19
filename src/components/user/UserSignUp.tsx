@@ -8,6 +8,9 @@ import type { AppDispatch, RootState } from "../../redux/store";
 import { signUpUser } from "../../redux/actions/auth/signupAction";
 import { FaUser, FaEnvelope, FaLock, FaCheckCircle, FaEye, FaEyeSlash } from "react-icons/fa";
 import bgImage from "@/assets/newbg.jpg";
+import { GoogleLogin } from "@react-oauth/google";
+import { googleAuth } from "../../redux/actions/auth/googleSigninAction";
+import { toast } from "react-toastify";
 
 const UserSignUp: React.FC = (): JSX.Element => {
   const navigate = useNavigate();
@@ -23,6 +26,17 @@ const UserSignUp: React.FC = (): JSX.Element => {
   useEffect(() => {
     if (isAuthenticated) navigate("/");
   }, [isAuthenticated, navigate]);
+
+    const handleGoogleAuth = async (token: string) => {
+      try {
+        await dispatch(googleAuth(token)).unwrap();
+        toast.success("Logged in with Google successfully!");
+        navigate("/");
+      } catch (err) {
+        console.error("Google login failed:", err);
+        toast.error("Google login failed. Please try again.");
+      }
+    };
 
   useEffect(() => {
     dispatch(userClearError());
@@ -211,6 +225,27 @@ const UserSignUp: React.FC = (): JSX.Element => {
             </Form>
           )}
         </Formik>
+
+                {/* Google Login Button */}
+                <div className="mt-6">
+                  <GoogleLogin
+                    onSuccess={(credentialResponse) => {
+                      if (credentialResponse.credential) {
+                        handleGoogleAuth(credentialResponse.credential);
+                      }
+                    }}
+                    onError={() => {
+                      toast.error("Google authentication failed");
+                    }}
+                    useOneTap
+                    theme="outline"
+                    text="continue_with"
+                    shape="rectangular"
+                    width="100%"
+                    logo_alignment="center"
+                  />
+                </div>
+        
         <p className="text-center text-sm text-gray-600 mt-4">
           Already have an account? <Link to="/login" className="text-[#49bbbd] font-bold hover:underline">Log in</Link>
         </p>

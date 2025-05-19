@@ -38,7 +38,7 @@ export interface UserEndpoints extends IEndPoints {
         search?: string,
         sortField?: string,
         sortOrder?: "asc" | "desc",
-        instructorId?: string
+        courseFilter?: string
     ) => string;
     createAssessment: (courseId: string, moduleTitle: string) => string;
     getAssessmentsByCourseAndModule: (courseId: string, moduleTitle: string, page: number, limit: number) => string;
@@ -69,7 +69,7 @@ export interface UserEndpoints extends IEndPoints {
     // Chat
     getMessages: (courseId: string, page: number, limit: number) => string;
     sendMessage: (courseId: string) => string;
-    getChatGroupMetadata:()=>string
+    getChatGroupMetadata: () => string
 }
 
 export interface AdminEndpoints extends IEndPoints {
@@ -89,8 +89,9 @@ export interface AdminEndpoints extends IEndPoints {
         limit: number,
         search?: string,
         sortField?: string,
-        sortOrder?: "asc" | "desc"
+        sortOrder?: "asc" | "desc",
+        courseFilter?: string
     ) => string;
-    dashboardStats: () => string
+    dashboardStats: () => string;
 }
 

@@ -79,19 +79,37 @@ export const checkEnrollmentAction = createAsyncThunk(
 );
 
 
+interface EnrollmentParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 export const getAllEnrollmentsAction = createAsyncThunk(
-    "enrollment/getAllEnrollments",
-    async (_, { rejectWithValue }) => {
-        try {
-            const response = await serverUser.get(userEndPoints.enrollments, {
-                withCredentials: true,
-            });
-            return response.data;
-        } catch (error) {
-            const err = error as AxiosError;
-            return rejectWithValue(err.response?.data || { message: err.message });
-        }
+  "enrollment/getAllEnrollments",
+  async (params: EnrollmentParams = {}, { rejectWithValue }) => {
+    try {
+      const { page = 1, limit = 10, search = "" } = params;
+      
+      const queryParams = new URLSearchParams();
+      queryParams.append("page", page.toString());
+      queryParams.append("limit", limit.toString());
+      if (search) {
+        queryParams.append("search", search);
+      }
+      
+      const url = `${userEndPoints.enrollments}?${queryParams.toString()}`;
+      
+      const response = await serverUser.get(url, {
+        withCredentials: true,
+      });
+      
+      return response.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
     }
+  }
 );
 
 export const getPaymentsByUserAction = createAsyncThunk(
