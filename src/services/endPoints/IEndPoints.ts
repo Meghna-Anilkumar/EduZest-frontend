@@ -93,5 +93,9 @@ export interface AdminEndpoints extends IEndPoints {
         courseFilter?: string
     ) => string;
     dashboardStats: () => string;
+    createCoupon: string;
+    fetchAllCoupons: (page: number, limit: number, search?: string) => string;
+    editCoupon: (couponId: string) => string;
+    deleteCoupon: (couponId: string) => string;
 }
 

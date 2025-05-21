@@ -158,4 +158,17 @@ export const adminEndpoints: AdminEndpoints = {
     return `/getTransactions?${queryParams.toString()}`;
   },
   dashboardStats: () => `/dashboard-stats`,
+  createCoupon: '/create-coupon',
+  fetchAllCoupons: (page: number, limit: number, search?: string) => {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    if (search) {
+      queryParams.append("search", search);
+    }
+    return `/fetch-all-coupons?${queryParams.toString()}`;
+  },
+  editCoupon: (couponId: string) => `/edit-coupon/${couponId}`,
+  deleteCoupon: (couponId: string) => `/delete-coupon/${couponId}`,
 };

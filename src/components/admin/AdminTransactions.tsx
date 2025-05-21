@@ -122,9 +122,7 @@ const TransactionsPage: React.FC = () => {
     setPaginationPage(page);
   };
 
-  const handleCourseFilterChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
+  const handleCourseFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setCourseFilter(e.target.value);
     setPaginationPage(1);
   };
@@ -255,7 +253,7 @@ const TransactionsPage: React.FC = () => {
                 </select>
               </div>
 
-              <div className="flex items-end">
+              <div className="self-center mt-6">
                 <button
                   onClick={resetFilters}
                   className="py-2 px-4 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition text-sm font-medium"
@@ -313,7 +311,7 @@ const TransactionsPage: React.FC = () => {
                 </div>
                 <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                   <div className="text-gray-600 text-sm">
-                    {transactions.length > 0 ? (
+                    {totalEntries > 0 ? (
                       <>
                         Showing {(paginationPage - 1) * limit + 1} to{" "}
                         {Math.min(paginationPage * limit, totalEntries)} of{" "}
@@ -323,7 +321,6 @@ const TransactionsPage: React.FC = () => {
                       "No transactions found"
                     )}
                   </div>
-
                   <Pagination
                     currentPage={paginationPage}
                     totalPages={totalPages}

@@ -6,14 +6,14 @@ import {
   RiDashboardLine,
   RiUserLine,
   RiTeamLine,
-  // RiBookOpenLine,
   RiPriceTag3Line,
-  // RiFileList3Line,
+  RiMailLine,
   RiMoneyDollarCircleLine,
   RiMenuFoldLine,
   RiMenuUnfoldLine,
   RiLogoutBoxLine,
-  RiMailLine,
+  RiCoupon3Line,
+  RiGiftLine,
 } from "react-icons/ri";
 import { AppDispatch } from "../../../redux/store";
 
@@ -50,10 +50,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     { path: "/admin/dashboard", name: "Dashboard", icon: RiDashboardLine },
     { path: "/admin/students", name: "Students", icon: RiUserLine },
     { path: "/admin/instructors", name: "Instructors", icon: RiTeamLine },
-    // { path: "/admin/courses", name: "Courses", icon: RiBookOpenLine },
     { path: "/admin/categories", name: "Categories", icon: RiPriceTag3Line },
+    { path: "/admin/coupons", name: "Coupons", icon: RiCoupon3Line },
+    { path: "/admin/offers", name: "Offers", icon: RiGiftLine },
     { path: "/admin/requests", name: "Requests", icon: RiMailLine },
-    // { path: "/admin/assessments", name: "Assessments", icon: RiFileList3Line },
     {
       path: "/admin/transactions",
       name: "Transactions",
@@ -83,7 +83,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         ${isCollapsed ? "w-20" : "w-64"}
         ${isMobile ? "w-64" : ""}`}
     >
-      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {(!isCollapsed || isMobile) && (
           <h1 className="text-xl font-bold text-white truncate">Admin Panel</h1>
@@ -103,7 +102,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="mt-6 px-2">
         {menuItems.map((item) => (
           <Link
@@ -125,7 +123,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           </Link>
         ))}
 
-        {/* Logout Button */}
         <button
           onClick={handleLogout}
           className="flex items-center px-4 py-3 mt-6 rounded-lg transition-colors w-full hover:bg-red-600 text-gray-300"
