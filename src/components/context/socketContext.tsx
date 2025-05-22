@@ -29,6 +29,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const newSocket = io("https://api.eduzest.site", {
       //  const newSocket = io('http://localhost:5000', {
+      
       withCredentials: true,
       auth: { userId: userData._id },
       path: "/socket.io",
