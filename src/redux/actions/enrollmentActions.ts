@@ -3,29 +3,29 @@ import { userEndPoints } from "../../services/endPoints/endPoints";
 import { serverUser } from "../../services";
 import { AxiosError } from "axios";
 
-
 export const createPaymentIntentAction = createAsyncThunk(
-    "payment/createPaymentIntent",
-    async (
-        {
-            courseId,
-            amount,
-            paymentType,
-        }: { courseId: string; amount: number; paymentType: "debit" | "credit" },
-        { rejectWithValue }
-    ) => {
-        try {
-            const response = await serverUser.post(
-                userEndPoints.createPaymentIntent,
-                { courseId, amount, paymentType },
-                { withCredentials: true }
-            );
-            return response.data;
-        } catch (error) {
-            const err = error as AxiosError;
-            return rejectWithValue(err.response?.data || { message: err.message });
-        }
+  "payment/createPaymentIntent",
+  async (
+    {
+      courseId,
+      amount,
+      paymentType,
+      couponId,
+    }: { courseId: string; amount: number; paymentType: "debit" | "credit"; couponId?: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await serverUser.post(
+        userEndPoints.createPaymentIntent,
+        { courseId, amount, paymentType, couponId },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const err = error as AxiosError;
+      return rejectWithValue(err.response?.data || { message: err.message });
     }
+  }
 );
 
 export const confirmPaymentAction = createAsyncThunk(

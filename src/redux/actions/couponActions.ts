@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { adminEndpoints } from "../../services/endPoints/endPoints";
-import { serverAdmin } from "../../services";
+import { adminEndpoints, userEndPoints } from "../../services/endPoints/endPoints";
+import { serverAdmin, serverUser } from "../../services";
 import { AxiosError } from "axios";
 import { Coupon } from "@/components/admin/Coupons";
 
@@ -8,8 +8,8 @@ interface CouponResponse {
   data: {
     coupons: Coupon[];
     total: number;
-    page: number;
-    totalPages: number;
+    page?: number;
+    totalPages?: number;
   };
   message: string;
   success: boolean;
@@ -35,9 +35,14 @@ interface UpdateCouponData {
 }
 
 interface DeleteCouponResponse {
-  data: Coupon | null; // Allow null to handle missing data
+  data: Coupon | null;
   message: string;
   success: boolean;
+}
+
+interface CheckCouponUsageResponse {
+  success: boolean;
+  message: string;
 }
 
 // Create Coupon Action
@@ -74,7 +79,6 @@ export const getAllCouponsAction = createAsyncThunk(
         return rejectWithValue("Invalid data format received from server");
       }
 
-      // Validate each coupon has _id
       const validCoupons = coupons.filter(
         (coupon): coupon is Coupon => coupon && typeof coupon._id === "string"
       );
@@ -123,22 +127,79 @@ export const deleteCouponAction = createAsyncThunk(
       const url = adminEndpoints.deleteCoupon(couponId);
       const response = await serverAdmin.delete<DeleteCouponResponse>(url);
       const deletedCoupon = response.data.data;
-      
+
       if (!deletedCoupon) {
         console.warn(`No coupon data returned for ID ${couponId}`);
-        return { _id: couponId }; // Return minimal data for UI update
+        return { _id: couponId };
       }
 
       return {
         ...deletedCoupon,
         expirationDate: deletedCoupon.expirationDate
           ? deletedCoupon.expirationDate.toString()
-          : "", // Fallback to empty string if undefined
+          : "",
       };
     } catch (error) {
       const err = error as AxiosError;
       console.error(`Error deleting coupon with ID ${couponId}:`, err);
       return rejectWithValue(err.response?.data || { message: err.message });
+    }
+  }
+);
+
+// Fetch Active Coupons (User)
+export const getActiveCouponsUserAction = createAsyncThunk(
+  "coupons/getActive",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.get<CouponResponse>(userEndPoints.fetchActiveCoupons);
+      console.log("User API Response:", response.data);
+
+      const coupons = response.data.data;
+
+      if (!Array.isArray(coupons)) {
+        console.error("Coupons is not an array:", coupons);
+        return rejectWithValue("Invalid data format received from server");
+      }
+
+      const validCoupons = coupons.filter(
+        (coupon): coupon is Coupon => coupon && typeof coupon._id === "string"
+      );
+
+      if (validCoupons.length !== coupons.length) {
+        console.warn("Some coupons were invalid:", coupons);
+      }
+
+      return validCoupons;
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error("Fetch active coupons error:", err);
+      return rejectWithValue(err.response?.data || "Failed to fetch coupons");
+    }
+  }
+);
+
+export const checkCouponUsageAction = createAsyncThunk(
+  "coupon/checkCouponUsage",
+  async (couponId: string, { rejectWithValue }) => {
+    try {
+      const response = await serverUser.post<CheckCouponUsageResponse>(
+        userEndPoints.checkCouponUsage,
+        { couponId },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      const err = error as AxiosError<{ message: string }>;
+      console.error("Check coupon usage error:", err);
+      
+      // Properly extract the error message from the response
+      const errorMessage = err.response?.data?.message || err.message || "Failed to check coupon usage";
+      
+      return rejectWithValue({
+        message: errorMessage,
+        status: err.response?.status
+      });
     }
   }
 );

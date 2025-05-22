@@ -88,6 +88,10 @@ export const userEndPoints: UserEndpoints = {
   sendMessage: (courseId: string) => `/${courseId}/messages`,
   getChatGroupMetadata: () => `/metadata`,
 
+  //coupons
+  fetchActiveCoupons:'/activeCoupons',
+  checkCouponUsage:"/check-coupon-usage"
+
 }
 
 export const adminEndpoints: AdminEndpoints = {

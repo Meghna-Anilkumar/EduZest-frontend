@@ -7,7 +7,6 @@ import {
   confirmPaymentAction,
 } from "../../redux/actions/enrollmentActions";
 
-// Course interface
 interface Course {
   _id: string;
   title: string;
@@ -17,9 +16,14 @@ interface Course {
 interface CheckoutFormProps {
   course: Course;
   onSuccess: () => void;
+  couponId?: string;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ course, onSuccess }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({
+  course,
+  onSuccess,
+  couponId,
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const [error, setError] = useState<string | null>(null);
@@ -29,18 +33,22 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ course, onSuccess }) => {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements) {
+      setError("Stripe has not loaded correctly. Please try again.");
+      return;
+    }
 
     setProcessing(true);
     setError(null);
 
     try {
-      // Step 1: Create payment intent
+      // Step 1: Create payment intent with the adjusted amount
       const response = await dispatch(
         createPaymentIntentAction({
           courseId: course._id,
-          amount: course.pricing.amount,
+          amount: course.pricing.amount, // This is already the discounted price from CourseDetailsPage
           paymentType: "credit",
+          couponId,
         })
       ).unwrap();
 
@@ -50,7 +58,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ course, onSuccess }) => {
 
       const { clientSecret, paymentId } = response.data;
 
-      // Step 2: Confirm payment with Stripe
+      // Step 2: Confirm the payment with Stripe
       const cardElement = elements.getElement(CardElement);
       const paymentResult = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: cardElement! },
@@ -62,15 +70,19 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ course, onSuccess }) => {
         return;
       }
 
-      // Step 3: Confirm payment on backend
-      const confirmResult = await dispatch(
-        confirmPaymentAction(paymentId)
-      ).unwrap();
+      if (paymentResult.paymentIntent?.status === "succeeded") {
+        // Step 3: Confirm payment on the backend
+        const confirmResult = await dispatch(
+          confirmPaymentAction(paymentId)
+        ).unwrap();
 
-      if (confirmResult.success) {
-        onSuccess();
+        if (confirmResult.success) {
+          onSuccess();
+        } else {
+          setError(confirmResult.message || "Failed to confirm payment");
+        }
       } else {
-        setError(confirmResult.message || "Failed to confirm payment");
+        setError("Payment confirmation failed. Please try again.");
       }
     } catch (err) {
       setError(
@@ -101,7 +113,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ course, onSuccess }) => {
       {error && <div className="text-red-500 text-sm">{error}</div>}
       <button
         type="submit"
-        disabled={!stripe || processing}
+        disabled={!stripe || !elements || processing}
         className="w-full bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] disabled:opacity-50"
       >
         {processing ? "Processing..." : `Pay ₹${course.pricing.amount}`}

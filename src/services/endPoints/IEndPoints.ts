@@ -70,6 +70,10 @@ export interface UserEndpoints extends IEndPoints {
     getMessages: (courseId: string, page: number, limit: number) => string;
     sendMessage: (courseId: string) => string;
     getChatGroupMetadata: () => string
+
+    //coupons
+    fetchActiveCoupons:string;
+    checkCouponUsage:string
 }
 
 export interface AdminEndpoints extends IEndPoints {
