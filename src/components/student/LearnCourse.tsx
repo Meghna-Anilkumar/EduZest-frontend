@@ -642,6 +642,7 @@ const CourseDetails: React.FC = () => {
                             <video
                               ref={videoRef}
                               controls
+                              controlsList="nodownload"
                               className="absolute inset-0 w-full h-full"
                               src={videoUrl}
                               poster={course.thumbnail}

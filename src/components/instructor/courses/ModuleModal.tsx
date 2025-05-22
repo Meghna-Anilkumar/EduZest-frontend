@@ -251,6 +251,7 @@ const ModuleViewModal: React.FC<ModuleViewModalProps> = ({
                   <video
                     ref={videoRef}
                     controls
+                    controlsList="nodownload"
                     className="absolute inset-0 w-full h-full object-contain"
                     key={selectedLesson.videoKey}
                     onError={() =>
