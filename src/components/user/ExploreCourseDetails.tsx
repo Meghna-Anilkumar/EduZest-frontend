@@ -30,6 +30,7 @@ interface Coupon {
 interface HeaderProps {
   className?: string;
 }
+
 const Header = lazy(() =>
   import("../common/users/Header").then((module) => ({
     default: module.default as React.ComponentType<HeaderProps>,
@@ -178,6 +179,7 @@ const CourseDetailsPage = () => {
       setDiscountedPrice(null);
     }
   }, [course, selectedCoupon]);
+
   const handleApplyCoupon = async () => {
     if (!tempSelectedCoupon) {
       setSelectedCoupon(null);
@@ -217,6 +219,7 @@ const CourseDetailsPage = () => {
     }
   };
 
+  // Early return for loading, error, or no course to prevent rendering course-dependent JSX
   if (loading) return <div className="text-center py-10">Loading...</div>;
   if (error)
     return <div className="text-center py-10 text-red-500">{error}</div>;
@@ -225,6 +228,7 @@ const CourseDetailsPage = () => {
       <div className="text-center py-10 text-gray-500">Course not found.</div>
     );
 
+  // All course-dependent calculations and JSX moved here to ensure `course` is not null
   const totalLessons = course.modules.reduce(
     (acc, module) => acc + module.lessons.length,
     0
@@ -614,7 +618,7 @@ const CourseDetailsPage = () => {
                         },
                       }}
                       onSuccess={handlePaymentSuccess}
-                      couponId={"682d8f406578584d3fea6926"}
+                      couponId={selectedCoupon?._id || ""}
                     />
                   </Elements>
                 ) : isEnrolled ? (
@@ -646,7 +650,7 @@ const CourseDetailsPage = () => {
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
               Student Feedback
             </h2>
-            <ReviewsSection courseId={course?._id || ""} />
+            <ReviewsSection courseId={course._id} />
           </div>
         </div>
       </div>

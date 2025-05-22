@@ -99,11 +99,7 @@ export const streamVideoAction = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      // Instead of fetching the video and converting to blob,
-      // just return the API endpoint URL
       const encodedVideoKey = encodeURIComponent(videoKey);
-      
-      // Construct the API URL that your video player will use directly
       const videoUrl = `${serverUser.defaults.baseURL}${userEndPoints.streamVideo.replace(':courseId', courseId)}?videoKey=${encodedVideoKey}`;
       
       console.log('Video streaming URL:', { videoUrl, videoKey });
