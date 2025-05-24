@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import Sidebar from "../instructor/InstructorSidebar";
 import TableComponent from "../common/TableComponent";
 import Pagination from "../common/Pagination";
-import { getInstructorPayoutsAction } from "../../redux/actions/userActions";
+import { getAdminPayoutsAction } from "@/redux/actions/adminActions";
 import { AppDispatch, RootState } from "../../redux/store";
 
 interface Transaction {
@@ -57,8 +57,7 @@ const TransactionsPage: React.FC = () => {
     setError(null);
     try {
       const result = await dispatch(
-        getInstructorPayoutsAction({
-          instructorId,
+        getAdminPayoutsAction({
           page: paginationPage,
           limit,
           sortField: "date",
