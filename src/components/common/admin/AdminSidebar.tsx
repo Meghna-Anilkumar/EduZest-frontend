@@ -18,8 +18,8 @@ import {
 import { AppDispatch } from "../../../redux/store";
 
 interface AdminSidebarProps {
-  open: boolean;
-  currentPage: string;
+  open?: boolean;
+  currentPage?: string;
   onToggleSidebar: () => void;
   setCurrentPage: Dispatch<SetStateAction<string>>;
   isMobile?: boolean;
