@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import Sidebar from "../common/admin/AdminSidebar";
 import TableComponent from "../common/TableComponent";
 import Pagination from "../common/Pagination";
 import { getAdminPayoutsAction } from "@/redux/actions/adminActions";
@@ -167,13 +166,68 @@ const TransactionsPage: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-gray-100">
       {/* Fixed Sidebar */}
-      <div className="fixed top-0 left-0 h-screen z-10">
-        <Sidebar
-          open={sidebarOpen}
-          currentPage={currentPage}
-          onToggleSidebar={toggleSidebar}
-          setCurrentPage={setCurrentPage}
-        />
+      <div className={`fixed top-0 left-0 h-screen z-10 transition-all duration-300 ${
+        sidebarOpen ? 'w-64' : 'w-20'
+      }`}>
+        <div className="h-full bg-white shadow-lg border-r border-gray-200">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className={`font-bold text-xl text-gray-800 transition-opacity duration-300 ${
+              sidebarOpen ? 'opacity-100' : 'opacity-0'
+            }`}>
+              {sidebarOpen && 'Admin Panel'}
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <svg
+                className="w-5 h-5 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d={sidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Navigation Items */}
+          <nav className="mt-6">
+            <div className="px-3">
+              <button
+                onClick={() => setCurrentPage("transactions")}
+                className={`w-full flex items-center px-3 py-3 text-left rounded-lg transition-colors ${
+                  currentPage === "transactions"
+                    ? 'bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <svg
+                  className="w-5 h-5 mr-3 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+                {sidebarOpen && (
+                  <span className="transition-opacity duration-300">Transactions</span>
+                )}
+              </button>
+            </div>
+          </nav>
+        </div>
       </div>
 
       {/* Main Content */}
