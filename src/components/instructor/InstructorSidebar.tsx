@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom"; 
 
 interface SidebarProps {
   open: boolean;
@@ -15,20 +15,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   setCurrentPage,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const navigate = useNavigate(); 
 
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    // Check initially
     checkIfMobile();
 
-    // Add event listener
     window.addEventListener("resize", checkIfMobile);
 
-    // Cleanup
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
@@ -213,7 +210,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             </a>
           </nav>
         </div>
-        {/* Bottom section with accent color */}
         <div
           className={`mt-auto p-4 bg-[#49BBBD] bg-opacity-20 ${
             open ? "text-center" : ""

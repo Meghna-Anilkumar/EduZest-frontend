@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import Sidebar from "../instructor/InstructorSidebar";
+import Sidebar from "../common/admin/AdminSidebar";
 import TableComponent from "../common/TableComponent";
 import Pagination from "../common/Pagination";
 import { getAdminPayoutsAction } from "@/redux/actions/adminActions";
@@ -31,24 +31,22 @@ const TransactionsPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const instructorId = useSelector(
-    (state: RootState) => state.user.userData?._id || ""
-  );
+  const userData = useSelector((state: RootState) => state.user.userData);
 
   useEffect(() => {
-    if (!instructorId) {
-      setError("Instructor not authenticated. Please log in.");
+    if (!userData?._id || userData.role !== "Admin") {
+      setError("Access denied. Admins only.");
       navigate("/login");
     }
-  }, [instructorId, navigate]);
+  }, [userData, navigate]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
   const fetchPayouts = async () => {
-    if (!instructorId) {
-      setError("Instructor not authenticated");
+    if (!userData?._id || userData.role !== "Admin") {
+      setError("Access denied");
       setLoading(false);
       return;
     }
@@ -105,17 +103,17 @@ const TransactionsPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Error fetching payouts:", err);
-      setError(err.message || "Failed to fetch instructor payouts");
+      setError(err.message || "Failed to fetch admin payouts");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (instructorId) {
+    if (userData?._id && userData.role === "Admin") {
       fetchPayouts();
     }
-  }, [paginationPage, sortOrder, instructorId, courseFilter]);
+  }, [paginationPage, sortOrder, userData, courseFilter]);
 
   const handlePageChange = (page: number) => {
     setPaginationPage(page);
@@ -162,7 +160,7 @@ const TransactionsPage: React.FC = () => {
     }, 0)
     .toFixed(2);
 
-  if (!instructorId) {
+  if (!userData?._id || userData.role !== "Admin") {
     return null;
   }
 
@@ -186,7 +184,7 @@ const TransactionsPage: React.FC = () => {
       >
         <div className="p-6 flex-1">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Transactions</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">

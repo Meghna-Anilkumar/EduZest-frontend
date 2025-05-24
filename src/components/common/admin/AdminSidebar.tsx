@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { adminLogout } from "../../../redux/actions/auth/adminLogoutAction";
@@ -17,26 +17,36 @@ import {
 } from "react-icons/ri";
 import { AppDispatch } from "../../../redux/store";
 
-interface SidebarProps {
+interface AdminSidebarProps {
+  open: boolean;
+  currentPage: string;
+  onToggleSidebar: () => void;
+  setCurrentPage: Dispatch<SetStateAction<string>>;
   isMobile?: boolean;
   onCloseMobile?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
+const AdminSidebar: React.FC<AdminSidebarProps> = ({
+  open,
+  onToggleSidebar,
+  setCurrentPage,
   isMobile = false,
   onCloseMobile,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(!open);
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
   useEffect(() => {
+    setIsCollapsed(!open); // Sync with open prop
     const handleResize = () => {
       if (!isMobile && window.innerWidth < 1024) {
         setIsCollapsed(true);
+        onToggleSidebar(); // Update parent state
       } else if (!isMobile && window.innerWidth >= 1024) {
         setIsCollapsed(false);
+        onToggleSidebar(); // Update parent state
       }
     };
 
@@ -44,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     handleResize();
 
     return () => window.removeEventListener("resize", handleResize);
-  }, [isMobile]);
+  }, [isMobile, open, onToggleSidebar]);
 
   const menuItems = [
     { path: "/admin/dashboard", name: "Dashboard", icon: RiDashboardLine },
@@ -71,7 +81,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const handleMenuClick = () => {
+  const handleMenuClick = (path: string) => {
+    setCurrentPage(path.split("/").pop() || "dashboard");
     if (isMobile && onCloseMobile) {
       onCloseMobile();
     }
@@ -81,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div
       className={`bg-gray-900 text-gray-100 transition-all duration-300 overflow-y-auto h-screen
         ${isCollapsed ? "w-20" : "w-64"}
-        ${isMobile ? "w-64" : ""}`}
+        ${isMobile ? "w-64" : "fixed top-0 left-0"}`}
     >
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {(!isCollapsed || isMobile) && (
@@ -89,7 +100,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
         {!isMobile && (
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => {
+              setIsCollapsed(!isCollapsed);
+              onToggleSidebar();
+            }}
             className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -107,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Link
             key={item.path}
             to={item.path}
-            onClick={handleMenuClick}
+            onClick={() => handleMenuClick(item.path)}
             className={`flex items-center px-4 py-3 mb-2 rounded-lg transition-colors
               ${
                 isActive(item.path)
@@ -138,4 +152,4 @@ const Sidebar: React.FC<SidebarProps> = ({
   );
 };
 
-export default Sidebar;
+export default AdminSidebar;
