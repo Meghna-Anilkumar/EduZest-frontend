@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import TableComponent from "../common/TableComponent";
 import Pagination from "../common/Pagination";
 import { getAdminPayoutsAction } from "@/redux/actions/adminActions";
-import { AppDispatch, RootState } from "../../redux/store";
+import { AppDispatch } from "../../redux/store";
+import { RiMenuLine } from "react-icons/ri";
+import Sidebar from "../common/admin/AdminSidebar";
 
 interface Transaction {
   transactionId: string;
@@ -15,8 +16,7 @@ interface Transaction {
 }
 
 const TransactionsPage: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState("transactions");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [paginationPage, setPaginationPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -27,29 +27,10 @@ const TransactionsPage: React.FC = () => {
   const [courseFilter, setCourseFilter] = useState<string>("");
   const [uniqueCourses, setUniqueCourses] = useState<string[]>([]);
   const limit = 10;
-  const navigate = useNavigate();
+
   const dispatch = useDispatch<AppDispatch>();
 
-  const userData = useSelector((state: RootState) => state.user.userData);
-
-  useEffect(() => {
-    if (!userData?._id || userData.role !== "Admin") {
-      setError("Access denied. Admins only.");
-      navigate("/login");
-    }
-  }, [userData, navigate]);
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   const fetchPayouts = async () => {
-    if (!userData?._id || userData.role !== "Admin") {
-      setError("Access denied");
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -109,10 +90,8 @@ const TransactionsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (userData?._id && userData.role === "Admin") {
-      fetchPayouts();
-    }
-  }, [paginationPage, sortOrder, userData, courseFilter]);
+    fetchPayouts();
+  }, [paginationPage, sortOrder, courseFilter]);
 
   const handlePageChange = (page: number) => {
     setPaginationPage(page);
@@ -159,90 +138,43 @@ const TransactionsPage: React.FC = () => {
     }, 0)
     .toFixed(2);
 
-  if (!userData?._id || userData.role !== "Admin") {
-    return null;
-  }
-
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Fixed Sidebar */}
-      <div className={`fixed top-0 left-0 h-screen z-10 transition-all duration-300 ${
-        sidebarOpen ? 'w-64' : 'w-20'
-      }`}>
-        <div className="h-full bg-white shadow-lg border-r border-gray-200">
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <div className={`font-bold text-xl text-gray-800 transition-opacity duration-300 ${
-              sidebarOpen ? 'opacity-100' : 'opacity-0'
-            }`}>
-              {sidebarOpen && 'Admin Panel'}
-            </div>
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <svg
-                className="w-5 h-5 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d={sidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                />
-              </svg>
-            </button>
-          </div>
+      <button
+        className="fixed top-4 left-4 z-50 lg:hidden bg-gray-900 text-white p-2 rounded-md"
+        onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+      >
+        <RiMenuLine size={24} />
+      </button>
 
-          {/* Navigation Items */}
-          <nav className="mt-6">
-            <div className="px-3">
-              <button
-                onClick={() => setCurrentPage("transactions")}
-                className={`w-full flex items-center px-3 py-3 text-left rounded-lg transition-colors ${
-                  currentPage === "transactions"
-                    ? 'bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <svg
-                  className="w-5 h-5 mr-3 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  />
-                </svg>
-                {sidebarOpen && (
-                  <span className="transition-opacity duration-300">Transactions</span>
-                )}
-              </button>
-            </div>
-          </nav>
-        </div>
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Fixed Sidebar */}
+      <div
+        className={`
+          fixed
+          inset-y-0 left-0
+          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 transition-transform duration-300 ease-in-out
+          z-50 lg:z-30
+        `}
+      >
+        <Sidebar />
       </div>
 
-      {/* Main Content */}
-      <div
-        className={`flex-1 transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        } min-h-screen flex flex-col`}
-      >
+      {/* Main Content with left margin to accommodate fixed sidebar */}
+      <div className="flex-1 min-w-0 overflow-auto lg:ml-64">
         <div className="p-6 flex-1">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold text-gray-900">Admin Transactions</h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">
-            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-blue-50 p-6 rounded-lg border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
                 <div className="text-sm font-medium text-blue-700">
@@ -262,7 +194,6 @@ const TransactionsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Filter and Sort Controls */}
             <div className="flex flex-wrap items-center gap-4 mb-8">
               <div className="min-w-[150px] max-w-[200px]">
                 <label
@@ -314,7 +245,6 @@ const TransactionsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Table Section */}
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
               Recent Transactions
             </h2>

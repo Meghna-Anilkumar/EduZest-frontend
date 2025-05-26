@@ -100,7 +100,7 @@ export const getAllInstructorsAction = createAsyncThunk(
         const response = await serverAdmin.get(
           adminEndpoints.getAllInstructors(page, limit, search)
         );
-        console.log("Action response:", response.data); // Debug log
+        console.log("Action response:", response.data); 
         return response.data;
       } catch (error: any) {
         console.error("Get instructors action Error: ", error);
