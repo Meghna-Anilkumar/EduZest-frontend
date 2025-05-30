@@ -89,10 +89,11 @@ export const userEndPoints: UserEndpoints = {
   getChatGroupMetadata: () => `/metadata`,
 
   //coupons
-  fetchActiveCoupons:'/activeCoupons',
-  checkCouponUsage:"/check-coupon-usage"
+  fetchActiveCoupons: '/activeCoupons',
+  checkCouponUsage: "/check-coupon-usage"
 
 }
+
 
 export const adminEndpoints: AdminEndpoints = {
   login: '/login',
@@ -175,4 +176,11 @@ export const adminEndpoints: AdminEndpoints = {
   },
   editCoupon: (couponId: string) => `/edit-coupon/${couponId}`,
   deleteCoupon: (couponId: string) => `/delete-coupon/${couponId}`,
+
+
+  createOffer: "/create-offer",                
+  fetchAllOffers: (page: number, limit: number, search?: string) =>
+    `/offers?page=${page}&limit=${limit}${search ? `&search=${search}` : ""}`, 
+  editOffer: (offerId: string) => `/edit-offer/${offerId}`,   
+  deleteOffer: (offerId: string) => `/delete-offer/${offerId}`, 
 };

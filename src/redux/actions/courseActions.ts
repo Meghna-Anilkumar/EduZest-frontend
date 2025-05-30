@@ -1,8 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { userEndPoints } from "../../services/endPoints/endPoints"; 
-import { serverUser } from "../../services"; 
+import { userEndPoints } from "../../services/endPoints/endPoints";
+import { serverUser } from "../../services";
 import { AxiosError } from "axios";
-import { ICourse ,FilterOptions,SortOptions} from "../../interface/ICourse";
+import { ICourse, FilterOptions, SortOptions } from "../../interface/ICourse";
 
 
 export const createCourseAction = createAsyncThunk(
@@ -30,7 +30,7 @@ export const getAllCoursesByInstructorAction = createAsyncThunk(
       const response = await serverUser.get(userEndPoints.getAllCoursesByInstructor, {
         params: { page, limit, search },
       });
-      return response.data.data; 
+      return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });
@@ -68,9 +68,12 @@ export const getAllActiveCoursesAction = createAsyncThunk(
         },
         withCredentials: true,
       });
+      console.log("Raw API response in getAllActiveCoursesAction:", response.data);
+      console.log("Data dispatched to reducer:", response.data.data);
       return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
+      console.error("Error in getAllActiveCoursesAction:", err);
       return rejectWithValue(err.response?.data || { message: err.message });
     }
   }
@@ -81,10 +84,10 @@ export const getCourseByIdAction = createAsyncThunk(
   async (courseId: string, { rejectWithValue }) => {
     try {
       const response = await serverUser.get(`${userEndPoints.getCourseById}/${courseId}`, {
-        withCredentials: true, 
+        withCredentials: true,
       });
       console.log("API Response:", response.data);
-      return response.data.data; 
+      return response.data.data;
     } catch (error) {
       const err = error as AxiosError;
       return rejectWithValue(err.response?.data || { message: err.message });
@@ -101,9 +104,9 @@ export const streamVideoAction = createAsyncThunk(
     try {
       const encodedVideoKey = encodeURIComponent(videoKey);
       const videoUrl = `${serverUser.defaults.baseURL}${userEndPoints.streamVideo.replace(':courseId', courseId)}?videoKey=${encodedVideoKey}`;
-      
+
       console.log('Video streaming URL:', { videoUrl, videoKey });
-      
+
       return { videoUrl, videoKey };
     } catch (error) {
       const err = error as AxiosError;
@@ -117,9 +120,9 @@ export const streamVideoAction = createAsyncThunk(
 );
 
 export const editCourseAction = createAsyncThunk<
-  ICourse, 
-  { courseId: string; formData: FormData | Partial<ICourse> }, 
-  { rejectValue: { message: string } } 
+  ICourse,
+  { courseId: string; formData: FormData | Partial<ICourse> },
+  { rejectValue: { message: string } }
 >(
   "course/editCourse",
   async (

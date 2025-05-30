@@ -1,18 +1,14 @@
-
-
 export interface ILesson {
-  
   lessonNumber: string;
   title: string;
   description: string;
   video: string;
-  videoKey?:string;
+  videoKey?: string;
   duration?: string;
   objectives?: string[];
 }
 
 export interface IModule {
- 
   moduleTitle: string;
   lessons: ILesson[];
 }
@@ -32,15 +28,18 @@ export interface IAttachment {
 }
 
 export interface IInstructorRef {
-
   name: string;
   email?: string;
   profile: { profilePic: string };
 }
 
 export interface ICategoryRef {
-
   categoryName: string;
+}
+
+export interface IOfferDetails {
+  discountPercentage: number;
+  offerPrice: number;
 }
 
 export interface ICourse {
@@ -48,8 +47,8 @@ export interface ICourse {
   title: string;
   description: string;
   thumbnail: string;
-  instructorRef: IInstructorRef 
-  categoryRef: ICategoryRef
+  instructorRef: IInstructorRef;
+  categoryRef: ICategoryRef;
   language: string;
   level: "beginner" | "intermediate" | "advanced";
   modules: IModule[];
@@ -64,8 +63,8 @@ export interface ICourse {
   createdAt: string;
   updatedAt: string;
   __v?: number;
+  offer?: IOfferDetails; 
 }
-
 
 export interface FilterOptions {
   level?: "beginner" | "intermediate" | "advanced";

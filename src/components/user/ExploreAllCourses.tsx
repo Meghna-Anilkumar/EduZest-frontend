@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import { Star,Filter, ChevronDown } from "lucide-react";
+import { Star, Filter, ChevronDown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { clearError } from "../../redux/reducers/courseReducer";
@@ -7,10 +7,12 @@ import { AppDispatch, RootState } from "../../redux/store";
 import { getAllActiveCoursesAction } from "../../redux/actions/courseActions";
 import { SearchBar } from "../common/SearchBar";
 import Pagination from "../common/Pagination";
+import { ICourse, FilterOptions, SortOptions } from "../../interface/ICourse";
 
 interface HeaderProps {
   className?: string;
 }
+
 const Header = lazy(() =>
   import("../common/users/Header").then((module) => ({
     default: module.default as React.ComponentType<HeaderProps>,
@@ -24,21 +26,13 @@ interface DisplayCourse {
   rating: number;
   reviewCount: number;
   originalPrice: number;
+  offerPrice?: number;
+  discountPercentage?: number;
   tags?: string[];
   imageUrl: string;
 }
 
-interface FilterOptions {
-  level?: "beginner" | "intermediate" | "advanced";
-  pricingType?: "free" | "paid";
-}
-
-interface SortOptions {
-  field: "price" | "updatedAt" | "studentsEnrolled";
-  order: "asc" | "desc";
-}
-
-const CourseListing: React.FC = () => {
+const ExploreAllCourses: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { activeCourses, loading, error } = useSelector((state: RootState) => state.course);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -48,6 +42,13 @@ const CourseListing: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
+    console.log("Dispatching getAllActiveCoursesAction with params:", {
+      page: currentPage,
+      limit: 8,
+      search: searchTerm || undefined,
+      filters,
+      sort,
+    });
     dispatch(
       getAllActiveCoursesAction({
         page: currentPage,
@@ -62,6 +63,33 @@ const CourseListing: React.FC = () => {
       dispatch(clearError());
     };
   }, [dispatch, currentPage, searchTerm, filters, sort]);
+
+  console.log("activeCourses state received from Redux:", activeCourses);
+
+  console.log("Raw courses data before mapping:", activeCourses.courses);
+
+  const courses: DisplayCourse[] = activeCourses.courses.map((course: ICourse) => {
+    const mappedCourse = {
+      id: course._id.toString(),
+      title: course.title,
+      instructor: course.instructorRef?.name || "Unknown Instructor",
+      rating: 4.5,
+      reviewCount: 1000,
+      originalPrice: course.pricing?.amount || 0,
+      offerPrice: course.offer?.offerPrice,
+      discountPercentage: course.offer?.discountPercentage,
+      tags: [
+        ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
+        ...(course.studentsEnrolled > 1000 ? ["Bestseller"] : []),
+        ...(course.offer?.discountPercentage ? [`${course.offer.discountPercentage}% Off`] : []),
+      ],
+      imageUrl: course.thumbnail || "/api/placeholder/300/200",
+    };
+    console.log(`Mapped course (${course.title}):`, mappedCourse);
+    return mappedCourse;
+  });
+
+  console.log("Final mapped courses for rendering:", courses);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -88,19 +116,8 @@ const CourseListing: React.FC = () => {
     setIsFilterOpen(!isFilterOpen);
   };
 
-  const courses: DisplayCourse[] = activeCourses.courses.map((course: any) => ({
-    id: course._id,
-    title: course.title,
-    instructor: course.instructorRef?.name || "Unknown Instructor",
-    rating: 4.5,
-    reviewCount: 1000,
-    originalPrice: course.pricing?.amount || 0,
-    tags: [
-      ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
-      ...(course.studentsEnrolled > 1000 ? ["Bestseller"] : []),
-    ],
-    imageUrl: course.thumbnail || "/api/placeholder/300/200",
-  }));
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(price);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -112,15 +129,14 @@ const CourseListing: React.FC = () => {
 
       <div className="flex-grow pt-[80px] md:pt-[100px] pb-12">
         <div className="container mx-auto px-4 md:px-8">
-        <div className="bg-gradient-to-r from-[#247274] to-[#49BBBD] rounded-xl p-6 md:p-10 mb-8 text-white shadow-lg">
-  <h1 className="text-3xl md:text-4xl font-bold mb-2">Discover Your Next Skill</h1>
-  <p className="text-lg md:text-xl opacity-90 mb-6">Explore courses from experienced, real-world experts</p>
-  <div className="max-w-2xl">
-    <SearchBar onSearchChange={handleSearchChange} />
-  </div>
-</div>
+          <div className="bg-gradient-to-r from-[#247274] to-[#49BBBD] rounded-xl p-6 md:p-10 mb-8 text-white shadow-lg">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Discover Your Next Skill</h1>
+            <p className="text-lg md:text-xl opacity-90 mb-6">Explore courses from experienced, real-world experts</p>
+            <div className="max-w-2xl">
+              <SearchBar onSearchChange={handleSearchChange} />
+            </div>
+          </div>
 
-          {/* Filter and Sort Controls */}
           <div className="mb-8">
             <div className="flex flex-wrap justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">Featured Courses</h2>
@@ -178,7 +194,6 @@ const CourseListing: React.FC = () => {
             </div>
           </div>
 
-          {/* Course Cards */}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#49BBBD]"></div>
@@ -208,7 +223,6 @@ const CourseListing: React.FC = () => {
                         alt={course.title}
                         className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-
                     </div>
                     
                     <div className="p-5 flex-grow flex flex-col">
@@ -243,8 +257,21 @@ const CourseListing: React.FC = () => {
                       
                       <div className="mt-auto">
                         <div className="flex items-center justify-between">
-                          <div className="font-bold text-lg text-gray-900">
-                            {course.originalPrice > 0 ? `₹${course.originalPrice}` : 'Free'}
+                          <div className="flex items-center space-x-2">
+                            {course.offerPrice !== undefined ? (
+                              <>
+                                <span className="font-bold text-lg text-gray-900">
+                                  {formatPrice(course.offerPrice)}
+                                </span>
+                                <span className="text-sm text-gray-500 line-through">
+                                  {formatPrice(course.originalPrice)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="font-bold text-lg text-gray-900">
+                                {course.originalPrice > 0 ? formatPrice(course.originalPrice) : 'Free'}
+                              </span>
+                            )}
                           </div>
                           
                           <div className="flex space-x-2">
@@ -258,6 +285,8 @@ const CourseListing: React.FC = () => {
                                       ? "bg-purple-100 text-purple-700"
                                       : tag === "Free"
                                       ? "bg-[#49BBBD]/10 text-[#49BBBD]"
+                                      : tag.includes("% Off")
+                                      ? "bg-red-100 text-red-700"
                                       : "bg-green-100 text-green-700"
                                   }
                                 `}
@@ -287,4 +316,4 @@ const CourseListing: React.FC = () => {
   );
 };
 
-export default CourseListing;
+export default ExploreAllCourses;

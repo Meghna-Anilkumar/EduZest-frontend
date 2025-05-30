@@ -88,10 +88,13 @@ const courseSlice = createSlice({
       })
       .addCase(getAllActiveCoursesAction.fulfilled, (state, action) => {
         state.loading = false;
+        console.log("Payload received in reducer:", action.payload);
+        // Directly assign the courses array to ensure offer field is preserved
         state.activeCourses.courses = action.payload.courses;
         state.activeCourses.currentPage = action.payload.currentPage;
         state.activeCourses.totalPages = action.payload.totalPages;
         state.activeCourses.totalCourses = action.payload.totalCourses;
+        console.log("Updated activeCourses state:", state.activeCourses);
       })
       .addCase(getAllActiveCoursesAction.rejected, (state, action) => {
         state.loading = false;

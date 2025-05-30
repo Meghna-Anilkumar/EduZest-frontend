@@ -22,7 +22,6 @@ export interface Coupon {
   maxDiscountAmount?: number;
   minPurchaseAmount?: number;
   expirationDate: string;
-  isActive: boolean;
 }
 
 interface CouponFormValues {
@@ -31,7 +30,6 @@ interface CouponFormValues {
   maxDiscountAmount?: number;
   minPurchaseAmount?: number;
   expirationDate: string;
-  isActive: boolean;
 }
 
 const addCouponValidationSchema = Yup.object({
@@ -50,7 +48,6 @@ const addCouponValidationSchema = Yup.object({
     .required("Expiration date is required")
     .typeError("Invalid date format")
     .min(new Date(), "Expiration date must be in the future"),
-  isActive: Yup.boolean(),
 });
 
 const editCouponValidationSchema = Yup.object({
@@ -69,7 +66,6 @@ const editCouponValidationSchema = Yup.object({
     .required("Expiration date is required")
     .typeError("Invalid date format")
     .min(new Date(), "Expiration date must be in the future"),
-  isActive: Yup.boolean().required("Status is required"),
 });
 
 const CouponsPage: React.FC = () => {
@@ -124,7 +120,6 @@ const CouponsPage: React.FC = () => {
       maxDiscountAmount: undefined,
       minPurchaseAmount: undefined,
       expirationDate: "",
-      isActive: true,
     },
     validationSchema: addCouponValidationSchema,
     onSubmit: (values, { resetForm }: FormikHelpers<CouponFormValues>) => {
@@ -157,7 +152,6 @@ const CouponsPage: React.FC = () => {
       maxDiscountAmount: selectedCoupon?.maxDiscountAmount,
       minPurchaseAmount: selectedCoupon?.minPurchaseAmount,
       expirationDate: selectedCoupon?.expirationDate || "",
-      isActive: selectedCoupon?.isActive ?? true,
     },
     validationSchema: editCouponValidationSchema,
     enableReinitialize: true,
@@ -214,19 +208,14 @@ const CouponsPage: React.FC = () => {
     setIsConfirmModalOpen(true);
   };
 
-  // Handle Pagination
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
       <Sidebar />
-
-      {/* Main Content */}
       <div className="flex-1 p-6">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Coupons</h1>
           <div className="flex items-center gap-4">
@@ -239,8 +228,6 @@ const CouponsPage: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Coupons Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {error && (
             <div className="p-4 text-sm text-red-600 bg-red-100 rounded-t-lg">
@@ -276,9 +263,6 @@ const CouponsPage: React.FC = () => {
                     Expiry Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -296,27 +280,16 @@ const CouponsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {coupon.maxDiscountAmount
-                          ? `$${coupon.maxDiscountAmount}`
+                          ? `₹${coupon.maxDiscountAmount}`
                           : "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {coupon.minPurchaseAmount
-                          ? `$${coupon.minPurchaseAmount}`
+                          ? `₹${coupon.minPurchaseAmount}`
                           : "-"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(coupon.expirationDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            coupon.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {coupon.isActive ? "Active" : "Inactive"}
-                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
@@ -343,7 +316,6 @@ const CouponsPage: React.FC = () => {
             </table>
           )}
         </div>
-
         <div className="mt-4 flex justify-center">
           <Pagination
             currentPage={currentPage}
@@ -351,7 +323,6 @@ const CouponsPage: React.FC = () => {
             onPageChange={handlePageChange}
           />
         </div>
-
         {isAddModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -506,34 +477,6 @@ const CouponsPage: React.FC = () => {
                       </p>
                     )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Status
-                  </label>
-                  <select
-                    name="isActive"
-                    value={addCouponFormik.values.isActive.toString()}
-                    onChange={addCouponFormik.handleChange}
-                    onBlur={addCouponFormik.handleBlur}
-                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#49bbbd] focus:ring-[#49bbbd] sm:text-sm ${
-                      addCouponFormik.touched.isActive &&
-                      addCouponFormik.errors.isActive
-                        ? "border-red-500"
-                        : ""
-                    }`}
-                  >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                  </select>
-                  {addCouponFormik.touched.isActive &&
-                    addCouponFormik.errors.isActive && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {typeof addCouponFormik.errors.isActive === "string"
-                          ? addCouponFormik.errors.isActive
-                          : "Invalid status"}
-                      </p>
-                    )}
-                </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button
                     type="button"
@@ -560,7 +503,6 @@ const CouponsPage: React.FC = () => {
             </div>
           </div>
         )}
-
         {isEditModalOpen && selectedCoupon && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -648,11 +590,11 @@ const CouponsPage: React.FC = () => {
                     placeholder="Enter max discount amount"
                   />
                   {editCouponFormik.touched.maxDiscountAmount &&
-                    addCouponFormik.errors.maxDiscountAmount && (
+                    editCouponFormik.errors.maxDiscountAmount && (
                       <p className="mt-1 text-sm text-red-600">
-                        {typeof addCouponFormik.errors.maxDiscountAmount ===
+                        {typeof editCouponFormik.errors.maxDiscountAmount ===
                         "string"
-                          ? addCouponFormik.errors.maxDiscountAmount
+                          ? editCouponFormik.errors.maxDiscountAmount
                           : "Invalid max discount amount"}
                       </p>
                     )}
@@ -677,11 +619,11 @@ const CouponsPage: React.FC = () => {
                     placeholder="Enter min purchase amount"
                   />
                   {editCouponFormik.touched.minPurchaseAmount &&
-                    addCouponFormik.errors.minPurchaseAmount && (
+                    editCouponFormik.errors.minPurchaseAmount && (
                       <p className="mt-1 text-sm text-red-600">
-                        {typeof addCouponFormik.errors.minPurchaseAmount ===
+                        {typeof editCouponFormik.errors.minPurchaseAmount ===
                         "string"
-                          ? addCouponFormik.errors.minPurchaseAmount
+                          ? editCouponFormik.errors.minPurchaseAmount
                           : "Invalid min purchase amount"}
                       </p>
                     )}
@@ -712,34 +654,6 @@ const CouponsPage: React.FC = () => {
                         "string"
                           ? editCouponFormik.errors.expirationDate
                           : "Invalid expiration date"}
-                      </p>
-                    )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Status
-                  </label>
-                  <select
-                    name="isActive"
-                    value={editCouponFormik.values.isActive.toString()}
-                    onChange={editCouponFormik.handleChange}
-                    onBlur={editCouponFormik.handleBlur}
-                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#49bbbd] focus:ring-[#49bbbd] sm:text-sm ${
-                      editCouponFormik.touched.isActive &&
-                      editCouponFormik.errors.isActive
-                        ? "border-red-500"
-                        : ""
-                    }`}
-                  >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                  </select>
-                  {editCouponFormik.touched.isActive &&
-                    editCouponFormik.errors.isActive && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {typeof editCouponFormik.errors.isActive === "string"
-                          ? editCouponFormik.errors.isActive
-                          : "Invalid status"}
                       </p>
                     )}
                 </div>
@@ -775,7 +689,6 @@ const CouponsPage: React.FC = () => {
             </div>
           </div>
         )}
-
         <ConfirmationModal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}

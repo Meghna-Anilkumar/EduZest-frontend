@@ -72,8 +72,8 @@ export interface UserEndpoints extends IEndPoints {
     getChatGroupMetadata: () => string
 
     //coupons
-    fetchActiveCoupons:string;
-    checkCouponUsage:string
+    fetchActiveCoupons: string;
+    checkCouponUsage: string
 }
 
 export interface AdminEndpoints extends IEndPoints {
@@ -101,5 +101,9 @@ export interface AdminEndpoints extends IEndPoints {
     fetchAllCoupons: (page: number, limit: number, search?: string) => string;
     editCoupon: (couponId: string) => string;
     deleteCoupon: (couponId: string) => string;
+    createOffer: string;
+    fetchAllOffers: (page: number, limit: number, search?: string) => string;
+    editOffer: (offerId: string) => string;
+    deleteOffer: (offerId: string) => string;
 }
 

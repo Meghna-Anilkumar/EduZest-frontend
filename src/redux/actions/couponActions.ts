@@ -21,7 +21,6 @@ interface CreateCouponData {
   maxDiscountAmount?: number;
   minPurchaseAmount?: number;
   expirationDate: string;
-  isActive: boolean;
 }
 
 interface UpdateCouponData {
@@ -31,7 +30,6 @@ interface UpdateCouponData {
   maxDiscountAmount?: number;
   minPurchaseAmount?: number;
   expirationDate: string;
-  isActive: boolean;
 }
 
 interface DeleteCouponResponse {
@@ -193,7 +191,6 @@ export const checkCouponUsageAction = createAsyncThunk(
       const err = error as AxiosError<{ message: string }>;
       console.error("Check coupon usage error:", err);
       
-      // Properly extract the error message from the response
       const errorMessage = err.response?.data?.message || err.message || "Failed to check coupon usage";
       
       return rejectWithValue({

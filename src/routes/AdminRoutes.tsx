@@ -10,6 +10,7 @@ import CategoryManagement from "../components/admin/CategoryPage";
 import AdminInstructors from "../components/admin/AdminInstructors";
 import AdminTransactionsPage from "../components/admin/AdminTransactions";
 import CouponsPage from "@/components/admin/Coupons";
+import OffersPage from "@/components/admin/Offers";
 
 const AdminRoutes: React.FC = () => {
   return (
@@ -17,7 +18,6 @@ const AdminRoutes: React.FC = () => {
       <Routes>
         <Route path="/login" element={<AdminLogin />} />
 
-        {/* Protected Routes for Admins */}
         <Route element={<ProtectedRoute allowedRoles={["Admin"]} />}>
           <Route path="/dashboard" element={<AdminDashboard />} />
           <Route path="/students" element={<AdminStudents />} />
@@ -26,6 +26,7 @@ const AdminRoutes: React.FC = () => {
           <Route path="/categories" element={<CategoryManagement />} />
           <Route path="/transactions" element={<AdminTransactionsPage />} />
           <Route path="/coupons" element={<CouponsPage />} />
+          <Route path="/offers" element={<OffersPage />} />
         </Route>
       </Routes>
     </Suspense>
