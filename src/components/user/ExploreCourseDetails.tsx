@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
@@ -27,18 +27,6 @@ interface Coupon {
   expirationDate: string;
 }
 
-interface HeaderProps {
-  className?: string;
-}
-
-const Header = lazy(() =>
-  import("../common/users/Header").then((module) => ({
-    default: module.default as React.ComponentType<HeaderProps>,
-  }))
-);
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
 interface Course {
   _id: string;
   title: string;
@@ -62,10 +50,7 @@ interface Course {
       duration?: string;
     }>;
   }>;
-  trial: {
-    video?: string;
-    videoKey?: string;
-  };
+  trial: { video?: string; videoKey?: string };
   attachments?: { title?: string; url?: string };
   isRequested: boolean;
   isBlocked: boolean;
@@ -74,7 +59,24 @@ interface Course {
   isRejected: boolean;
   createdAt: string;
   updatedAt: string;
+  offer?: {
+    discountPercentage: number;
+    offerPrice: number;
+    expirationDate?: string;
+  };
 }
+
+interface HeaderProps {
+  className?: string;
+}
+
+const Header = lazy(() =>
+  import("../common/users/Header").then((module) => ({
+    default: module.default as React.ComponentType<HeaderProps>,
+  }))
+);
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const CourseDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -99,6 +101,52 @@ const CourseDetailsPage = () => {
   );
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [discountedPrice, setDiscountedPrice] = useState<number | null>(null);
+  const [finalPrice, setFinalPrice] = useState<number | null>(null);
+  const [applyingCoupon, setApplyingCoupon] = useState<boolean>(false);
+
+  const calculateFinalPrice = ({
+    originalPrice,
+    offer,
+    coupon,
+  }: {
+    originalPrice: number;
+    offer?: Course["offer"];
+    coupon?: Coupon | null;
+  }): number => {
+    let price = originalPrice;
+
+    const hasValidOffer =
+      offer &&
+      typeof offer === "object" &&
+      offer.offerPrice !== undefined &&
+      offer.offerPrice !== null &&
+      !isNaN(offer.offerPrice) &&
+      offer.offerPrice > 0 &&
+      (!offer.expirationDate || new Date(offer.expirationDate) >= new Date());
+
+    if (hasValidOffer) {
+      price = offer.offerPrice;
+    }
+
+    if (coupon && new Date(coupon.expirationDate) >= new Date()) {
+      if (
+        coupon.minPurchaseAmount &&
+        originalPrice < coupon.minPurchaseAmount
+      ) {
+        throw new Error(
+          `This coupon requires a minimum purchase of ₹${coupon.minPurchaseAmount}.`
+        );
+      }
+
+      let discount = (price * coupon.discountPercentage) / 100;
+      if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
+        discount = coupon.maxDiscountAmount;
+      }
+      price = Math.max(0, price - discount);
+    }
+
+    return Math.round(price);
+  };
 
   useEffect(() => {
     if (id) {
@@ -138,56 +186,48 @@ const CourseDetailsPage = () => {
   }, [dispatch, id, isAuthenticated]);
 
   useEffect(() => {
-    if (course && selectedCoupon) {
-      const originalPrice = course.pricing.amount;
-      const discountPercentage = selectedCoupon.discountPercentage;
-
-      if (
-        selectedCoupon.minPurchaseAmount &&
-        originalPrice < selectedCoupon.minPurchaseAmount
-      ) {
-        setDiscountedPrice(null);
-        setSelectedCoupon(null);
-        setEnrollmentError(
-          `This coupon requires a minimum purchase of ₹${selectedCoupon.minPurchaseAmount}.`
-        );
-        return;
-      }
-
-      let discountAmount = (originalPrice * discountPercentage) / 100;
-
-      if (
-        selectedCoupon.maxDiscountAmount &&
-        discountAmount > selectedCoupon.maxDiscountAmount
-      ) {
-        discountAmount = selectedCoupon.maxDiscountAmount;
-      }
-
-      const finalPrice = Math.round(
-        Math.max(0, originalPrice - discountAmount)
-      );
-      console.log("Discount applied:", {
-        originalPrice,
-        discountPercentage,
-        discountAmount,
-        finalPrice,
-        couponId: selectedCoupon._id,
-      });
-      setDiscountedPrice(finalPrice);
-      setEnrollmentError(null);
-    } else {
+    if (!course) {
+      setFinalPrice(null);
       setDiscountedPrice(null);
+      return;
+    }
+
+    try {
+      const hasEmptyOffer =
+        !course.offer ||
+        (typeof course.offer === "object" &&
+          Object.keys(course.offer).length === 0) ||
+        (course.offer.offerPrice === undefined &&
+          course.offer.discountPercentage === undefined);
+
+      const finalPrice = calculateFinalPrice({
+        originalPrice: course.pricing.amount,
+        offer: hasEmptyOffer || course.pricing.type === "free" ? undefined : course.offer,
+        coupon: selectedCoupon,
+      });
+
+      setFinalPrice(finalPrice);
+      setDiscountedPrice(
+        finalPrice < course.pricing.amount && course.pricing.type !== "free" ? finalPrice : null
+      );
+      setEnrollmentError(null);
+    } catch (err: any) {
+      console.error("Price calculation error:", err);
+      setFinalPrice(course.pricing.amount);
+      setDiscountedPrice(null);
+      setEnrollmentError(
+        err.message || "Failed to calculate price with coupon"
+      );
     }
   }, [course, selectedCoupon]);
 
   const handleApplyCoupon = async () => {
     if (!tempSelectedCoupon) {
-      setSelectedCoupon(null);
-      setDiscountedPrice(null);
       setEnrollmentError("Please select a coupon to apply.");
       return;
     }
 
+    setApplyingCoupon(true);
     try {
       const result = await dispatch(
         checkCouponUsageAction(tempSelectedCoupon._id)
@@ -197,63 +237,60 @@ const CourseDetailsPage = () => {
         setEnrollmentError(null);
       } else {
         setSelectedCoupon(null);
+        setTempSelectedCoupon(null);
         setDiscountedPrice(null);
         setEnrollmentError(result.message || "Failed to apply coupon");
       }
     } catch (err: any) {
+      console.error("Error applying coupon:", err);
       setSelectedCoupon(null);
+      setTempSelectedCoupon(null);
       setDiscountedPrice(null);
-
-      let errorMessage = "An error occurred while applying the coupon";
-
-      if (err && typeof err === "object") {
-        if (err.message) {
-          errorMessage = err.message;
-        } else if (typeof err === "string") {
-          errorMessage = err;
-        }
-      }
-
-      setEnrollmentError(errorMessage);
-      console.error("Coupon usage check error:", err);
+      setEnrollmentError(
+        err.message || "An error occurred while applying the coupon"
+      );
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 
-  // Early return for loading, error, or no course to prevent rendering course-dependent JSX
-  if (loading) return <div className="text-center py-10">Loading...</div>;
-  if (error)
-    return <div className="text-center py-10 text-red-500">{error}</div>;
-  if (!course)
-    return (
-      <div className="text-center py-10 text-gray-500">Course not found.</div>
-    );
+  const handleTempCouponChange = (couponId: string) => {
+    const coupon = coupons.find((c) => c._id === couponId) || null;
+    setTempSelectedCoupon(coupon);
+    setEnrollmentError(null);
+  };
 
-  // All course-dependent calculations and JSX moved here to ensure `course` is not null
-  const totalLessons = course.modules.reduce(
-    (acc, module) => acc + module.lessons.length,
-    0
+  const totalLessons = useMemo(
+    () =>
+      course?.modules.reduce((acc, module) => acc + module.lessons.length, 0) ||
+      0,
+    [course]
   );
-  const totalDuration = course.modules.reduce((acc, module) => {
-    const moduleDuration = module.lessons.reduce((lessonAcc, lesson) => {
-      if (!lesson.duration) return lessonAcc;
-      const durationMatch = lesson.duration.match(/(\d+)/);
-      const lessonMinutes = durationMatch ? parseInt(durationMatch[1]) : 0;
-      return lessonAcc + lessonMinutes;
-    }, 0);
-    return acc + moduleDuration;
-  }, 0);
-  const formattedDuration = `${Math.floor(totalDuration / 60)}h ${
-    totalDuration % 60
-  }m`;
 
-  const totalModules = course.modules.length;
+  const totalDuration = useMemo(() => {
+    if (!course) return 0;
+    return course.modules.reduce((acc, module) => {
+      const moduleDuration = module.lessons.reduce((lessonAcc, lesson) => {
+        if (!lesson.duration) return lessonAcc;
+        const durationMatch = lesson.duration.match(/(\d+)/);
+        return lessonAcc + (durationMatch ? parseInt(durationMatch[1]) : 0);
+      }, 0);
+      return acc + moduleDuration;
+    }, 0);
+  }, [course]);
+
+  const formattedDuration = useMemo(
+    () => `${Math.floor(totalDuration / 60)}h ${totalDuration % 60}m`,
+    [totalDuration]
+  );
+
+  const totalModules = useMemo(() => course?.modules.length || 0, [course]);
 
   const formatModuleDuration = (lessons: Course["modules"][0]["lessons"]) => {
     const moduleDuration = lessons.reduce((acc, lesson) => {
       if (!lesson.duration) return acc;
       const durationMatch = lesson.duration.match(/(\d+)/);
-      const lessonMinutes = durationMatch ? parseInt(durationMatch[1]) : 0;
-      return acc + lessonMinutes;
+      return acc + (durationMatch ? parseInt(durationMatch[1]) : 0);
     }, 0);
     return `${Math.floor(moduleDuration / 60)}h ${moduleDuration % 60}min`;
   };
@@ -268,7 +305,7 @@ const CourseDetailsPage = () => {
     if (expandAll) {
       setActiveSections([]);
     } else {
-      setActiveSections(course.modules.map((_, index) => index));
+      setActiveSections(course?.modules.map((_, index) => index) || []);
     }
     setExpandAll(!expandAll);
   };
@@ -282,14 +319,14 @@ const CourseDetailsPage = () => {
   };
 
   const handleGoToCourse = () => {
-    navigate(`/student/learn/${course._id}`);
+    navigate(`/student/learn/${course?._id}`);
   };
 
   const confirmEnrollment = async () => {
     setShowModal(false);
     setEnrollmentError(null);
 
-    if (course.pricing.type === "free") {
+    if (course?.pricing.type === "free") {
       try {
         const result = await dispatch(enrollCourseAction(course._id)).unwrap();
         if (result.success) {
@@ -300,15 +337,26 @@ const CourseDetailsPage = () => {
             result.message || "Failed to enroll in the free course"
           );
         }
-      } catch (err) {
-        setEnrollmentError(
-          err instanceof Error
-            ? err.message
-            : "An error occurred during enrollment"
-        );
+      } catch (err: any) {
         console.error("Enrollment error:", err);
+        setEnrollmentError(
+          err.message || "An error occurred during enrollment"
+        );
       }
     } else {
+      if (
+        course.offer &&
+        typeof course.offer === "object" &&
+        (course.offer.offerPrice === undefined ||
+          course.offer.offerPrice === null) &&
+        (course.offer.discountPercentage !== undefined ||
+          course.offer.expirationDate !== undefined)
+      ) {
+        setEnrollmentError(
+          "Invalid offer data for this course. Please contact support."
+        );
+        return;
+      }
       setShowPaymentForm(true);
     }
   };
@@ -319,13 +367,15 @@ const CourseDetailsPage = () => {
     navigate("/student/enrollment-success");
   };
 
-  const handleTempCouponChange = (couponId: string) => {
-    const coupon = coupons.find((c) => c._id === couponId) || null;
-    setTempSelectedCoupon(coupon);
-    setEnrollmentError(null);
-  };
-
   const isInstructor = userData?.role === "Instructor";
+
+  if (loading) return <div className="text-center py-10">Loading...</div>;
+  if (error)
+    return <div className="text-center py-10 text-red-500">{error}</div>;
+  if (!course)
+    return (
+      <div className="text-center py-10 text-gray-500">Course not found.</div>
+    );
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -373,7 +423,6 @@ const CourseDetailsPage = () => {
                 {course.title}
               </h1>
               <p className="text-lg text-gray-300 mb-4">{course.description}</p>
-
               <div className="flex items-center mb-4">
                 <span className="text-yellow-400 font-bold mr-2">4.7</span>
                 <div className="flex text-yellow-400">
@@ -393,7 +442,6 @@ const CourseDetailsPage = () => {
                   {course.studentsEnrolled.toLocaleString()} students
                 </span>
               </div>
-
               <p className="mb-2">
                 Created by{" "}
                 <a href="#" className="text-[#49BBBD] hover:underline">
@@ -424,7 +472,6 @@ const CourseDetailsPage = () => {
                 </span>
               </div>
             </div>
-
             <div className="lg:w-96">
               <div className="relative">
                 <img
@@ -476,7 +523,6 @@ const CourseDetailsPage = () => {
                   )}
                 </ul>
               </div>
-
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-semibold">Course Content</h2>
@@ -537,27 +583,43 @@ const CourseDetailsPage = () => {
                 </div>
               </div>
             </div>
-
             <div className="lg:w-96">
               <div className="border rounded-lg p-4 shadow-lg bg-white -mt-32 lg:sticky lg:top-24">
                 <div className="mb-4">
                   <span className="text-2xl font-bold text-[#49BBBD]">
                     {course.pricing.type === "free"
                       ? "Free"
-                      : discountedPrice !== null
-                      ? `₹${discountedPrice}`
+                      : finalPrice !== null
+                      ? `₹${finalPrice}`
                       : `₹${course.pricing.amount}`}
                   </span>
-                  {discountedPrice !== null && (
-                    <div className="text-sm text-gray-500">
-                      <span className="line-through">
-                        ₹{course.pricing.amount}
-                      </span>{" "}
-                      ({selectedCoupon?.discountPercentage}% off)
-                    </div>
-                  )}
+                  {discountedPrice !== null &&
+                    discountedPrice < course.pricing.amount &&
+                    course.pricing.type !== "free" && (
+                      <div className="text-sm text-gray-500">
+                        <span className="line-through">
+                          ₹{course.pricing.amount}
+                        </span>{" "}
+                        {selectedCoupon
+                          ? `(${selectedCoupon.discountPercentage}% off via coupon)`
+                          : course.offer &&
+                            (!course.offer.expirationDate ||
+                              new Date(course.offer.expirationDate) >= new Date())
+                          ? `(${course.offer.discountPercentage}% off)`
+                          : ""}
+                      </div>
+                    )}
+                  {course.offer?.expirationDate &&
+                    new Date(course.offer.expirationDate) >= new Date() &&
+                    course.pricing.type !== "free" && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Offer valid until{" "}
+                        {new Date(
+                          course.offer.expirationDate
+                        ).toLocaleDateString()}
+                      </div>
+                    )}
                 </div>
-
                 {course.pricing.type !== "free" &&
                   !isEnrolled &&
                   !isInstructor && (
@@ -578,22 +640,35 @@ const CourseDetailsPage = () => {
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-[#49bbbd] focus:ring-[#49bbbd] sm:text-sm"
                         >
                           <option value="">Select a coupon</option>
-                          {coupons.map((coupon) => (
-                            <option key={coupon._id} value={coupon._id}>
-                              {coupon.code} ({coupon.discountPercentage}% off)
-                            </option>
-                          ))}
+                          {coupons.length > 0 ? (
+                            coupons.map((coupon) => (
+                              <option key={coupon._id} value={coupon._id}>
+                                {coupon.code} ({coupon.discountPercentage}% off,
+                                expires{" "}
+                                {new Date(
+                                  coupon.expirationDate
+                                ).toLocaleDateString()}
+                                )
+                              </option>
+                            ))
+                          ) : (
+                            <option disabled>No coupons available</option>
+                          )}
                         </select>
                         <button
                           onClick={handleApplyCoupon}
-                          className="mt-1 px-4 py-2 bg-[#49BBBD] text-white rounded hover:bg-[#3a9a9c]"
+                          disabled={applyingCoupon || !tempSelectedCoupon}
+                          className={`mt-1 px-4 py-2 bg-[#49BBBD] text-white rounded hover:bg-[#3a9a9c] text-sm ${
+                            applyingCoupon || !tempSelectedCoupon
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
                         >
-                          Apply
+                          {applyingCoupon ? "Applying..." : "Apply"}
                         </button>
                       </div>
                     </div>
                   )}
-
                 {enrollmentError && (
                   <div className="text-red-500 text-sm mb-4">
                     {enrollmentError}
@@ -604,7 +679,7 @@ const CourseDetailsPage = () => {
                     You are already enrolled in this course!
                   </div>
                 )}
-                {showPaymentForm ? (
+                {showPaymentForm && course ? (
                   <Elements stripe={stripePromise}>
                     <CheckoutForm
                       course={{
@@ -612,13 +687,16 @@ const CourseDetailsPage = () => {
                         pricing: {
                           ...course.pricing,
                           amount:
-                            discountedPrice !== null
-                              ? discountedPrice
+                            finalPrice !== null
+                              ? finalPrice
                               : course.pricing.amount,
                         },
                       }}
+                      finalPrice={
+                        finalPrice !== null ? finalPrice : course.pricing.amount
+                      }
                       onSuccess={handlePaymentSuccess}
-                      couponId={selectedCoupon?._id || ""}
+                      couponId={selectedCoupon?._id}
                     />
                   </Elements>
                 ) : isEnrolled ? (

@@ -28,7 +28,7 @@ interface DisplayCourse {
   originalPrice: number;
   offerPrice?: number;
   discountPercentage?: number;
-  tags?: string[];
+  tags: string[];
   imageUrl: string;
 }
 
@@ -65,10 +65,10 @@ const ExploreAllCourses: React.FC = () => {
   }, [dispatch, currentPage, searchTerm, filters, sort]);
 
   console.log("activeCourses state received from Redux:", activeCourses);
-
   console.log("Raw courses data before mapping:", activeCourses.courses);
 
   const courses: DisplayCourse[] = activeCourses.courses.map((course: ICourse) => {
+    const isFree = course.pricing?.amount === 0;
     const mappedCourse = {
       id: course._id.toString(),
       title: course.title,
@@ -76,12 +76,12 @@ const ExploreAllCourses: React.FC = () => {
       rating: 4.5,
       reviewCount: 1000,
       originalPrice: course.pricing?.amount || 0,
-      offerPrice: course.offer?.offerPrice,
-      discountPercentage: course.offer?.discountPercentage,
+      offerPrice: isFree ? undefined : course.offer?.offerPrice,
+      discountPercentage: isFree ? undefined : course.offer?.discountPercentage,
       tags: [
-        ...(course.pricing?.amount > 0 ? ["Paid"] : ["Free"]),
+        isFree ? "Free" : "Paid",
         ...(course.studentsEnrolled > 1000 ? ["Bestseller"] : []),
-        ...(course.offer?.discountPercentage ? [`${course.offer.discountPercentage}% Off`] : []),
+        ...(!isFree && course.offer?.discountPercentage ? [`${course.offer.discountPercentage}% Off`] : []),
       ],
       imageUrl: course.thumbnail || "/api/placeholder/300/200",
     };
@@ -258,7 +258,9 @@ const ExploreAllCourses: React.FC = () => {
                       <div className="mt-auto">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
-                            {course.offerPrice !== undefined ? (
+                            {course.originalPrice === 0 ? (
+                              <span className="font-bold text-lg text-gray-900">Free</span>
+                            ) : course.offerPrice !== undefined ? (
                               <>
                                 <span className="font-bold text-lg text-gray-900">
                                   {formatPrice(course.offerPrice)}
@@ -269,13 +271,13 @@ const ExploreAllCourses: React.FC = () => {
                               </>
                             ) : (
                               <span className="font-bold text-lg text-gray-900">
-                                {course.originalPrice > 0 ? formatPrice(course.originalPrice) : 'Free'}
+                                {formatPrice(course.originalPrice)}
                               </span>
                             )}
                           </div>
                           
                           <div className="flex space-x-2">
-                            {course.tags?.map((tag) => (
+                            {course.tags.map((tag) => (
                               <span
                                 key={tag}
                                 className={`
