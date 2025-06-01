@@ -95,7 +95,8 @@ export const userEndPoints: UserEndpoints = {
 
   //subscriptions
   createSubscription:'/student/subscriptions/create',
-  confirmSubscription:'/student/subscriptions/confirm'
+  confirmSubscription:'/student/subscriptions/confirm',
+  getSubscriptionStatus:'/student/subscriptions/status'
 
 }
 

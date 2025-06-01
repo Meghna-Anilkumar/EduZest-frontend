@@ -78,6 +78,7 @@ export interface UserEndpoints extends IEndPoints {
     //subscriptions
     createSubscription: string
     confirmSubscription: string
+    getSubscriptionStatus:string
 }
 
 export interface AdminEndpoints extends IEndPoints {
