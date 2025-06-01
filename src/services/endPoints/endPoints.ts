@@ -38,7 +38,7 @@ export const userEndPoints: UserEndpoints = {
     search?: string,
     sortField?: string,
     sortOrder?: "asc" | "desc",
-    courseFilter?: string // Add courseFilter parameter
+    courseFilter?: string 
   ) => {
     const query = new URLSearchParams({
       page: page.toString(),
@@ -46,11 +46,12 @@ export const userEndPoints: UserEndpoints = {
       ...(search && { search }),
       ...(sortField && { sortField }),
       ...(sortOrder && { sortOrder }),
-      ...(courseFilter && { courseFilter: encodeURIComponent(courseFilter) }), // Encode courseFilter
+      ...(courseFilter && { courseFilter: encodeURIComponent(courseFilter) }), 
     }).toString();
-    return `/instructor/getTransactions?${query}`; // Ensure the path matches the backend route
+    return `/instructor/getTransactions?${query}`; 
   },
   getCourseStats: '/instructor/course-stats',
+
 
 
   //assessments
@@ -90,7 +91,11 @@ export const userEndPoints: UserEndpoints = {
 
   //coupons
   fetchActiveCoupons: '/activeCoupons',
-  checkCouponUsage: "/check-coupon-usage"
+  checkCouponUsage: "/check-coupon-usage",
+
+  //subscriptions
+  createSubscription:'/student/subscriptions/create',
+  confirmSubscription:'/student/subscriptions/confirm'
 
 }
 

@@ -74,6 +74,10 @@ export interface UserEndpoints extends IEndPoints {
     //coupons
     fetchActiveCoupons: string;
     checkCouponUsage: string
+
+    //subscriptions
+    createSubscription: string
+    confirmSubscription: string
 }
 
 export interface AdminEndpoints extends IEndPoints {

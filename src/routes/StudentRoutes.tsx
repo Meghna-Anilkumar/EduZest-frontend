@@ -9,6 +9,7 @@ import PaymentsHistory from "../components/student/StudentPayments";
 import AssessmentPlayer from "../components/student/AssessmentConduct";
 import CourseProgress from "../components/student/CourseProgress";
 import CourseResults from "../components/student/CourseResults";
+import SubscriptionPlans from "@/components/student/Subscription";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -29,6 +30,7 @@ const StudentRoutes: React.FC = () => {
           <Route path="/courses/:courseId/assessments/:assessmentId" element={<AssessmentPlayer />} />
           <Route path="/courses/:courseId/results" element={<CourseResults />} />
           <Route path="/progress" element={<CourseProgress/>}/>
+          <Route path="/subscription" element={<SubscriptionPlans/>}/>
         </Route>
 
         {/* 404 Page */}

@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, CreditCard, User, BarChart } from "lucide-react";
+import { BookOpen, CreditCard, User, BarChart, Star } from "lucide-react";
 
 interface StudentSidebarProps {
   activeTab: string;
@@ -15,7 +15,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
   isMobile = false,
   closeMobileMenu,
 }) => {
-  const tabs = ["Profile", "My Courses", "My Progress", "Payments"];
+  const tabs = ["Profile", "My Courses", "My Progress", "Payments", "Subscription"];
   const navigate = useNavigate();
 
   const handleTabClick = (tab: string) => {
@@ -29,6 +29,8 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
       navigate("/profile");
     } else if (tab === "My Progress") {
       navigate("/student/progress");
+    } else if (tab === "Subscription") {
+      navigate("/student/subscription");
     }
     if (isMobile && closeMobileMenu) {
       closeMobileMenu();
@@ -40,6 +42,7 @@ const StudentSidebar: React.FC<StudentSidebarProps> = ({
     Profile: <User className="w-6 h-6 mr-3" />,
     "My Progress": <BarChart className="w-6 h-6 mr-3" />,
     Payments: <CreditCard className="w-6 h-6 mr-3" />,
+    Subscription: <Star className="w-6 h-6 mr-3" />,
   };
 
   return (
