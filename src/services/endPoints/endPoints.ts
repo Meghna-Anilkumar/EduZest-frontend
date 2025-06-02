@@ -38,7 +38,7 @@ export const userEndPoints: UserEndpoints = {
     search?: string,
     sortField?: string,
     sortOrder?: "asc" | "desc",
-    courseFilter?: string 
+    courseFilter?: string
   ) => {
     const query = new URLSearchParams({
       page: page.toString(),
@@ -46,9 +46,9 @@ export const userEndPoints: UserEndpoints = {
       ...(search && { search }),
       ...(sortField && { sortField }),
       ...(sortOrder && { sortOrder }),
-      ...(courseFilter && { courseFilter: encodeURIComponent(courseFilter) }), 
+      ...(courseFilter && { courseFilter: encodeURIComponent(courseFilter) }),
     }).toString();
-    return `/instructor/getTransactions?${query}`; 
+    return `/instructor/getTransactions?${query}`;
   },
   getCourseStats: '/instructor/course-stats',
 
@@ -94,9 +94,22 @@ export const userEndPoints: UserEndpoints = {
   checkCouponUsage: "/check-coupon-usage",
 
   //subscriptions
-  createSubscription:'/student/subscriptions/create',
-  confirmSubscription:'/student/subscriptions/confirm',
-  getSubscriptionStatus:'/student/subscriptions/status'
+  createSubscription: '/student/subscriptions/create',
+  confirmSubscription: '/student/subscriptions/confirm',
+  getSubscriptionStatus: '/student/subscriptions/status',
+
+  // Exams
+  createExam: (courseId: string) => `/instructor/courses/${courseId}/exams`,
+  getExamsByCourse: (courseId: string, page: number, limit: number) =>
+    `/instructor/courses/${courseId}/exams?page=${page}&limit=${limit}`,
+  editExam: (examId: string) => `/instructor/exams/${examId}`,
+  deleteExam: (examId: string) => `/instructor/exams/${examId}`,
+  getExamsForStudent: (courseId: string, page: number, limit: number) =>
+    `/student/courses/${courseId}/exams?page=${page}&limit=${limit}`,
+  getExamById: (examId: string) => `/student/exams/${examId}`,
+  submitExam: (examId: string) => `/student/exams/${examId}/submit`,
+  getExamByIdForStudent: (examId: string) => `/student/exams/${examId}/details`,
+  getExamResult: (examId: string) => `/student/exams/${examId}/result`,
 
 }
 
@@ -184,9 +197,9 @@ export const adminEndpoints: AdminEndpoints = {
   deleteCoupon: (couponId: string) => `/delete-coupon/${couponId}`,
 
 
-  createOffer: "/create-offer",                
+  createOffer: "/create-offer",
   fetchAllOffers: (page: number, limit: number, search?: string) =>
-    `/offers?page=${page}&limit=${limit}${search ? `&search=${search}` : ""}`, 
-  editOffer: (offerId: string) => `/edit-offer/${offerId}`,   
-  deleteOffer: (offerId: string) => `/delete-offer/${offerId}`, 
+    `/offers?page=${page}&limit=${limit}${search ? `&search=${search}` : ""}`,
+  editOffer: (offerId: string) => `/edit-offer/${offerId}`,
+  deleteOffer: (offerId: string) => `/delete-offer/${offerId}`,
 };

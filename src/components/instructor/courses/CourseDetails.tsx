@@ -298,6 +298,10 @@ const CourseDetailsPage: React.FC = () => {
     );
   };
 
+  const handleExams = () => {
+    navigate(`/instructor/courses/${courseId}/exams`);
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -328,6 +332,9 @@ const CourseDetailsPage: React.FC = () => {
       ),
     0
   );
+
+  // Placeholder for exam count (to be fetched from API in a real implementation)
+  const totalExams = 0; // Replace with actual exam count if available
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -516,8 +523,10 @@ const CourseDetailsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#49BBBD]">4.5</div>
-                    <div className="text-gray-600 text-sm">Average Rating</div>
+                    <div className="text-2xl font-bold text-[#49BBBD]">
+                      {totalExams}
+                    </div>
+                    <div className="text-gray-600 text-sm">Total Exams</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-[#49BBBD]">
@@ -536,6 +545,13 @@ const CourseDetailsPage: React.FC = () => {
                     disabled={isUploading}
                   >
                     Edit Course
+                  </button>
+                  <button
+                    onClick={handleExams}
+                    className="w-full bg-[#49BBBD] text-white py-2 rounded-md hover:bg-[#3a9a9c] transition-colors"
+                    disabled={isUploading}
+                  >
+                    Manage Exams
                   </button>
                 </div>
               </div>

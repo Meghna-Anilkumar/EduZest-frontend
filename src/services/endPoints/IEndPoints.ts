@@ -78,7 +78,18 @@ export interface UserEndpoints extends IEndPoints {
     //subscriptions
     createSubscription: string
     confirmSubscription: string
-    getSubscriptionStatus:string
+    getSubscriptionStatus: string
+
+    // Exams
+    createExam: (courseId: string) => string;
+    getExamsByCourse: (courseId: string, page: number, limit: number) => string;
+    editExam: (examId: string) => string;
+    deleteExam: (examId: string) => string;
+    getExamsForStudent: (courseId: string, page: number, limit: number) => string;
+    getExamById: (examId: string) => string;
+    submitExam: (examId: string) => string;
+    getExamByIdForStudent: (examId: string) => string;
+    getExamResult: (examId: string) => string;
 }
 
 export interface AdminEndpoints extends IEndPoints {

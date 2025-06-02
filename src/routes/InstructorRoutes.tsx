@@ -12,6 +12,7 @@ import TransactionsPage from "../components/instructor/InstructorTransactions";
 import AssessmentsPage from "../components/instructor/courses/Assessments";
 import ChatLayout from "../components/instructor/InstructorChatLayout";
 import InstructorChatGroups from "../components/instructor/ChatGroups";
+import ExamsPage from "@/components/instructor/courses/ExamsPage";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -33,6 +34,11 @@ const InstructorRoutes: React.FC = () => {
             path="/courses/:courseId/modules/:moduleTitle/assessments"
             element={<AssessmentsPage />}
           />
+          <Route
+            path="/courses/:courseId/exams"
+            element={<ExamsPage />}
+          />
+        
           <Route
             path="/chat"
             element={
