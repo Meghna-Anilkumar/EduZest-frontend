@@ -106,11 +106,12 @@ export const userEndPoints: UserEndpoints = {
   deleteExam: (examId: string) => `/instructor/exams/${examId}`,
   getExamsForStudent: (courseId: string, page: number, limit: number) =>
     `/student/courses/${courseId}/exams?page=${page}&limit=${limit}`,
-  getExamById: (examId: string) => `/student/exams/${examId}`,
+  getExamByIdForStudent: (examId: string) => `/student/exams/${examId}`,
+  startExam: (examId: string) => `/student/exams/${examId}/start`,
   submitExam: (examId: string) => `/student/exams/${examId}/submit`,
-  getExamByIdForStudent: (examId: string) => `/student/exams/${examId}/details`,
   getExamResult: (examId: string) => `/student/exams/${examId}/result`,
-
+  getExamById: (examId: string) => `/exams/${examId}`,
+  getExamProgress: (examId: string) => `/student/exams/${examId}/progress`,
 }
 
 

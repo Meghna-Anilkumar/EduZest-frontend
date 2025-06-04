@@ -13,6 +13,7 @@ import {
   updateLessonProgressAction,
 } from "../../redux/actions/enrollmentActions";
 import { getAssessmentsForStudentAction } from "../../redux/actions/assessmentActions";
+import { getExamsForStudentAction } from "../../redux/actions/examActions";
 import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import {
@@ -25,10 +26,13 @@ import {
   Shield,
   FileText,
   Lock,
+  FileCheck,
+  MessageCircle,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
 import ChatComponent from "./ChatComponent";
 import { IAssessment } from "../../interface/IAssessment";
+import { IExam } from "../instructor/courses/ExamsPage";
 
 interface ILesson {
   _id: string;
@@ -80,6 +84,14 @@ interface IAssessmentsResponse {
   totalPages: number;
 }
 
+interface IExamsResponse {
+  exams: IExam[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 const CourseDetails: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const dispatch = useDispatch<AppDispatch>();
@@ -99,15 +111,17 @@ const CourseDetails: React.FC = () => {
   const [assessmentsByModule, setAssessmentsByModule] = useState<{
     [moduleTitle: string]: IAssessmentsResponse | null;
   }>({});
+  const [exams, setExams] = useState<IExamsResponse | null>(null);
   const [assessmentErrors, setAssessmentErrors] = useState<{
     [moduleTitle: string]: string | null;
   }>({});
+  const [examError, setExamError] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastProgressUpdate = useRef<number>(0);
 
   useEffect(() => {
-    console.log('[CourseDetails] Course ID from useParams:', courseId);
+    console.log("[CourseDetails] Course ID from useParams:", courseId);
     const fetchCourseAndEnrollment = async () => {
       if (!courseId) return;
 
@@ -197,7 +211,7 @@ const CourseDetails: React.FC = () => {
       if (!courseId || !isEnrolled || !moduleTitle) return;
 
       try {
-        const result = await dispatch(
+        const assessmentResult = await dispatch(
           getAssessmentsForStudentAction({
             courseId,
             moduleTitle,
@@ -207,7 +221,7 @@ const CourseDetails: React.FC = () => {
         ).unwrap();
         setAssessmentsByModule((prev) => ({
           ...prev,
-          [moduleTitle]: result,
+          [moduleTitle]: assessmentResult,
         }));
         setAssessmentErrors((prev) => ({
           ...prev,
@@ -222,14 +236,36 @@ const CourseDetails: React.FC = () => {
       }
     };
 
+    const fetchExamsForCourse = async () => {
+      if (!courseId || !isEnrolled) return;
+
+      try {
+        const examResult = await dispatch(
+          getExamsForStudentAction({
+            courseId,
+            page: 1,
+            limit: 10,
+          })
+        ).unwrap();
+        setExams(examResult);
+        setExamError(null);
+      } catch (err: any) {
+        console.error(`Failed to fetch exams for course ${courseId}:`, err.message);
+        setExamError(err.message || "Failed to load exams.");
+      }
+    };
+
     expandedSections.forEach((moduleTitle) => {
-      if (!assessmentsByModule[moduleTitle]) {
+      if (moduleTitle && !assessmentsByModule[moduleTitle]) {
         fetchAssessmentsForModule(moduleTitle);
       }
     });
-  }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule]);
 
-  // Find module index for a lesson
+    if (!exams) {
+      fetchExamsForCourse();
+    }
+  }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule, exams]);
+
   const findModuleIndexForLesson = (lesson: ILesson): number => {
     if (!course) return -1;
     return course.modules.findIndex((module) =>
@@ -237,7 +273,6 @@ const CourseDetails: React.FC = () => {
     );
   };
 
-  // Check if a module is fully completed
   const isModuleFullyCompleted = (module: IModule): boolean => {
     if (!module.lessons || module.lessons.length === 0) return false;
     return module.lessons.every((lesson) => {
@@ -246,34 +281,21 @@ const CourseDetails: React.FC = () => {
     });
   };
 
-  // Check if a module is accessible
   const isModuleAccessible = (moduleIndex: number): boolean => {
     if (!course || !isEnrolled) return false;
-
-    // First module is always accessible
     if (moduleIndex === 0) return true;
-
-    // For other modules, check if previous module is fully completed
     const previousModule = course.modules[moduleIndex - 1];
     return isModuleFullyCompleted(previousModule);
   };
 
-  // Check if a lesson is unlocked
   const isLessonUnlocked = (lesson: ILesson): boolean => {
     if (!course || !isEnrolled) return false;
-
-    // Find which module this lesson belongs to
     const moduleIndex = findModuleIndexForLesson(lesson);
     if (moduleIndex === -1) return false;
-
-    // Check if this module is accessible first
     if (!isModuleAccessible(moduleIndex)) return false;
-
     const module = course.modules[moduleIndex];
     const lessonIndex = module.lessons.findIndex((l) => l._id === lesson._id);
-
     if (lessonIndex === 0) return true;
-
     const previousLesson = module.lessons[lessonIndex - 1];
     const previousProgress = lessonProgress.find((lp) => lp.lessonId === previousLesson._id);
     return previousProgress?.isCompleted || false;
@@ -286,19 +308,15 @@ const CourseDetails: React.FC = () => {
       if (duration && currentTime) {
         const progress = Math.min((currentTime / duration) * 100, 100);
         const currentTimeMs = Date.now();
-
         if (currentTimeMs - lastProgressUpdate.current >= 5000) {
           lastProgressUpdate.current = currentTimeMs;
-
           const payload = {
             courseId: courseId!,
             lessonId: selectedLesson._id,
             progress,
           };
-          console.log("Sending progress update payload:", payload);
           dispatch(updateLessonProgressAction(payload))
             .then((result: any) => {
-              console.log("Progress update response:", result);
               if (result.payload?.data) {
                 setLessonProgress(result.payload.data);
               }
@@ -333,6 +351,10 @@ const CourseDetails: React.FC = () => {
 
   const handleAssessmentClick = (assessment: IAssessment) => {
     navigate(`/student/courses/${courseId}/assessments/${assessment._id}`);
+  };
+
+  const handleExamClick = (exam: IExam) => {
+    navigate(`/student/courses/${courseId}/exams/${exam._id}`);
   };
 
   const handleExpandAll = () => {
@@ -374,25 +396,20 @@ const CourseDetails: React.FC = () => {
 
   const renderModuleSection = (module: IModule, index: number) => {
     const isAccessible = isModuleAccessible(index);
-
     return (
       <div key={index} className="border-t border-gray-200 py-2">
         <button
           className={`flex justify-between items-center w-full text-left p-2 hover:bg-gray-50 rounded-md ${
             !isAccessible ? "opacity-70" : ""
           }`}
-          onClick={() => {
-            if (isAccessible) {
-              toggleSection(module.moduleTitle);
-            } else {
-              setVideoError("Complete previous module to unlock this content.");
-            }
-          }}
+          onClick={() =>
+            isAccessible
+              ? toggleSection(module.moduleTitle)
+              : setVideoError("Complete previous module to unlock this content.")
+          }
         >
           <div className="flex items-center">
-            {!isAccessible && (
-              <Lock className="h-4 w-4 mr-2 text-gray-400" />
-            )}
+            {!isAccessible && <Lock className="h-4 w-4 mr-2 text-gray-400" />}
             <span className="font-semibold text-gray-800">{module.moduleTitle}</span>
           </div>
           <div className="flex items-center">
@@ -420,13 +437,11 @@ const CourseDetails: React.FC = () => {
                         ? "hover:bg-gray-50 cursor-pointer"
                         : "opacity-50 cursor-not-allowed"
                     }`}
-                    onClick={() => {
-                      if (isUnlocked) {
-                        handleLessonClick(lesson);
-                      } else {
-                        setVideoError("Complete previous lessons to unlock this one.");
-                      }
-                    }}
+                    onClick={() =>
+                      isUnlocked
+                        ? handleLessonClick(lesson)
+                        : setVideoError("Complete previous lessons to unlock this one.")
+                    }
                   >
                     <div className="flex items-center flex-1">
                       {isUnlocked ? (
@@ -458,39 +473,69 @@ const CourseDetails: React.FC = () => {
               })}
             </ul>
             {isModuleFullyCompleted(module) ? (
-              assessmentsByModule[module.moduleTitle] ? (
-                <div className="mt-4">
-                  <h4 className="font-medium text-gray-700 mb-2">Assessments</h4>
-                  <ul className="space-y-2">
-                    {assessmentsByModule[module.moduleTitle]!.assessments.map((assessment) => (
-                      <li
-                        key={assessment._id}
-                        className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleAssessmentClick(assessment)}
-                      >
-                        <FileText className="h-4 w-4 mr-2 text-gray-500" />
-                        <span className="text-sm text-gray-600">{assessment.title}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {assessmentsByModule[module.moduleTitle]!.total >
-                    assessmentsByModule[module.moduleTitle]!.assessments.length && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
-                      {assessmentsByModule[module.moduleTitle]!.total} assessments
-                    </p>
-                  )}
-                </div>
-              ) : assessmentErrors[module.moduleTitle] ? (
-                <p className="text-red-500 text-sm mt-2">
-                  {assessmentErrors[module.moduleTitle]}
-                </p>
-              ) : (
-                <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
-              )
+              <>
+                {/* Assessments Section */}
+                {assessmentsByModule[module.moduleTitle] ? (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-700 mb-2">Assessments</h4>
+                    <ul className="space-y-2">
+                      {assessmentsByModule[module.moduleTitle]!.assessments.map((assessment) => (
+                        <li
+                          key={assessment._id}
+                          className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                          onClick={() => handleAssessmentClick(assessment)}
+                        >
+                          <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                          <span className="text-sm text-gray-600">{assessment.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {assessmentsByModule[module.moduleTitle]!.total >
+                      assessmentsByModule[module.moduleTitle]!.assessments.length && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Showing {assessmentsByModule[module.moduleTitle]!.assessments.length} of{" "}
+                        {assessmentsByModule[module.moduleTitle]!.total} assessments
+                      </p>
+                    )}
+                  </div>
+                ) : assessmentErrors[module.moduleTitle] ? (
+                  <p className="text-red-500 text-sm mt-2">
+                    {assessmentErrors[module.moduleTitle]}
+                  </p>
+                ) : (
+                  <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
+                )}
+                {/* Exams Section */}
+                {exams ? (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-700 mb-2">Exams</h4>
+                    <ul className="space-y-2">
+                      {exams.exams.map((exam) => (
+                        <li
+                          key={exam._id}
+                          className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                          onClick={() => handleExamClick(exam)}
+                        >
+                          <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
+                          <span className="text-sm text-gray-600">{exam.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {exams.total > exams.exams.length && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Showing {exams.exams.length} of {exams.total} exams
+                      </p>
+                    )}
+                  </div>
+                ) : examError ? (
+                  <p className="text-red-500 text-sm mt-2">{examError}</p>
+                ) : (
+                  <p className="text-gray-500 text-sm mt-2">Loading exams...</p>
+                )}
+              </>
             ) : (
               <p className="text-gray-500 text-sm mt-2">
-                Complete all lessons in this module to unlock assessments
+                Complete all lessons in this module to unlock assessments and exams
               </p>
             )}
           </div>
@@ -527,10 +572,7 @@ const CourseDetails: React.FC = () => {
           </svg>
         </button>
         {isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-            onClick={closeMobileMenu}
-          >
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={closeMobileMenu}>
             <div
               className="absolute top-0 left-0 h-full w-64 bg-white z-50"
               onClick={(e) => e.stopPropagation()}
@@ -550,7 +592,7 @@ const CourseDetails: React.FC = () => {
               <>
                 <div
                   className="text-white p-6 rounded-lg mb-6 shadow-lg"
-                  style={{ background: "linear-gradient(to right, #49bbbd, #276b6b)" }}
+                  style={{ background: "linear-gradient(to right, #49BBBD, #276B6B)" }}
                 >
                   <div className="flex flex-col md:flex-row md:justify-between">
                     <div className="md:w-3/4">
@@ -571,7 +613,10 @@ const CourseDetails: React.FC = () => {
                         <div>
                           <p className="text-sm font-medium">
                             Instructor:{" "}
-                            <Link to={`/instructor/${course.instructorRef._id}`} className="underline">
+                            <Link
+                              to={`/instructor/${course.instructorRef._id}`}
+                              className="underline"
+                            >
                               {course.instructorRef.name}
                             </Link>
                           </p>
@@ -579,13 +624,19 @@ const CourseDetails: React.FC = () => {
                             {course.pricing.type === "free" ? (
                               <span className="text-green-400 font-semibold">Free</span>
                             ) : (
-                              <span className="text-yellow-400 font-semibold">₹{course.pricing.amount}</span>
+                              <span className="text-yellow-400 font-semibold">
+                                ₹{course.pricing.amount}
+                              </span>
                             )}
                           </p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(course.level)}`}>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getLevelColor(
+                            course.level
+                          )}`}
+                        >
                           {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
                         </span>
                         <span className="flex items-center text-xs">
@@ -621,10 +672,11 @@ const CourseDetails: React.FC = () => {
                         </button>
                       </div>
                       <div className="text-sm text-gray-600 mb-4">
-                        {course.modules.length} modules • {totalLessons} lessons • {getTotalDuration()} total
+                        {course.modules.length} modules • {totalLessons} lessons •{" "}
+                        {getTotalDuration()} total
                       </div>
                       <div className="max-h-[60vh] overflow-y-auto pr-1">
-                        {course.modules.map((module: IModule, index: number) => 
+                        {course.modules.map((module: IModule, index: number) =>
                           renderModuleSection(module, index)
                         )}
                       </div>
@@ -650,7 +702,9 @@ const CourseDetails: React.FC = () => {
                               onTimeUpdate={handleTimeUpdate}
                               onError={(e) => {
                                 console.error("Video Error:", e.currentTarget.error);
-                                setVideoError("Failed to play video. Please try refreshing or contact support.");
+                                setVideoError(
+                                  "Failed to play video. Please try refreshing or contact support."
+                                );
                               }}
                             />
                           ) : (
@@ -664,9 +718,7 @@ const CourseDetails: React.FC = () => {
                                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
                                   <div className="text-center text-white p-4">
                                     <Lock className="h-12 w-12 mx-auto mb-2" />
-                                    <p className="text-lg font-medium">
-                                      This lesson is locked
-                                    </p>
+                                    <p className="text-lg font-medium">This lesson is locked</p>
                                     <p className="text-sm mt-2">
                                       Complete previous lessons to unlock this content
                                     </p>
@@ -679,16 +731,16 @@ const CourseDetails: React.FC = () => {
                         {videoError && (
                           <div className="bg-red-50 text-red-700 p-4 border-l-4 border-red-500">
                             <p className="flex items-center">
-                              <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                className="h-5 w-5 mr-2" 
-                                viewBox="0 0 20 20" 
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5 mr-2"
+                                viewBox="0 0 20 20"
                                 fill="currentColor"
                               >
-                                <path 
-                                  fillRule="evenodd" 
-                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" 
-                                  clipRule="evenodd" 
+                                <path
+                                  fillRule="evenodd"
+                                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z"
+                                  clipRule="evenodd"
                                 />
                               </svg>
                               {videoError}
@@ -696,7 +748,9 @@ const CourseDetails: React.FC = () => {
                           </div>
                         )}
                         <div className="p-6">
-                          <h3 className="text-xl font-bold text-gray-800 mb-2">{selectedLesson.title}</h3>
+                          <h3 className="text-xl font-bold text-gray-800 mb-2">
+                            {selectedLesson.title}
+                          </h3>
                           <div className="flex items-center text-sm text-gray-600 mb-4">
                             <Clock className="h-4 w-4 mr-1" />
                             <span>{formatLessonDuration(selectedLesson.duration)}</span>
@@ -712,7 +766,9 @@ const CourseDetails: React.FC = () => {
                               <h4 className="font-medium text-gray-700 mb-1">Learning Objectives</h4>
                               <ul className="list-disc list-inside space-y-1">
                                 {selectedLesson.objectives.map((objective, index) => (
-                                  <li key={index} className="text-gray-600">{objective}</li>
+                                  <li key={index} className="text-gray-600">
+                                    {objective}
+                                  </li>
                                 ))}
                               </ul>
                             </div>
@@ -747,8 +803,14 @@ const CourseDetails: React.FC = () => {
           </div>
         </main>
       </div>
-
-      {courseId && <ChatComponent courseId={courseId} />}
+      <button
+        className="fixed bottom-6 right-6 bg-[#49BBBD] text-white p-4 rounded-full shadow-lg hover:bg-[#3aa9ab] z-50 transition-colors duration-200"
+        onClick={() => setIsChatOpen(!isChatOpen)}
+        aria-label="Toggle chat"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </button>
+      {isChatOpen && courseId && <ChatComponent courseId={courseId} />}
     </div>
   );
 };

@@ -39,7 +39,7 @@ const validationSchema = Yup.object({
     .max(500, "Description must not exceed 500 characters")
     .required("Description is required"),
   duration: Yup.number()
-    .min(10, "Duration must be at least 10 minutes")
+    .min(2, "Duration must be at least 2 minutes")
     .max(180, "Duration must not exceed 180 minutes")
     .required("Duration is required"),
   passingCriteria: Yup.number()
@@ -288,7 +288,7 @@ const ExamForm: React.FC<ExamFormProps> = ({ exam, onSave, onCancel }) => {
                       type="number"
                       id="duration"
                       name="duration"
-                      min="10"
+                      min="2"
                       max="180"
                       className={`w-full border rounded-md p-2 ${
                         errors.duration && touched.duration
