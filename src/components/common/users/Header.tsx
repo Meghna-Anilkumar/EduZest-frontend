@@ -6,15 +6,19 @@ import { logoutUser } from "../../../redux/actions/auth/logoutUserAction";
 import { fetchUserData } from "../../../redux/actions/auth/fetchUserdataAction";
 import { userClearError } from "../../../redux/reducers/userReducer";
 import { getSubscriptionStatus } from "../../../redux/actions/subscriptionActions";
+import Notifications from "./Notifications";
+import { useSocket } from "@/components/context/socketContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
-
+  const { socket } = useSocket();
   const { isAuthenticated, userData } = useSelector((state: RootState) => state.user);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   // Handle scroll effect
   useEffect(() => {
@@ -25,6 +29,7 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Fetch user data, subscription status, and notifications
   useEffect(() => {
     dispatch(userClearError());
 
@@ -54,15 +59,47 @@ const Header = () => {
           setHasActiveSubscription(false);
         });
     }
-  }, [dispatch, isAuthenticated, userData]);
+
+    // Fetch notifications if socket is connected
+    if (socket && isAuthenticated) {
+      socket.emit("getNotifications", { page: 1, limit: 10 });
+
+      socket.on("notifications", (data: { success: boolean; data: any[]; unreadCount: number }) => {
+        if (data.success) {
+          setUnreadCount(data.unreadCount);
+        }
+      });
+
+      socket.on("notificationRead", (data: { notificationId: string; unreadCount: number }) => {
+        setUnreadCount(data.unreadCount);
+      });
+
+      socket.on("allNotificationsRead", (data: { unreadCount: number }) => {
+        setUnreadCount(data.unreadCount);
+      });
+
+      return () => {
+        socket.off("notifications");
+        socket.off("notificationRead");
+        socket.off("allNotificationsRead");
+      };
+    }
+  }, [dispatch, isAuthenticated, userData, socket]);
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);
+    setIsNotificationsOpen(false); // Close notifications when menu is toggled
+  };
+
+  const toggleNotifications = () => {
+    setIsNotificationsOpen((prev) => !prev);
+    setIsMenuOpen(false); // Close menu when notifications are toggled
   };
 
   const handleLogout = () => {
     toast.success("Logout successful");
     dispatch(logoutUser());
+    setIsNotificationsOpen(false);
   };
 
   const navLinks = [
@@ -74,7 +111,9 @@ const Header = () => {
 
   if (loading) {
     return (
-      <header className={`bg-black/95 backdrop-blur-lg py-4 md:py-6 shadow-2xl fixed top-0 left-0 right-0 z-50 border-b border-gray-800/50 transition-all duration-300`}>
+      <header
+        className={`bg-black/95 backdrop-blur-lg py-4 md:py-6 shadow-2xl fixed top-0 left-0 right-0 z-50 border-b border-gray-800/50 transition-all duration-300`}
+      >
         <div className="container mx-auto flex justify-center px-4 md:px-6">
           <div className="flex items-center space-x-3">
             <div className="w-6 h-6 border-2 border-[#49bbbd] border-t-transparent rounded-full animate-spin"></div>
@@ -86,11 +125,12 @@ const Header = () => {
   }
 
   return (
-    <header className={`bg-black/95 backdrop-blur-lg shadow-2xl fixed top-0 left-0 right-0 z-50 border-b border-gray-800/50 transition-all duration-300 ${
-      scrolled ? "py-3 md:py-4" : "py-4 md:py-6"
-    }`}>
+    <header
+      className={`bg-black/95 backdrop-blur-lg shadow-2xl fixed top-0 left-0 right-0 z-50 border-b border-gray-800/50 transition-all duration-300 ${
+        scrolled ? "py-3 md:py-4" : "py-4 md:py-6"
+      }`}
+    >
       <div className="container mx-auto flex flex-wrap justify-between items-center px-4 md:px-6">
-        
         {/* Logo with enhanced styling */}
         <div className="flex items-center group">
           <h1 className="text-white text-2xl md:text-3xl font-bold flex items-center cursor-pointer transition-all duration-300 hover:scale-105">
@@ -157,15 +197,47 @@ const Header = () => {
         <div
           className={`${
             isMenuOpen ? "flex opacity-100 translate-y-0" : "hidden opacity-0 -translate-y-4"
-          } md:flex md:opacity-100 md:translate-y-0 items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto mt-4 md:mt-0 flex-col md:flex-row transition-all duration-300`}
+          } md:flex md:opacity-100 md:translate-y-0 items-center space-y-4 md:space-y-0 md:space-x-4 w-full md:w-auto mt-4 md:mt-0 flex-col md:flex-row transition-all duration-300 relative`}
         >
           {isAuthenticated ? (
             <>
+              {/* Notifications Bell Icon */}
+              <button
+                onClick={toggleNotifications}
+                className="text-white p-2 rounded-lg relative group hover:bg-white/10 transition-all duration-300"
+                aria-label="Notifications"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#49bbbd]/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+              {isNotificationsOpen && <Notifications onClose={() => setIsNotificationsOpen(false)} />}
+
               {/* Enhanced Profile Button */}
               <a
                 href="/profile"
                 className="text-white text-lg hover:text-[#49bbbd] transition-all duration-300 text-center w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg relative group hover:bg-white/5"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsNotificationsOpen(false);
+                }}
               >
                 <span className="relative z-10">Welcome, {userData?.name || "User"}</span>
                 {hasActiveSubscription && (
@@ -183,7 +255,7 @@ const Header = () => {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#49bbbd]/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </a>
-              
+
               {/* Enhanced Logout Button */}
               <button
                 onClick={handleLogout}
@@ -199,18 +271,24 @@ const Header = () => {
               <a
                 href="/login"
                 className="text-white text-lg hover:text-[#49bbbd] transition-all duration-300 text-center w-full md:w-auto px-4 py-2 rounded-lg relative group hover:bg-white/5"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsNotificationsOpen(false);
+                }}
               >
                 <span className="relative z-10">Login</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-[#49bbbd]/10 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-[#49bbbd] group-hover:w-3/4 group-hover:left-1/8 transition-all duration-300"></div>
               </a>
-              
+
               {/* Enhanced Get Started Button */}
               <a
                 href="/signup"
                 className="bg-[#49bbbd] text-black px-6 py-2.5 rounded-full text-lg font-semibold hover:bg-white hover:text-[#49bbbd] transition-all duration-300 text-center w-full md:w-auto relative overflow-hidden group hover:shadow-lg hover:shadow-[#49bbbd]/25 hover:scale-105"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsNotificationsOpen(false);
+                }}
               >
                 <span className="relative z-10">Get Started</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"></div>
