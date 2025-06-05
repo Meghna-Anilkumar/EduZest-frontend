@@ -90,7 +90,9 @@ const OffersPage: React.FC = () => {
       const result = await dispatch(
         getAllCategoriesAction({ page: 1, limit: 100 })
       ).unwrap();
-      setCategories(result.categories.filter((category: Category) => category.isActive));
+      setCategories(
+        result.categories.filter((category: Category) => category.isActive)
+      );
     } catch (err: any) {
       const errorMessage = err.message || "Failed to fetch categories";
       toast.error(errorMessage);
@@ -160,7 +162,7 @@ const OffersPage: React.FC = () => {
     },
     validationSchema: editOfferValidationSchema,
     enableReinitialize: true,
-    onSubmit: (values) => {
+    onSubmit: (values, { resetForm }: FormikHelpers<OfferFormValues>) => {
       if (selectedOffer) {
         setConfirmMessage("Are you sure you want to update this offer?");
         setConfirmAction(() => async () => {
@@ -177,7 +179,9 @@ const OffersPage: React.FC = () => {
             ).unwrap();
             toast.success("Offer updated successfully");
             setIsEditModalOpen(false);
-            await fetchOffers();
+            setSelectedOffer(null); // Clear selected offer
+            resetForm(); // Reset form values
+            await fetchOffers(); // Refresh offers list
           } catch (err: any) {
             const errorMessage = err.message || "Failed to update offer";
             setError(errorMessage);
@@ -190,7 +194,9 @@ const OffersPage: React.FC = () => {
   });
 
   const handleDeleteOffer = (offerId: string, categoryName: string) => {
-    setConfirmMessage(`Are you sure you want to delete the offer for "${categoryName}"?`);
+    setConfirmMessage(
+      `Are you sure you want to delete the offer for "${categoryName}"?`
+    );
     setConfirmAction(() => async () => {
       try {
         await dispatch(deleteOfferAction(offerId)).unwrap();
@@ -264,9 +270,7 @@ const OffersPage: React.FC = () => {
               Loading...
             </div>
           ) : offers.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              No offers found
-            </div>
+            <div className="p-6 text-center text-gray-500">No offers found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full table-auto">
@@ -290,7 +294,10 @@ const OffersPage: React.FC = () => {
                   {offers
                     .filter((offer) => offer && offer._id)
                     .map((offer) => (
-                      <tr key={offer._id} className="hover:bg-gray-50 transition-colors duration-150">
+                      <tr
+                        key={offer._id}
+                        className="hover:bg-gray-50 transition-colors duration-150"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {offer.categoryId.categoryName}
                         </td>
@@ -346,7 +353,10 @@ const OffersPage: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 Add Offer
               </h2>
-              <form onSubmit={addOfferFormik.handleSubmit} className="space-y-4">
+              <form
+                onSubmit={addOfferFormik.handleSubmit}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Category
@@ -470,7 +480,10 @@ const OffersPage: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 Edit Offer
               </h2>
-              <form onSubmit={editOfferFormik.handleSubmit} className="space-y-4">
+              <form
+                onSubmit={editOfferFormik.handleSubmit}
+                className="space-y-4"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Category

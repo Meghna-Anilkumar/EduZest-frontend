@@ -38,6 +38,14 @@ interface IStartExamResponse {
   isSubmitted?: boolean;
 }
 
+
+interface LeaderboardEntry {
+  rank: number;
+  studentId: string;
+  studentName: string;
+  totalScore: number;
+}
+
 export const createExamAction = createAsyncThunk<
   IExam,
   { courseId: string; examData: Partial<IExam> },
@@ -296,6 +304,60 @@ export const getExamProgressAction = createAsyncThunk<
   } catch (error) {
     const err = error as AxiosError;
     console.error("getExamProgressAction: Error:", err.response?.data || err.message);
+    return rejectWithValue(err.response?.data as { message: string } || { message: err.message });
+  }
+});
+
+
+export const getLeaderboardAction = createAsyncThunk<
+  LeaderboardEntry[],
+  { courseId?: string; limit?: number },
+  { rejectValue: { message: string } }
+>("student/getLeaderboard", async ({ courseId, limit = 10 }, { rejectWithValue }) => {
+  try {
+    const url = courseId
+      ? `${userEndPoints.getLeaderboard}?courseId=${courseId}&limit=${limit}`
+      : `${userEndPoints.getLeaderboard}?limit=${limit}`;
+    console.log("getLeaderboardAction: Fetching from URL:", url);
+    const response = await serverUser.get(url, {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    });
+    console.log("getLeaderboardAction: Response:", response.data);
+    if (!response.data.success) {
+      return rejectWithValue({ message: response.data.message });
+    }
+    return response.data.data;
+  } catch (error) {
+    const err = error as AxiosError;
+    console.error("getLeaderboardAction: Error:", err.response?.data || err.message);
+    return rejectWithValue(err.response?.data as { message: string } || { message: err.message });
+  }
+});
+
+
+export const getStudentRankAction = createAsyncThunk<
+  { rank: number; totalScore: number } | null,
+  { courseId?: string },
+  { rejectValue: { message: string } }
+>("student/getStudentRank", async ({ courseId }, { rejectWithValue }) => {
+  try {
+    const url = courseId
+      ? `${userEndPoints.getRank}?courseId=${courseId}`
+      : userEndPoints.getRank;
+    console.log("getStudentRankAction: Fetching from URL:", url);
+    const response = await serverUser.get(url, {
+      headers: { "Content-Type": "application/json" },
+      withCredentials: true,
+    });
+    console.log("getStudentRankAction: Response:", response.data);
+    if (!response.data.success) {
+      return rejectWithValue({ message: response.data.message });
+    }
+    return response.data.data;
+  } catch (error) {
+    const err = error as AxiosError;
+    console.error("getStudentRankAction: Error:", err.response?.data || err.message);
     return rejectWithValue(err.response?.data as { message: string } || { message: err.message });
   }
 });

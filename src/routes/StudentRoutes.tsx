@@ -11,6 +11,7 @@ import CourseProgress from "../components/student/CourseProgress";
 import CourseResults from "../components/student/CourseResults";
 import SubscriptionPlans from "@/components/student/Subscription";
 import ExamPlayer from "@/components/student/ExamConduct";
+import Leaderboard from "@/components/student/Leaderboard";
 
 const NotFound = lazy(() => import("../pages/NotFound"));
 
@@ -33,6 +34,7 @@ const StudentRoutes: React.FC = () => {
           <Route path="/progress" element={<CourseProgress/>}/>
           <Route path="/subscription" element={<SubscriptionPlans/>}/>
           <Route path="/courses/:courseId/exams/:examId" element={<ExamPlayer />}/>
+          <Route path="/scoreboard" element={<Leaderboard />} />
         </Route>
 
         {/* 404 Page */}

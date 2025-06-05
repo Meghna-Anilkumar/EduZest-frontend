@@ -90,8 +90,10 @@ export interface UserEndpoints extends IEndPoints {
     submitExam: (examId: string) => string;
     getExamByIdForStudent: (examId: string) => string;
     getExamResult: (examId: string) => string;
-    startExam: (examId: string) =>string
-     getExamProgress: (examId: string) =>string
+    startExam: (examId: string) => string
+    getExamProgress: (examId: string) => string
+    getLeaderboard:string
+    getRank:string
 }
 
 export interface AdminEndpoints extends IEndPoints {

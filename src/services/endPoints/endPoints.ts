@@ -112,6 +112,8 @@ export const userEndPoints: UserEndpoints = {
   getExamResult: (examId: string) => `/student/exams/${examId}/result`,
   getExamById: (examId: string) => `/exams/${examId}`,
   getExamProgress: (examId: string) => `/student/exams/${examId}/progress`,
+  getLeaderboard:'/student/leaderboard',
+  getRank:'/student/rank'
 }
 
 
