@@ -61,6 +61,8 @@ export interface IUserdata {
     github?: string;
   }
   experience:string;
+  subscriptionStatus?: "active" | "inactive"
+  stripeCustomerId?: string;
 }
 
 

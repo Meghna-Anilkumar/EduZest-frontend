@@ -207,7 +207,6 @@ interface RefreshSignedUrlResponse extends ResponseData {
   signedUrl: string;
 }
 
-// Thunk to refresh a signed URL
 export const refreshSignedUrlThunk = createAsyncThunk<
   RefreshSignedUrlResponse,
   { key: string },

@@ -28,6 +28,7 @@ import {
   Lock,
   FileCheck,
   MessageCircle,
+  Star,
 } from "lucide-react";
 import RatingReview from "./ReviewComponent";
 import ChatComponent from "./ChatComponent";
@@ -261,10 +262,10 @@ const CourseDetails: React.FC = () => {
       }
     });
 
-    if (!exams) {
+    if (!exams && userData?.subscriptionStatus === "active") {
       fetchExamsForCourse();
     }
-  }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule, exams]);
+  }, [dispatch, courseId, isEnrolled, expandedSections, assessmentsByModule, exams, userData?.subscriptionStatus]);
 
   const findModuleIndexForLesson = (lesson: ILesson): number => {
     if (!course) return -1;
@@ -354,7 +355,11 @@ const CourseDetails: React.FC = () => {
   };
 
   const handleExamClick = (exam: IExam) => {
-    navigate(`/student/courses/${courseId}/exams/${exam._id}`);
+    if (userData?.subscriptionStatus === "active") {
+      navigate(`/student/courses/${courseId}/exams/${exam._id}`);
+    } else {
+      setVideoError("An active subscription is required to access exams.");
+    }
   };
 
   const handleExpandAll = () => {
@@ -506,31 +511,43 @@ const CourseDetails: React.FC = () => {
                   <p className="text-gray-500 text-sm mt-2">Loading assessments...</p>
                 )}
                 {/* Exams Section */}
-                {exams ? (
-                  <div className="mt-4">
-                    <h4 className="font-medium text-gray-700 mb-2">Exams</h4>
-                    <ul className="space-y-2">
-                      {exams.exams.map((exam) => (
-                        <li
-                          key={exam._id}
-                          className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
-                          onClick={() => handleExamClick(exam)}
-                        >
-                          <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
-                          <span className="text-sm text-gray-600">{exam.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {exams.total > exams.exams.length && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Showing {exams.exams.length} of {exams.total} exams
-                      </p>
-                    )}
-                  </div>
-                ) : examError ? (
-                  <p className="text-red-500 text-sm mt-2">{examError}</p>
+                {userData?.subscriptionStatus === "active" ? (
+                  exams ? (
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-700 mb-2 flex items-center">
+                        Exams <Star className="h-4 w-4 ml-2 text-yellow-500" />
+                      </h4>
+                      <ul className="space-y-2">
+                        {exams.exams.map((exam) => (
+                          <li
+                            key={exam._id}
+                            className="flex items-center p-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                            onClick={() => handleExamClick(exam)}
+                          >
+                            <FileCheck className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="text-sm text-gray-600">{exam.title}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {exams.total > exams.exams.length && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Showing {exams.exams.length} of {exams.total} exams
+                        </p>
+                      )}
+                    </div>
+                  ) : examError ? (
+                    <p className="text-red-500 text-sm mt-2">{examError}</p>
+                  ) : (
+                    <p className="text-gray-500 text-sm mt-2">Loading exams...</p>
+                  )
                 ) : (
-                  <p className="text-gray-500 text-sm mt-2">Loading exams...</p>
+                  <p className="text-yellow-600 text-sm mt-2 flex items-center">
+                    <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                    An active subscription is required to access exams.
+                    <Link to="/student/subscription" className="underline ml-2">
+                      Subscribe now
+                    </Link>
+                  </p>
                 )}
               </>
             ) : (
@@ -757,7 +774,7 @@ const CourseDetails: React.FC = () => {
                           </div>
                           {selectedLesson.description && (
                             <div className="mb-4">
-                              <h4 className="font-medium text-gray-700 mb-1">Description</h4>
+                              <h4 className="font haplotypes-medium text-gray-700 mb-1">Description</h4>
                               <p className="text-gray-600">{selectedLesson.description}</p>
                             </div>
                           )}
@@ -787,7 +804,6 @@ const CourseDetails: React.FC = () => {
                             }
                           }}
                         >
-                          Start First Lesson
                         </button>
                       </div>
                     )}

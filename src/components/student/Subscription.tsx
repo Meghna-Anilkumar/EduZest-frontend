@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/redux/store";
-import { createSubscriptionAction, confirmSubscriptionAction, getSubscriptionStatus } from "../../redux/actions/subscriptionActions";
+import {
+  createSubscriptionAction,
+  confirmSubscriptionAction,
+  getSubscriptionStatus,
+} from "../../redux/actions/subscriptionActions";
 import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import StudentSidebar from "./StudentSidebar";
 import Header from "../common/users/Header";
 import { toast } from "react-toastify";
-
+import { fetchUserData } from "@/redux/actions/auth/fetchUserdataAction";
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 interface Plan {
@@ -22,14 +31,14 @@ interface Plan {
 }
 
 // Loading Spinner Component
-const LoadingSpinner: React.FC<{ size?: "sm" | "md" | "lg"; color?: string }> = ({ 
-  size = "md", 
-  color = "text-white" 
-}) => {
+const LoadingSpinner: React.FC<{
+  size?: "sm" | "md" | "lg";
+  color?: string;
+}> = ({ size = "md", color = "text-white" }) => {
   const sizeClasses = {
     sm: "w-4 h-4",
     md: "w-6 h-6",
-    lg: "w-8 h-8"
+    lg: "w-8 h-8",
   };
 
   return (
@@ -53,12 +62,19 @@ const LoadingSpinner: React.FC<{ size?: "sm" | "md" | "lg"; color?: string }> = 
   );
 };
 
-const SubscriptionCheckoutForm: React.FC<{
+interface SubscriptionCheckoutFormProps {
   userId: string;
   plan: "monthly" | "yearly";
   onClose: () => void;
   onSuccess: () => void;
-}> = ({ userId, plan, onClose, onSuccess }) => {
+}
+
+const SubscriptionCheckoutForm: React.FC<SubscriptionCheckoutFormProps> = ({
+  userId,
+  plan,
+  onClose,
+  onSuccess,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const stripe = useStripe();
   const elements = useElements();
@@ -87,7 +103,8 @@ const SubscriptionCheckoutForm: React.FC<{
         return;
       }
 
-      const { clientSecret, subscriptionId: newSubscriptionId } = createResult.data;
+      const { clientSecret, subscriptionId: newSubscriptionId } =
+        createResult.data;
 
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: { card: elements.getElement(CardElement)! },
@@ -104,9 +121,11 @@ const SubscriptionCheckoutForm: React.FC<{
       ).unwrap();
 
       if (confirmResult.success) {
+        // Dispatch fetchUserData to update userData in Redux store
+        await dispatch(fetchUserData()).unwrap();
         toast.success("Subscription successful!");
-        onSuccess();
-        onClose();
+        onSuccess(); // Update local subscription status
+        onClose(); // Close the modal
       } else {
         setError(confirmResult.message);
       }
@@ -165,9 +184,14 @@ const SubscriptionCheckoutForm: React.FC<{
 const SubscriptionPlans: React.FC = () => {
   const [activeTab] = useState("Subscription");
   const dispatch = useDispatch<AppDispatch>();
-  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly" | null>(null);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
-  const [activePlan, setActivePlan] = useState<"monthly" | "yearly" | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"monthly" | "yearly" | null>(
+    null
+  );
+  const [hasActiveSubscription, setHasActiveSubscription] =
+    useState<boolean>(false);
+  const [activePlan, setActivePlan] = useState<"monthly" | "yearly" | null>(
+    null
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -184,7 +208,9 @@ const SubscriptionPlans: React.FC = () => {
       const result = await dispatch(getSubscriptionStatus(userId)).unwrap();
       if (result.success) {
         setHasActiveSubscription(result.data?.hasActiveSubscription || false);
-        setActivePlan(result.data?.hasActiveSubscription ? result.data.plan : null);
+        setActivePlan(
+          result.data?.hasActiveSubscription ? result.data.plan : null
+        );
       } else {
         setError(result.message);
       }
@@ -199,8 +225,7 @@ const SubscriptionPlans: React.FC = () => {
     if (userId) {
       fetchSubscriptionStatus();
     }
-  }, [userId]); // Removed dispatch dependency to avoid unnecessary re-renders
-
+  }, [userId]); 
   const plans: Plan[] = [
     {
       name: "Monthly",
@@ -208,9 +233,7 @@ const SubscriptionPlans: React.FC = () => {
       price: 299,
       period: "month",
       features: [
-        "Get started with messaging",
-        "Flexible team meetings",
-        "5 TB cloud storage",
+        'Unlock Access To Exams And Leaderboard'
       ],
       color: "bg-gray-200",
       textColor: "text-gray-800",
@@ -221,9 +244,7 @@ const SubscriptionPlans: React.FC = () => {
       price: 2499,
       period: "year",
       features: [
-        "All features in Monthly",
-        "Flexible call scheduling",
-        "15 TB cloud storage",
+       'Unlock Access To Exams And Leaderboard'
       ],
       color: "bg-[#49bbbd]",
       textColor: "text-white",
@@ -276,13 +297,17 @@ const SubscriptionPlans: React.FC = () => {
         <div className="flex-1 md:pl-64 mt-20 md:mt-24 p-6">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-black">Subscription Plans</h1>
+              <h1 className="text-4xl font-bold text-black">
+                Subscription Plans
+              </h1>
               <p className="text-lg text-gray-600 mt-2">
                 Choose a plan that works best for your success.
               </p>
               {hasActiveSubscription && activePlan && (
                 <p className="text-green-600 mt-2">
-                  You have an active {activePlan.charAt(0).toUpperCase() + activePlan.slice(1)} subscription.
+                  You have an active{" "}
+                  {activePlan.charAt(0).toUpperCase() + activePlan.slice(1)}{" "}
+                  subscription.
                 </p>
               )}
               {error && <p className="text-red-500 mt-2">{error}</p>}
@@ -290,7 +315,8 @@ const SubscriptionPlans: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
               {plans.map((plan, index) => {
-                const isActivePlan = hasActiveSubscription && activePlan === plan.value;
+                const isActivePlan =
+                  hasActiveSubscription && activePlan === plan.value;
 
                 return (
                   <div
@@ -307,7 +333,9 @@ const SubscriptionPlans: React.FC = () => {
                       {plan.name}
                     </h2>
 
-                    <div className={`text-4xl font-bold mb-6 ${plan.textColor}`}>
+                    <div
+                      className={`text-4xl font-bold mb-6 ${plan.textColor}`}
+                    >
                       ₹{plan.price}
                       <span className={`text-lg font-normal ${plan.textColor}`}>
                         /{plan.period}
@@ -345,9 +373,7 @@ const SubscriptionPlans: React.FC = () => {
                           : "bg-[#49bbbd] text-white hover:bg-[#3a9a9c]"
                       }`}
                     >
-                      {isActivePlan
-                        ? "Active Plan"
-                        : "Choose Plan →"}
+                      {isActivePlan ? "Active Plan" : "Choose Plan →"}
                     </button>
                   </div>
                 );
