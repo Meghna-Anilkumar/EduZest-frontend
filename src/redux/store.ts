@@ -9,6 +9,7 @@ import courseReducer from "./reducers/courseReducer";
 const persistConfig = {
   key: "root",
   storage,
+  blacklist: ['auth'],
   whitelist: ["user", "admin"], 
 };
 

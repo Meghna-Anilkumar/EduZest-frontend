@@ -14,6 +14,7 @@ import {
 import ConfirmationModal from "../common/ConfirmationModal";
 import Pagination from "../common/Pagination";
 import { toast } from "react-toastify";
+import { SearchBar } from "../common/SearchBar";
 
 export interface Coupon {
   _id: string;
@@ -86,15 +87,17 @@ const CouponsPage: React.FC = () => {
   );
   const [confirmMessage, setConfirmMessage] = useState("");
   const [limit] = useState(10);
+  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
 
   const today = new Date().toISOString().split("T")[0];
 
+  // Modified fetchCoupons to include searchQuery
   const fetchCoupons = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await dispatch(
-        getAllCouponsAction({ page: currentPage, limit })
+        getAllCouponsAction({ page: currentPage, limit, search: searchQuery })
       ).unwrap();
       setCoupons(result.coupons);
       setCurrentPage(result.currentPage);
@@ -107,11 +110,21 @@ const CouponsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, currentPage, limit]);
+  }, [dispatch, currentPage, limit, searchQuery]); // Add searchQuery to dependencies
 
   useEffect(() => {
     fetchCoupons();
   }, [fetchCoupons]);
+
+  // Handle search input change
+  const handleSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const query = event.target.value.trim();
+      setSearchQuery(query);
+      setCurrentPage(1); // Reset to first page on search
+    },
+    []
+  );
 
   const addCouponFormik = useFormik<CouponFormValues>({
     initialValues: {
@@ -219,6 +232,7 @@ const CouponsPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Coupons</h1>
           <div className="flex items-center gap-4">
+            <SearchBar onSearchChange={handleSearchChange} /> {/* Add SearchBar */}
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-[#49bbbd] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#3a9a9b] transition-colors"

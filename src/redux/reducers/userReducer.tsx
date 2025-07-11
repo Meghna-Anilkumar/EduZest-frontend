@@ -7,7 +7,7 @@ import { login } from "../actions/auth/userLoginAction";
 import { fetchUserData } from "../actions/auth/fetchUserdataAction";
 import { IUserdata } from "../../interface/IUserData";
 import { logoutUser } from "../actions/auth/logoutUserAction";
-import { updateStudentProfileThunk} from "../actions/userActions";
+import { updateStudentProfileThunk } from "../actions/userActions";
 import { googleAuth } from "../actions/auth/googleSigninAction";
 
 const initialState: IInitialState = {
