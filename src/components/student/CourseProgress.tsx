@@ -62,12 +62,12 @@ const CourseProgress: React.FC = () => {
       setError(null);
       try {
         const result = await dispatch(getAllEnrollmentsAction()).unwrap();
-        if (result.success) {
-          setEnrollments(result.data || []);
-        } else {
-          setError(result.message || "Failed to fetch enrollments");
-        }
-      } catch (err: any) {
+                if (result.success) {
+                  setEnrollments(result.data?.enrollments || []);
+                } else {
+                  setError(result.message || "Failed to fetch enrollments");
+                }
+      } catch (err:any) {
         setError(err.message || "Failed to fetch enrollments");
       } finally {
         setLoading(false);

@@ -63,7 +63,7 @@ const MyCourses: React.FC = () => {
       try {
         const result = await dispatch(getAllEnrollmentsAction()).unwrap();
         if (result.success) {
-          setEnrollments(result.data || []);
+          setEnrollments(result.data?.enrollments || []);
         } else {
           setError(result.message || "Failed to fetch enrollments");
         }
