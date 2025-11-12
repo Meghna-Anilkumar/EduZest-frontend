@@ -15,6 +15,7 @@ import { getAllCategoriesAction } from "@/redux/actions/categoryActions";
 import ConfirmationModal from "../common/ConfirmationModal";
 import Pagination from "../common/Pagination";
 import { toast } from "react-toastify";
+import { SearchBar } from "../common/SearchBar";
 
 export interface Offer {
   _id: string;
@@ -82,6 +83,7 @@ const OffersPage: React.FC = () => {
   );
   const [confirmMessage, setConfirmMessage] = useState("");
   const [limit] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -104,7 +106,7 @@ const OffersPage: React.FC = () => {
     setError(null);
     try {
       const result = await dispatch(
-        getAllOffersAction({ page: currentPage, limit })
+        getAllOffersAction({ page: currentPage, limit, search: searchTerm })
       ).unwrap();
       setOffers(result.offers);
       setCurrentPage(result.currentPage);
@@ -117,12 +119,20 @@ const OffersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [dispatch, currentPage, limit]);
+  }, [dispatch, currentPage, limit, searchTerm]);
 
   useEffect(() => {
     fetchCategories();
+  }, [fetchCategories]);
+
+  useEffect(() => {
     fetchOffers();
-  }, [fetchCategories, fetchOffers]);
+  }, [fetchOffers]);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setCurrentPage(1);
+  };
 
   const addOfferFormik = useFormik<OfferFormValues>({
     initialValues: {
@@ -179,9 +189,9 @@ const OffersPage: React.FC = () => {
             ).unwrap();
             toast.success("Offer updated successfully");
             setIsEditModalOpen(false);
-            setSelectedOffer(null); // Clear selected offer
-            resetForm(); // Reset form values
-            await fetchOffers(); // Refresh offers list
+            setSelectedOffer(null);
+            resetForm();
+            await fetchOffers();
           } catch (err: any) {
             const errorMessage = err.message || "Failed to update offer";
             setError(errorMessage);
@@ -229,6 +239,9 @@ const OffersPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Offers</h1>
           <div className="flex items-center gap-4">
+            <div className="w-64">
+              <SearchBar onSearchChange={handleSearchChange} />
+            </div>
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-[#49bbbd] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#3a9a9b] transition-colors duration-200"
@@ -270,7 +283,9 @@ const OffersPage: React.FC = () => {
               Loading...
             </div>
           ) : offers.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No offers found</div>
+            <div className="p-6 text-center text-gray-500">
+              {searchTerm ? "No offers found matching your search" : "No offers found"}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full table-auto">

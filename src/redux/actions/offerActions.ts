@@ -60,13 +60,10 @@ export const getAllOffersAction = createAsyncThunk(
         { rejectWithValue }
     ) => {
         try {
-
             const endpoint = adminEndpoints.fetchAllOffers(page, limit, search);
             console.log("🚀 Full endpoint being called:", endpoint);
             console.log("🚀 Base URL:", serverAdmin.defaults.baseURL);
-            const response = await serverAdmin.get<OfferResponse>(
-                adminEndpoints.fetchAllOffers(page, limit, search)
-            );
+            const response = await serverAdmin.get<OfferResponse>(endpoint);
             console.log("API Response:", response.data);
 
             const { offers, total, page: currentPage, totalPages } = response.data.data;
@@ -143,37 +140,3 @@ export const deleteOfferAction = createAsyncThunk(
         }
     }
 );
-
-// Fetch Active Offers (User)
-// export const getActiveOffersUserAction = createAsyncThunk(
-//   "offers/getActive",
-//   async ({ categoryId }: { categoryId?: string }, { rejectWithValue }) => {
-//     try {
-//       const response = await serverUser.get<OfferResponse>(
-//         userEndPoints.fetchActiveOffers(categoryId)
-//       );
-//       console.log("User API Response:", response.data);
-
-//       const offers = response.data.data.offers;
-
-//       if (!Array.isArray(offers)) {
-//         console.error("Offers is not an array:", offers);
-//         return rejectWithValue("Invalid data format received from server");
-//       }
-
-//       const validOffers = offers.filter(
-//         (offer): offer is Offer => offer && typeof offer._id === "string"
-//       );
-
-//       if (validOffers.length !== offers.length) {
-//         console.warn("Some offers were invalid:", offers);
-//       }
-
-//       return validOffers;
-//     } catch (error) {
-//       const err = error as AxiosError;
-//       console.error("Fetch active offers error:", err);
-//       return rejectWithValue(err.response?.data || "Failed to fetch offers");
-//     }
-//   }
-// );

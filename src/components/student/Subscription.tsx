@@ -83,12 +83,23 @@ const SubscriptionCheckoutForm: React.FC<SubscriptionCheckoutFormProps> = ({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements) {
+      setError("Stripe is not loaded. Please refresh and try again.");
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      setError("Card element not found. Please refresh and try again.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      // Step 1: Create subscription
+      console.log("Creating subscription...");
       const createResult = await dispatch(
         createSubscriptionAction({
           userId,
@@ -98,39 +109,63 @@ const SubscriptionCheckoutForm: React.FC<SubscriptionCheckoutFormProps> = ({
       ).unwrap();
 
       if (!createResult.success) {
-        setError(createResult.message);
+        setError(createResult.message || "Failed to create subscription");
         setLoading(false);
         return;
       }
 
-      const { clientSecret, subscriptionId: newSubscriptionId } =
-        createResult.data;
+      const { clientSecret, subscriptionId: newSubscriptionId } = createResult.data;
 
-      const result = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: { card: elements.getElement(CardElement)! },
-      });
-
-      if (result.error) {
-        setError(result.error.message || "Payment failed");
+      if (!clientSecret) {
+        setError("Invalid payment configuration. Please contact support.");
         setLoading(false);
         return;
       }
 
+      // Step 2: Confirm payment
+      console.log("Confirming payment...");
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: { card: cardElement },
+        }
+      );
+
+      if (stripeError) {
+        console.error("Stripe payment error:", stripeError);
+        setError(stripeError.message || "Payment failed. Please check your card details.");
+        setLoading(false);
+        return;
+      }
+
+      if (!paymentIntent || paymentIntent.status !== "succeeded") {
+        setError("Payment was not completed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Confirm subscription on backend
+      console.log("Confirming subscription on backend...");
       const confirmResult = await dispatch(
         confirmSubscriptionAction(newSubscriptionId)
       ).unwrap();
 
       if (confirmResult.success) {
-        // Dispatch fetchUserData to update userData in Redux store
+        // Refresh user data
         await dispatch(fetchUserData()).unwrap();
-        toast.success("Subscription successful!");
-        onSuccess(); // Update local subscription status
-        onClose(); // Close the modal
+        
+        toast.success("Subscription activated successfully!");
+        onSuccess();
+        onClose();
       } else {
-        setError(confirmResult.message);
+        setError(confirmResult.message || "Failed to activate subscription");
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      console.error("Subscription error:", err);
+      setError(
+        err.message || 
+        "An unexpected error occurred. Please try again or contact support."
+      );
     } finally {
       setLoading(false);
     }
@@ -142,8 +177,9 @@ const SubscriptionCheckoutForm: React.FC<SubscriptionCheckoutFormProps> = ({
         <h2 className="text-2xl font-bold mb-4">
           Subscribe to {plan.charAt(0).toUpperCase() + plan.slice(1)} Plan
         </h2>
+        
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
+          <div className="mb-4 p-4 border border-gray-300 rounded">
             <CardElement
               options={{
                 style: {
@@ -157,22 +193,35 @@ const SubscriptionCheckoutForm: React.FC<SubscriptionCheckoutFormProps> = ({
               }}
             />
           </div>
-          {error && <div className="text-red-500 mb-4">{error}</div>}
+          
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
+          
           <div className="flex justify-end gap-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400"
+              disabled={loading}
+              className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!stripe || loading}
-              className="px-4 py-2 bg-[#49bbbd] text-white rounded hover:bg-[#3a9a9c] disabled:bg-gray-400 flex items-center gap-2"
+              className="px-4 py-2 bg-[#49bbbd] text-white rounded hover:bg-[#3a9a9c] disabled:bg-gray-400 flex items-center gap-2 min-w-[140px] justify-center"
             >
-              {loading && <LoadingSpinner size="sm" />}
-              {loading ? "Processing..." : "Confirm Payment"}
+              {loading ? (
+                <>
+                  <LoadingSpinner size="sm" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                "Confirm Payment"
+              )}
             </button>
           </div>
         </form>
