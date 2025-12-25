@@ -16,21 +16,22 @@ interface Transaction {
   amount: string;
 }
 
-interface AdminPayout {
-  transactionId?: string;
-  date?: string;
-  course?: string;
-  studentName?: string;
-  amount?: number | string;
+interface AdminPayoutItem {
+  transactionId: string;
+  date: string;
+  course: string;
+  studentName: string;
+  amount: string;
 }
 
-interface AdminPayoutResponse {
+interface AdminPayoutsResponse {
   success: boolean;
   message?: string;
-  data?: {
-    data: AdminPayout[];
+  data: {
+    data: AdminPayoutItem[]; 
     total: number;
     limit: number;
+    page: number;
   };
 }
 
@@ -62,7 +63,7 @@ const TransactionsPage: React.FC = () => {
     setError(null);
 
     try {
-      const result: AdminPayoutResponse = await dispatch(
+      const result: AdminPayoutsResponse = await dispatch(
         getAdminPayoutsAction({
           page: paginationPage,
           limit,
@@ -72,7 +73,7 @@ const TransactionsPage: React.FC = () => {
         })
       ).unwrap();
 
-      if (result.success && result.data) {
+      if (result.success && result.data?.data) {
         if (!Array.isArray(result.data.data)) {
           throw new Error("Invalid API response: data.data is not an array");
         }

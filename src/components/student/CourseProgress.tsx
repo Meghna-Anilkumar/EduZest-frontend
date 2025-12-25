@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import { Book, Clock, AlertCircle, Award } from "lucide-react";
@@ -8,6 +8,8 @@ import { getCourseProgressAction } from "../../redux/actions/assessmentActions";
 import Header from "../common/users/Header";
 import StudentSidebar from "./StudentSidebar";
 import ProgressBar from "@ramonak/react-progress-bar";
+import Pagination from "../common/Pagination";
+import { SearchBar } from "../common/SearchBar";
 
 interface CourseData {
   _id: string;
@@ -44,8 +46,14 @@ interface CourseProgress {
   progress: number;
 }
 
+interface PaginationData {
+  currentPage: number;
+  totalPages: number;
+  totalEnrollments: number;
+}
+
 const CourseProgress: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("My Courses");
+  const [activeTab, setActiveTab] = useState("Course Progress");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [enrollments, setEnrollments] = useState<EnrollmentData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,29 +61,44 @@ const CourseProgress: React.FC = () => {
   const [courseProgress, setCourseProgress] = useState<{
     [courseId: string]: CourseProgress | null;
   }>({});
-
+  const [paginationData, setPaginationData] = useState<PaginationData>({
+    currentPage: 1,
+    totalPages: 1,
+    totalEnrollments: 0,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const dispatch = useDispatch<AppDispatch>();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchEnrollments = async (page: number = 1, search: string = "") => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await dispatch(
+        getAllEnrollmentsAction({ page, limit: 6, search })
+      ).unwrap();
+      
+      if (result.success) {
+        setEnrollments(result.data.enrollments || []);
+        setPaginationData({
+          currentPage: result.data.currentPage,
+          totalPages: result.data.totalPages,
+          totalEnrollments: result.data.totalEnrollments,
+        });
+      } else {
+        setError(result.message || "Failed to fetch enrollments");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred while fetching enrollments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchEnrollments = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await dispatch(getAllEnrollmentsAction()).unwrap();
-                if (result.success) {
-                  setEnrollments(result.data?.enrollments || []);
-                } else {
-                  setError(result.message || "Failed to fetch enrollments");
-                }
-      } catch (err:any) {
-        setError(err.message || "Failed to fetch enrollments");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEnrollments();
-  }, [dispatch]);
+    fetchEnrollments(paginationData.currentPage, searchQuery);
+  }, [paginationData.currentPage, searchQuery, dispatch]);
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -91,7 +114,7 @@ const CourseProgress: React.FC = () => {
             );
             setCourseProgress((prev) => ({
               ...prev,
-              [enrollment.courseId._id]: result,
+              [enrollment.courseId!._id]: result,
             }));
           } catch (err: any) {
             console.error(
@@ -100,7 +123,7 @@ const CourseProgress: React.FC = () => {
             );
             setCourseProgress((prev) => ({
               ...prev,
-              [enrollment.courseId._id]: null,
+              [enrollment.courseId!._id]: null,
             }));
           }
         }
@@ -111,6 +134,31 @@ const CourseProgress: React.FC = () => {
       fetchProgress();
     }
   }, [enrollments, dispatch]);
+
+  const handlePageChange = (page: number) => {
+    setPaginationData((prev) => ({ ...prev, currentPage: page }));
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setSearchQuery(query);
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      setPaginationData((prev) => ({ ...prev, currentPage: 1 }));
+    }, 500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -210,9 +258,14 @@ const CourseProgress: React.FC = () => {
           </div>
         )}
 
-        <main className="flex-1 p-4 md:p-6 pt-6 md:ml-64 mt-16">
+        <main className="flex-1 p-4 md:p-6 pt-6 md:ml-64 mt-20">
           <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold mb-6">Course Progress</h1>
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <h1 className="text-2xl md:text-3xl font-bold">Course Progress</h1>
+              <div className="mt-4 md:mt-0 w-full md:w-64">
+                <SearchBar onSearchChange={handleSearchChange} />
+              </div>
+            </div>
 
             {loading ? (
               <div className="flex items-center justify-center h-64">
@@ -226,151 +279,172 @@ const CourseProgress: React.FC = () => {
                 </span>
               </div>
             ) : enrollments.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {enrollments.map((enrollment: EnrollmentData) => {
-                  if (!enrollment.courseId || !enrollment.courseId.level) {
-                    console.warn(
-                      `Skipping enrollment ${enrollment._id}: Missing courseId or level`,
-                      enrollment
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {enrollments.map((enrollment: EnrollmentData) => {
+                    if (!enrollment.courseId || !enrollment.courseId.level) {
+                      console.warn(
+                        `Skipping enrollment ${enrollment._id}: Missing courseId or level`,
+                        enrollment
+                      );
+                      return null;
+                    }
+
+                    const progressData = courseProgress[enrollment.courseId._id];
+                    const isCompleted = progressData && progressData.progress === 100;
+
+                    return (
+                      <div
+                        key={enrollment._id}
+                        className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col"
+                      >
+                        <div className="relative h-48 overflow-hidden">
+                          <img
+                            src={
+                              enrollment.courseId.thumbnail ||
+                              "/default-thumbnail.jpg"
+                            }
+                            alt={enrollment.courseId.title || "Course"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/default-thumbnail.jpg";
+                            }}
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                            <span
+                              className={`text-xs font-semibold px-2 py-1 rounded-full ${getLevelBadgeClass(
+                                enrollment.courseId.level
+                              )}`}
+                            >
+                              {enrollment.courseId.level.charAt(0).toUpperCase() +
+                                enrollment.courseId.level.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-4 flex-1 flex flex-col">
+                          <div className="flex justify-between items-start mb-2">
+                            <h2 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                              {enrollment.courseId.title || "Untitled Course"}
+                            </h2>
+                            <span
+                              className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusBadgeClass(
+                                enrollment.completionStatus
+                              )}`}
+                            >
+                              {enrollment.completionStatus
+                                .split("-")
+                                .map(
+                                  (word) =>
+                                    word.charAt(0).toUpperCase() + word.slice(1)
+                                )
+                                .join(" ")}
+                            </span>
+                          </div>
+
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                            {enrollment.courseId.description ||
+                              "No description available"}
+                          </p>
+
+                          <div className="flex items-center text-gray-500 text-xs mb-2">
+                            <Book className="h-4 w-4 mr-1" />
+                            <span>
+                              {enrollment.courseId.modules
+                                ? calculateTotalLessons(enrollment.courseId)
+                                : 0}{" "}
+                              lessons
+                            </span>
+                            <span className="mx-2">•</span>
+                            <span>
+                              {enrollment.courseId.language || "Unknown"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center text-gray-500 text-xs mb-4">
+                            <Clock className="h-4 w-4 mr-1" />
+                            <span>
+                              Enrolled on{" "}
+                              {formatEnrollmentDate(enrollment.enrolledAt)}
+                            </span>
+                          </div>
+
+                          <div className="mt-auto">
+                            {progressData ? (
+                              <div className="mb-3">
+                                <ProgressBar
+                                  completed={progressData.progress}
+                                  bgColor="#006400"
+                                  labelAlignment="center"
+                                  labelColor="#ffffff"
+                                  height="20px"
+                                  labelSize="12px"
+                                  maxCompleted={100}
+                                />
+                              </div>
+                            ) : (
+                              <div className="mb-3">
+                                <ProgressBar
+                                  completed={0}
+                                  bgColor="#d3d3d3"
+                                  labelAlignment="center"
+                                  labelColor="#ffffff"
+                                  height="20px"
+                                  labelSize="12px"
+                                  maxCompleted={100}
+                                  customLabel="Loading..."
+                                />
+                              </div>
+                            )}
+                            {isCompleted ? (
+                              <Link
+                                to={`/student/courses/${enrollment.courseId._id}/results`}
+                                className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300 flex items-center justify-center"
+                              >
+                                <Award className="h-5 w-5 mr-2" />
+                                View Results
+                              </Link>
+                            ) : (
+                              <Link
+                                to={`/student/learn/${enrollment.courseId._id}`}
+                                className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
+                              >
+                                Continue Learning
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     );
-                    return null;
-                  }
+                  })}
+                </div>
 
-                  const progressData = courseProgress[enrollment.courseId._id];
-                  const isCompleted = progressData && progressData.progress === 100;
-
-                  return (
-                    <div
-                      key={enrollment._id}
-                      className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col"
-                    >
-                      <div className="relative h-48 overflow-hidden">
-                        <img
-                          src={
-                            enrollment.courseId.thumbnail ||
-                            "default-thumbnail.jpg"
-                          }
-                          alt={enrollment.courseId.title || "Course"}
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                          <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${getLevelBadgeClass(
-                              enrollment.courseId.level
-                            )}`}
-                          >
-                            {enrollment.courseId.level.charAt(0).toUpperCase() +
-                              enrollment.courseId.level.slice(1)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="p-4 flex-1 flex flex-col">
-                        <div className="flex justify-between items-start mb-2">
-                          <h2 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                            {enrollment.courseId.title || "Untitled Course"}
-                          </h2>
-                          <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusBadgeClass(
-                              enrollment.completionStatus
-                            )}`}
-                          >
-                            {enrollment.completionStatus
-                              .split("-")
-                              .map(
-                                (word) =>
-                                  word.charAt(0).toUpperCase() + word.slice(1)
-                              )
-                              .join(" ")}
-                          </span>
-                        </div>
-
-                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                          {enrollment.courseId.description ||
-                            "No description available"}
-                        </p>
-
-                        <div className="flex items-center text-gray-500 text-xs mb-2">
-                          <Book className="h-4 w-4 mr-1" />
-                          <span>
-                            {enrollment.courseId.modules
-                              ? calculateTotalLessons(enrollment.courseId)
-                              : 0}{" "}
-                            lessons
-                          </span>
-                          <span className="mx-2">•</span>
-                          <span>
-                            {enrollment.courseId.language || "Unknown"}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center text-gray-500 text-xs mb-4">
-                          <Clock className="h-4 w-4 mr-1" />
-                          <span>
-                            Enrolled on{" "}
-                            {formatEnrollmentDate(enrollment.enrolledAt)}
-                          </span>
-                        </div>
-
-                        <div className="mt-auto">
-                          {progressData ? (
-                            <div className="mb-3">
-                              <ProgressBar
-                                completed={progressData.progress}
-                                bgColor="#006400"
-                                labelAlignment="center"
-                                labelColor="#ffffff"
-                                height="20px"
-                                labelSize="12px"
-                                maxCompleted={100}
-                              />
-                            </div>
-                          ) : (
-                            <div className="mb-3">
-                              <ProgressBar
-                                completed={0}
-                                bgColor="#d3d3d3"
-                                labelAlignment="center"
-                                labelColor="#ffffff"
-                                height="20px"
-                                labelSize="12px"
-                                maxCompleted={100}
-                                customLabel="Loading..."
-                              />
-                            </div>
-                          )}
-                          {isCompleted ? (
-                            <Link
-                              to={`/student/courses/${enrollment.courseId._id}/results`}
-                              className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300 flex items-center justify-center"
-                            >
-                              <Award className="h-5 w-5 mr-2" />
-                              View Results
-                            </Link>
-                          ) : (
-                            <Link
-                              to={`/student/learn/${enrollment.courseId._id}`}
-                              className="block w-full text-center bg-[#49BBBD] text-white py-2 rounded hover:bg-[#3a9a9c] transition-colors duration-300"
-                            >
-                              Continue Learning
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                {/* Always display pagination */}
+                <div className="mt-8 flex justify-center">
+                  <Pagination
+                    currentPage={paginationData.currentPage}
+                    totalPages={paginationData.totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+                
+                {/* Show page number indicator */}
+                <div className="mt-2 text-center text-sm text-gray-500">
+                  Page {paginationData.currentPage} of {paginationData.totalPages}
+                </div>
+              </>
             ) : (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <div className="flex justify-center mb-4">
                   <Book className="h-16 w-16 text-gray-300" />
                 </div>
                 <h2 className="text-xl font-semibold text-gray-700 mb-2">
-                  No progress yet
+                  {searchQuery ? "No matching courses found" : "No progress yet"}
                 </h2>
                 <p className="text-gray-500 mb-6">
-                  You haven't enrolled in any courses yet.
+                  {searchQuery
+                    ? "Try adjusting your search criteria."
+                    : "You haven't enrolled in any courses yet."}
                 </p>
                 <Link
                   to="/all-courses"

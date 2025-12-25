@@ -35,16 +35,16 @@ interface AdminPayoutItem {
   transactionId: string;
   date: string;
   course: string;
-  instructorName: string;
-  amount: number;
-  commission: number;
-  netAmount: number;
+  studentName: string;
+  amount: string;
 }
+
 
 interface AdminPayoutsResponse {
   success: boolean;
+  message?: string;
   data: {
-    payouts: AdminPayoutItem[];
+    data: AdminPayoutItem[]; 
     total: number;
     limit: number;
     page: number;

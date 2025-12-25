@@ -33,7 +33,7 @@ export interface VerifyOtpBaseResponse {
 
 export interface VerifyOtpSuccessResponse extends VerifyOtpBaseResponse {
     success: true;
-    data?: any;
+    data?: unknown;
     userData:unknown
 }
 

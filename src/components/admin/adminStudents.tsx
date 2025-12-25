@@ -4,6 +4,7 @@ import { AppDispatch } from "../../redux/store";
 import {
   getAllStudentsAction,
   blockUnblockUserAction,
+  AdminUser,
 } from "../../redux/actions/adminActions";
 import Pagination from "../common/Pagination";
 import { RiMenuLine } from "react-icons/ri";
@@ -22,17 +23,11 @@ import { AxiosError } from "axios";
 
 const Sidebar = lazy(() => import("../common/admin/AdminSidebar"));
 
-interface Student extends IUserdata {
-  _id: string;
-  name: string;
-  email: string;
-  status: string;
-  isBlocked: boolean;
-}
+
 
 export const AdminStudents: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<AdminUser[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -41,7 +36,7 @@ export const AdminStudents: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<AdminUser | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [studentToToggle, setStudentToToggle] = useState<{
     id: string;
@@ -60,7 +55,7 @@ export const AdminStudents: React.FC = () => {
       setError(null);
 
       try {
-        const response: GetStudentsResponse = await dispatch(
+        const response = await dispatch(
           getAllStudentsAction({
             page,
             limit: studentsPerPage,
@@ -128,7 +123,7 @@ export const AdminStudents: React.FC = () => {
     setStudentToToggle(null);
   };
 
-  const handleViewDetails = (student: Student) => {
+  const handleViewDetails = (student: AdminUser) => {
     setSelectedStudent(student);
     setIsModalOpen(true);
   };
@@ -260,7 +255,7 @@ export const AdminStudents: React.FC = () => {
                             className="text-blue-500 hover:text-blue-700"
                             title="View Details"
                           >
-                            👁️ {/* Unicode eye symbol */}
+                            👁️
                           </button>
                         </td>
                       </tr>
@@ -290,10 +285,9 @@ export const AdminStudents: React.FC = () => {
       <StudentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        student={selectedStudent}
+        student={selectedStudent as IUserdata}
       />
 
-      {/* Confirmation Dialog for Blocking/Unblocking */}
       <Dialog
         open={confirmDialogOpen}
         onClose={handleCancelBlockUnblock}
