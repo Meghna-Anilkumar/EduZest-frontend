@@ -6,8 +6,35 @@ import { getAdminPayoutsAction } from "@/redux/actions/adminActions";
 import { AppDispatch } from "../../redux/store";
 import { RiMenuLine } from "react-icons/ri";
 import Sidebar from "../common/admin/AdminSidebar";
+import { AxiosError } from "axios";
 
 interface Transaction {
+  transactionId: string;
+  date: string;
+  course: string;
+  studentName: string;
+  amount: string;
+}
+
+interface AdminPayout {
+  transactionId?: string;
+  date?: string;
+  course?: string;
+  studentName?: string;
+  amount?: number | string;
+}
+
+interface AdminPayoutResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    data: AdminPayout[];
+    total: number;
+    limit: number;
+  };
+}
+
+interface FormattedTransaction {
   transactionId: string;
   date: string;
   course: string;
@@ -30,11 +57,12 @@ const TransactionsPage: React.FC = () => {
 
   const dispatch = useDispatch<AppDispatch>();
 
-  const fetchPayouts = async () => {
+  const fetchPayouts = async (): Promise<void> => {
     setLoading(true);
     setError(null);
+
     try {
-      const result = await dispatch(
+      const result: AdminPayoutResponse = await dispatch(
         getAdminPayoutsAction({
           page: paginationPage,
           limit,
@@ -44,46 +72,59 @@ const TransactionsPage: React.FC = () => {
         })
       ).unwrap();
 
-      if (result && result.success && result.data) {
+      if (result.success && result.data) {
         if (!Array.isArray(result.data.data)) {
           throw new Error("Invalid API response: data.data is not an array");
         }
-        const formattedTransactions = result.data.data.map((payout: any) => ({
-          transactionId: payout.transactionId || "N/A",
-          date: payout.date
-            ? new Date(payout.date).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })
-            : "N/A",
-          course: payout.course || "N/A",
-          studentName: payout.studentName || "N/A",
-          amount: payout.amount
-            ? `₹${parseFloat(payout.amount).toFixed(2)}`
-            : "N/A",
-        }));
-        console.log("Formatted transactions:", formattedTransactions);
+
+        const formattedTransactions: FormattedTransaction[] =
+          result.data.data.map((payout) => ({
+            transactionId: payout.transactionId ?? "N/A",
+            date: payout.date
+              ? new Date(payout.date).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "N/A",
+            course: payout.course ?? "N/A",
+            studentName: payout.studentName ?? "N/A",
+            amount:
+              payout.amount !== undefined
+                ? `₹${Number(payout.amount).toFixed(2)}`
+                : "N/A",
+          }));
+
         setTransactions(formattedTransactions);
         setTotalPages(Math.ceil(result.data.total / result.data.limit) || 1);
         setTotalEntries(result.data.total);
 
-        const uniqueCourseNames: string[] = Array.from(
+        const uniqueCourseNames = Array.from(
           new Set(
             formattedTransactions
               .map((t) => t.course)
               .filter((c) => c !== "N/A")
           )
         );
+
         setUniqueCourses(uniqueCourseNames);
       } else {
-        setError(
-          result?.message || "No transactions found for the selected filters"
-        );
+        setError(result.message ?? "No transactions found");
       }
-    } catch (err: any) {
-      console.error("Error fetching payouts:", err);
-      setError(err.message || "Failed to fetch admin payouts");
+    } catch (error: unknown) {
+      console.error("Error fetching payouts:", error);
+
+      let errorMessage = "Failed to fetch admin payouts";
+
+      if (error instanceof AxiosError) {
+        errorMessage =
+          (error.response?.data as { message?: string })?.message ??
+          errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -97,7 +138,9 @@ const TransactionsPage: React.FC = () => {
     setPaginationPage(page);
   };
 
-  const handleCourseFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleCourseFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     setCourseFilter(e.target.value);
     setPaginationPage(1);
   };
@@ -159,7 +202,9 @@ const TransactionsPage: React.FC = () => {
         className={`
           fixed
           inset-y-0 left-0
-          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          transform ${
+            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }
           lg:translate-x-0 transition-transform duration-300 ease-in-out
           z-50 lg:z-30
         `}
@@ -171,7 +216,9 @@ const TransactionsPage: React.FC = () => {
       <div className="flex-1 min-w-0 overflow-auto lg:ml-64">
         <div className="p-6 flex-1">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Admin Transactions</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Admin Transactions
+            </h1>
           </div>
 
           <div className="bg-white rounded-xl shadow-lg p-6">

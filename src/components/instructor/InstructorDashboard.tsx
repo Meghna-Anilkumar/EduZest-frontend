@@ -35,6 +35,7 @@ const InstructorDashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
+
   const [courseStats, setCourseStats] = useState<CourseStats[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,10 +70,10 @@ const InstructorDashboard: React.FC = () => {
       try {
         await dispatch(fetchUserData()).unwrap();
         const statsResponse = await dispatch(getInstructorCourseStatsAction()).unwrap();
-        console.log("Course Stats:", statsResponse.data);
         setCourseStats(statsResponse.data);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch course statistics");
+      } catch (err) {
+        const errorObj = err as { message?: string };
+        setError(errorObj.message ?? "Failed to fetch course statistics");
       } finally {
         setLoading(false);
       }
@@ -101,7 +102,7 @@ const InstructorDashboard: React.FC = () => {
         borderWidth: 1,
       },
       {
-        label: "Total Revenue ($)",
+        label: "Total Revenue (₹)",
         data: courseStats.map((course) => course.totalRevenue),
         backgroundColor: "rgba(255, 99, 132, 0.5)",
         borderColor: "rgba(255, 99, 132, 1)",
@@ -109,7 +110,6 @@ const InstructorDashboard: React.FC = () => {
       },
     ],
   };
-  console.log("Chart Data:", chartData);
 
   const titleFont: Partial<FontSpec> = {
     size: 16,
@@ -253,7 +253,6 @@ const InstructorDashboard: React.FC = () => {
                 Course-wise Statistics
               </h2>
 
-              {/* Chart Section with fixed height */}
               {courseStats.length === 0 ? (
                 <div className="bg-gray-50 p-8 text-center rounded-lg">
                   <p className="text-gray-600 text-lg">No courses found. Create a course to see statistics here.</p>
@@ -264,7 +263,6 @@ const InstructorDashboard: React.FC = () => {
                     <Bar data={chartData} options={chartOptions} />
                   </div>
 
-                  {/* Summary Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <div className="bg-blue-50 p-4 rounded-lg shadow-sm">
                       <h3 className="text-blue-700 text-lg font-semibold">Total Courses</h3>
@@ -290,7 +288,6 @@ const InstructorDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Table Section */}
                   <div className="overflow-x-auto bg-white border border-gray-200 rounded-lg shadow-sm">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">

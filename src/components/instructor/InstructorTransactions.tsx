@@ -15,6 +15,14 @@ interface Transaction {
   amount: string;
 }
 
+interface PayoutData {
+  transactionId?: string;
+  date?: string;
+  course?: string;
+  studentName?: string;
+  amount?: string | number;
+}
+
 const TransactionsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState("transactions");
@@ -60,7 +68,7 @@ const TransactionsPage: React.FC = () => {
           instructorId,
           page: paginationPage,
           limit,
-          sortField: "date", // Hardcode to date
+          sortField: "date",
           sortOrder,
           courseFilter,
         })
@@ -70,7 +78,7 @@ const TransactionsPage: React.FC = () => {
         if (!Array.isArray(result.data.data)) {
           throw new Error("Invalid API response: data.data is not an array");
         }
-        const formattedTransactions = result.data.data.map((payout: any) => ({
+        const formattedTransactions = result.data.data.map((payout: PayoutData) => ({
           transactionId: payout.transactionId || "N/A",
           date: payout.date
             ? new Date(payout.date).toLocaleDateString("en-US", {
@@ -82,14 +90,13 @@ const TransactionsPage: React.FC = () => {
           course: payout.course || "N/A",
           studentName: payout.studentName || "N/A",
           amount: payout.amount
-            ? `₹${parseFloat(payout.amount).toFixed(2)}`
+            ? `₹${parseFloat(String(payout.amount)).toFixed(2)}`
             : "N/A",
         }));
-        console.log("Formatted transactions:", formattedTransactions); // Debug log
+        console.log("Formatted transactions:", formattedTransactions);
         setTransactions(formattedTransactions);
         setTotalPages(Math.ceil(result.data.total / result.data.limit) || 1);
 
-        // Extract unique course names and explicitly cast to string[]
         const uniqueCourseNames = Array.from(
           new Set(
             formattedTransactions
@@ -103,9 +110,10 @@ const TransactionsPage: React.FC = () => {
           result?.message || "No transactions found for the selected filters"
         );
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching payouts:", err);
-      setError(err.message || "Failed to fetch instructor payouts");
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch instructor payouts";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -135,7 +143,7 @@ const TransactionsPage: React.FC = () => {
 
   const resetFilters = () => {
     setCourseFilter("");
-    setSortOrder("desc"); // Reset to default
+    setSortOrder("desc");
     setPaginationPage(1);
   };
 
@@ -203,9 +211,7 @@ const TransactionsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Filter and Sort Controls */}
             <div className="flex flex-wrap gap-4 mb-6">
-              {/* Course Filter */}
               <div className="min-w-[150px] max-w-[200px]">
                 <label
                   htmlFor="courseFilter"
@@ -228,7 +234,6 @@ const TransactionsPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Sort Order (Date Only) */}
               <div className="min-w-[120px] max-w-[150px]">
                 <label
                   htmlFor="sortOrder"

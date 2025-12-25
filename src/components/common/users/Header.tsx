@@ -9,6 +9,21 @@ import { getSubscriptionStatus } from "../../../redux/actions/subscriptionAction
 import Notifications from "./Notifications";
 import { useSocket } from "@/components/context/socketContext";
 
+interface NotificationEvent {
+  success: boolean;
+  data: unknown[];
+  unreadCount: number;
+}
+
+interface NotificationReadEvent {
+  notificationId: string;
+  unreadCount: number;
+}
+
+interface AllNotificationsReadEvent {
+  unreadCount: number;
+}
+
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,7 +57,8 @@ const Header = () => {
           setLoading(false);
         })
         .catch((err) => {
-          console.error("Error fetching user data:", err);
+          const error = err as { message?: string };
+          console.error("Error fetching user data:", error.message ?? err);
           setLoading(false);
         });
     }
@@ -52,10 +68,11 @@ const Header = () => {
       dispatch(getSubscriptionStatus(userData._id))
         .unwrap()
         .then((result) => {
-          setHasActiveSubscription(result.data?.hasActiveSubscription || false);
+          setHasActiveSubscription(result.data?.hasActiveSubscription ?? false);
         })
         .catch((err) => {
-          console.error("Error fetching subscription status:", err);
+          const error = err as { message?: string };
+          console.error("Error fetching subscription status:", error.message ?? err);
           setHasActiveSubscription(false);
         });
     }
@@ -64,17 +81,17 @@ const Header = () => {
     if (socket && isAuthenticated) {
       socket.emit("getNotifications", { page: 1, limit: 10 });
 
-      socket.on("notifications", (data: { success: boolean; data: any[]; unreadCount: number }) => {
+      socket.on("notifications", (data: NotificationEvent) => {
         if (data.success) {
           setUnreadCount(data.unreadCount);
         }
       });
 
-      socket.on("notificationRead", (data: { notificationId: string; unreadCount: number }) => {
+      socket.on("notificationRead", (data: NotificationReadEvent) => {
         setUnreadCount(data.unreadCount);
       });
 
-      socket.on("allNotificationsRead", (data: { unreadCount: number }) => {
+      socket.on("allNotificationsRead", (data: AllNotificationsReadEvent) => {
         setUnreadCount(data.unreadCount);
       });
 

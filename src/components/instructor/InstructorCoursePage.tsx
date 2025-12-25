@@ -21,23 +21,28 @@ const InstructorCoursesPage: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { isAuthenticated } = useSelector((state: RootState) => state.user);
-  const { data: reduxCourses, loading, error: reduxError, currentPage, totalPages, totalCourses } = useSelector(
-    (state: RootState) => state.course
-  );
+  const {
+    data: reduxCourses = [],
+    loading,
+    error: reduxError,
+    // currentPage = 1,
+    totalPages = 1,
+    // totalCourses = 0,
+  } = useSelector((state: RootState) => state.course);
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [navigationError, setNavigationError] = useState<string | null>(null);
 
-  const courses: Course[] = reduxCourses.map((course: any) => ({
+  const courses: Course[] = reduxCourses.map((course) => ({
     id: course._id,
     title: course.title,
     thumbnail: course.thumbnail,
-    modulesCount: course.modules.length,
+    modulesCount: course.modules?.length ?? 0,
   }));
 
   useEffect(() => {
-    // Check for error in navigation state
     if (location.state?.error) {
       setNavigationError(location.state.error);
     }
@@ -46,35 +51,27 @@ const InstructorCoursesPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await dispatch(fetchUserData()).unwrap();
-        console.log("User data fetched:", result);
-      } catch (err: any) {
-        console.error("Error fetching user data:", err);
+        await dispatch(fetchUserData()).unwrap();
+      } catch (err) {
+        const errorObj = err as { message?: string };
+        console.error("Error fetching user data:", errorObj.message ?? err);
       }
     };
     fetchData();
   }, [dispatch]);
 
   useEffect(() => {
-    console.log("isAuthenticated:", isAuthenticated);
     if (!isAuthenticated) {
-      console.log("Skipping getAllCoursesByInstructorAction due to missing authentication");
       return;
     }
-    console.log("Dispatching getAllCoursesByInstructorAction with page:", page, "search:", searchQuery);
+
     dispatch(getAllCoursesByInstructorAction({ page, limit: 6, search: searchQuery }))
       .unwrap()
-      .then((result) => {
-        console.log("Courses fetched:", result);
-      })
       .catch((err) => {
-        console.error("Error fetching courses:", err);
+        const errorObj = err as { message?: string };
+        console.error("Error fetching courses:", errorObj.message ?? err);
       });
   }, [dispatch, isAuthenticated, page, searchQuery]);
-
-  useEffect(() => {
-    console.log("Redux state:", { reduxCourses, currentPage, totalPages, totalCourses });
-  }, [reduxCourses, currentPage, totalPages, totalCourses]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
@@ -86,7 +83,6 @@ const InstructorCoursesPage: React.FC = () => {
     setPage(newPage);
   };
 
-  // Navigate to course details page when thumbnail is clicked
   const handleThumbnailClick = (courseId: string) => {
     navigate(`/instructor/courseDetails/${courseId}`);
   };
@@ -117,12 +113,20 @@ const InstructorCoursesPage: React.FC = () => {
           </div>
         </header>
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          {/* Updated error message without Try Again button */}
           {navigationError && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm">
               <div className="flex items-center">
-                <svg className="h-5 w-5 mr-2 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 mr-2 text-red-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 <p>{navigationError}</p>
               </div>
@@ -186,8 +190,10 @@ const InstructorCoursesPage: React.FC = () => {
               </div>
             ))}
           </div>
-          {courses.length > 0 && !loading && totalPages > 0 && (
-            <div className="mt-6">
+
+          {/* Pagination is preserved */}
+          {courses.length > 0 && !loading && totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
               <Pagination
                 currentPage={page}
                 totalPages={totalPages}
@@ -195,6 +201,7 @@ const InstructorCoursesPage: React.FC = () => {
               />
             </div>
           )}
+
           {courses.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center bg-white rounded-lg shadow-md p-8 mt-4">
               <svg

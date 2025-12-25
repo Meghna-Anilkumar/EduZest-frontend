@@ -72,11 +72,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
     }
   }, [courseId]);
 
-
   useEffect(() => {
     localStorage.setItem(`chat_${courseId}`, JSON.stringify(messages));
   }, [messages, courseId]);
-
 
   useEffect(() => {
     setMessages([]);
@@ -116,9 +114,8 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
           ? "Unknown"
           : chat.senderId.name || "Anonymous";
       const senderRole =
-        typeof chat.senderId === "string"
-          ? "student"
-          : chat.senderId.role === "instructor"
+        typeof chat.senderId !== "string" &&
+        chat.senderId?.role?.toLowerCase() === "instructor"
           ? "instructor"
           : "student";
       const profilePic =
@@ -134,7 +131,12 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       const getReplyRole = (
         senderId:
           | string
-          | { _id: string; name?: string; role?: string; profile?: { profilePic?: string } }
+          | {
+              _id: string;
+              name?: string;
+              role?: string;
+              profile?: { profilePic?: string };
+            }
       ): "instructor" | "student" => {
         return typeof senderId !== "string" && senderId?.role === "instructor"
           ? "instructor"
@@ -241,7 +243,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
         }
 
         setCurrentPage((prev) => prev + 1);
-        setHasMoreMessages(data.totalPages ? currentPage < data.totalPages : false);
+        setHasMoreMessages(
+          data.totalPages ? currentPage < data.totalPages : false
+        );
         setUnreadCount(0);
         shouldScrollToBottomRef.current = currentPage === 1;
       } else {
@@ -287,7 +291,10 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       setOnlineUsers(users.filter((user) => user.userId !== userData?._id));
     };
 
-    const handleBlockedFromChat = (data: { courseId: string; message: string }) => {
+    const handleBlockedFromChat = (data: {
+      courseId: string;
+      message: string;
+    }) => {
       if (data.courseId === courseId) {
         setIsBlocked(true);
         setBlockMessage(
@@ -298,7 +305,10 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ courseId }) => {
       }
     };
 
-    const handleUnblockedFromChat = (data: { courseId: string; message: string }) => {
+    const handleUnblockedFromChat = (data: {
+      courseId: string;
+      message: string;
+    }) => {
       if (data.courseId === courseId) {
         setIsBlocked(false);
         setBlockMessage("You have been added back to this course chat.");

@@ -7,7 +7,6 @@ import CourseChatDisplay from "./CourseChatDisplay";
 import { useSocket } from "../context/socketContext";
 import { ChevronLeft } from "lucide-react";
 
-
 interface IChatGroupMetadata {
   _id: string;
   courseId: string;
@@ -43,32 +42,28 @@ const InstructorChatGroups: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [showChatList, setShowChatList] = useState(true);
 
-
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(() => {
     const savedCourseId = localStorage.getItem("selectedCourseId");
     return savedCourseId || null;
   });
 
-
   const [chatGroupMetadata, setChatGroupMetadata] = useState<IChatGroupMetadata[]>(() => {
     const savedMetadata = localStorage.getItem(METADATA_STORAGE_KEY);
     try {
       return savedMetadata ? JSON.parse(savedMetadata) : [];
-    } catch (e) {
+    } catch {
+      // Ignore parse errors – just return empty array
       return [];
     }
   });
-  
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
-  const [metadataFetchAttempted, setMetadataFetchAttempted] = useState(false);
 
+  const [chatLoading, setChatLoading] = useState(false);
+  const [metadataFetchAttempted, setMetadataFetchAttempted] = useState(false);
 
   useEffect(() => {
     const checkIfMobile = () => {
       const isMobileView = window.innerWidth < 768;
       setIsMobile(isMobileView);
-      
 
       if (isMobileView && selectedCourseId) {
         setShowChatList(false);
@@ -77,23 +72,17 @@ const InstructorChatGroups: React.FC = () => {
       }
     };
 
-
     checkIfMobile();
-
-
     window.addEventListener("resize", checkIfMobile);
-
 
     return () => window.removeEventListener("resize", checkIfMobile);
   }, [selectedCourseId]);
-
 
   useEffect(() => {
     if (userData?._id) {
       dispatch(getAllCoursesByInstructorAction({ page: 1, limit: 100 }));
     }
   }, [dispatch, userData?._id]);
-
 
   useEffect(() => {
     if (chatGroupMetadata.length > 0) {
@@ -105,19 +94,18 @@ const InstructorChatGroups: React.FC = () => {
     const fetchChatGroupMetadata = async () => {
       if (userData?._id && courses.length > 0 && !metadataFetchAttempted) {
         setChatLoading(true);
-        setChatError(null);
         try {
           const courseIds = courses.map((course) => course._id);
           const response = await dispatch(
             getChatGroupMetadataThunk({ userId: userData._id, courseIds })
           ).unwrap();
-          
+
           if (response.success) {
             const metadata = response.data as IChatGroupMetadata[];
             setChatGroupMetadata(metadata);
-   
+
             if (
-              (!selectedCourseId || !courses.some(course => course._id === selectedCourseId)) &&
+              (!selectedCourseId || !courses.some((course) => course._id === selectedCourseId)) &&
               courses.length > 0
             ) {
               const firstCourseId = courses[0]._id;
@@ -128,17 +116,11 @@ const InstructorChatGroups: React.FC = () => {
                 setShowChatList(false);
               }
             }
-          } else {
-            // Don't set error if we have existing metadata
-            if (chatGroupMetadata.length === 0) {
-              setChatError(null); // Hide error messages to avoid confusion
-            }
           }
-        } catch (error: any) {
-          // Don't set error if we have existing metadata
-          if (chatGroupMetadata.length === 0) {
-            setChatError(null); // Hide error messages to avoid confusion
-          }
+        } catch (err) {
+          const errorObj = err as { message?: string };
+          console.error("Failed to fetch chat metadata:", errorObj.message ?? err);
+          // No visible error shown – we fall back to cached metadata
         } finally {
           setChatLoading(false);
           setMetadataFetchAttempted(true);
@@ -149,13 +131,12 @@ const InstructorChatGroups: React.FC = () => {
     fetchChatGroupMetadata();
   }, [userData?._id, courses, dispatch, metadataFetchAttempted, chatGroupMetadata.length, isMobile]);
 
-  // Set up socket listeners for real-time updates
   useEffect(() => {
     if (socket && userData?._id) {
-      socket.on('chatGroupMetadataUpdate', (metadata: IChatGroupMetadata[]) => {
+      const handleMetadataUpdate = (metadataUpdates: IChatGroupMetadata[]) => {
         setChatGroupMetadata((prev) => {
           const updated = [...prev];
-          metadata.forEach((newMeta) => {
+          metadataUpdates.forEach((newMeta) => {
             const index = updated.findIndex(
               (m) => m.courseId.toString() === newMeta.courseId.toString()
             );
@@ -165,27 +146,25 @@ const InstructorChatGroups: React.FC = () => {
               updated.push(newMeta);
             }
           });
-          
-          // Save the updated metadata to localStorage
+
           localStorage.setItem(METADATA_STORAGE_KEY, JSON.stringify(updated));
-          
           return updated;
         });
-      });
+      };
 
-      // When socket reconnects, authenticate and rejoin rooms
-      socket.on('connect', () => {
-        socket.emit('authenticate', { userId: userData._id });
-        
-        // Rejoin the currently selected course room if any
+      socket.on("chatGroupMetadataUpdate", handleMetadataUpdate);
+
+      socket.on("connect", () => {
+        socket.emit("authenticate", { userId: userData._id });
+
         if (selectedCourseId) {
-          socket.emit('joinCourse', selectedCourseId);
+          socket.emit("joinCourse", selectedCourseId);
         }
       });
 
       return () => {
-        socket.off('chatGroupMetadataUpdate');
-        socket.off('connect');
+        socket.off("chatGroupMetadataUpdate", handleMetadataUpdate);
+        socket.off("connect");
       };
     }
   }, [socket, userData?._id, selectedCourseId]);
@@ -193,15 +172,13 @@ const InstructorChatGroups: React.FC = () => {
   const handleCourseClick = (courseId: string) => {
     setSelectedCourseId(courseId);
     localStorage.setItem("selectedCourseId", courseId);
-    
-    // On mobile, switch to chat view
+
     if (isMobile) {
       setShowChatList(false);
     }
-    
-    // Join the course room when selecting a course
+
     if (socket && socket.connected) {
-      socket.emit('joinCourse', courseId);
+      socket.emit("joinCourse", courseId);
     }
   };
 
@@ -213,12 +190,12 @@ const InstructorChatGroups: React.FC = () => {
     const metadata = chatGroupMetadata.find(
       (m) => m.courseId.toString() === courseId.toString()
     );
-    
+
     if (metadata?.lastMessage) {
       const message = metadata.lastMessage.message;
       return message.length > 50 ? `${message.substring(0, 47)}...` : message;
     }
-    return 'No messages yet';
+    return "No messages yet";
   };
 
   const getUnreadCount = (courseId: string) => {
@@ -232,41 +209,35 @@ const InstructorChatGroups: React.FC = () => {
     const metadata = chatGroupMetadata.find(
       (m) => m.courseId.toString() === courseId.toString()
     );
-    
+
     if (metadata?.lastMessage?.timestamp) {
       const date = new Date(metadata.lastMessage.timestamp);
-      // If today, show time only
       if (date.toDateString() === new Date().toDateString()) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       }
-      // If within the last week, show day of week
       const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
       if (daysAgo < 7) {
-        return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString([], { weekday: "short" });
       }
-      // Otherwise show short date
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString([], { month: "short", day: "numeric" });
     }
-    return '';
+    return "";
   };
 
   const getMessageSender = (courseId: string) => {
     const metadata = chatGroupMetadata.find(
       (m) => m.courseId.toString() === courseId.toString()
     );
-    
+
     if (metadata?.lastMessage?.senderId) {
-      // If message was sent by current user
       if (metadata.lastMessage.senderId._id === userData?._id) {
-        return 'You: ';
+        return "You: ";
       }
-      // Otherwise show sender's name
       return `${metadata.lastMessage.senderId.name}: `;
     }
-    return '';
+    return "";
   };
 
-  // Sort courses by last message timestamp
   const sortedCourses = [...courses].sort((a, b) => {
     const metadataA = chatGroupMetadata.find(
       (m) => m.courseId.toString() === a._id.toString()
@@ -274,22 +245,21 @@ const InstructorChatGroups: React.FC = () => {
     const metadataB = chatGroupMetadata.find(
       (m) => m.courseId.toString() === b._id.toString()
     );
-    
+
     const timeA = metadataA?.lastMessage?.timestamp
       ? new Date(metadataA.lastMessage.timestamp).getTime()
       : 0;
     const timeB = metadataB?.lastMessage?.timestamp
       ? new Date(metadataB.lastMessage.timestamp).getTime()
       : 0;
-    
-    // Sort in descending order (latest first)
+
     return timeB - timeA;
   });
 
-  // Find the current course name for mobile header
-  const currentCourseName = selectedCourseId 
-    ? courses.find(course => course._id === selectedCourseId)?.title || 'Course Chat'
-    : 'Course Chats';
+  const currentCourseName =
+    selectedCourseId
+      ? courses.find((course) => course._id === selectedCourseId)?.title || "Course Chat"
+      : "Course Chats";
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -313,7 +283,6 @@ const InstructorChatGroups: React.FC = () => {
         <div className="w-full md:w-1/3 bg-white border-r border-gray-200 overflow-y-auto shadow-sm flex flex-col h-full">
           <h2 className="text-lg md:text-2xl font-bold text-gray-900 p-4 md:p-6 border-b border-gray-200 flex items-center justify-between">
             <span>Chat Groups</span>
-            {/* Optional: Add a mobile action button here if needed */}
           </h2>
           {(loading || chatLoading) && !chatGroupMetadata.length && (
             <div className="p-6 flex items-center justify-center">
@@ -321,11 +290,8 @@ const InstructorChatGroups: React.FC = () => {
               <span className="ml-3 text-gray-500 text-sm">Loading...</span>
             </div>
           )}
-          {/* Only show error if courses are loaded and we have no metadata */}
           {error && courses.length === 0 && (
-            <p className="p-6 text-red-600 text-sm font-medium">
-              {error}
-            </p>
+            <p className="p-6 text-red-600 text-sm font-medium">{error}</p>
           )}
           {!loading && !error && courses.length === 0 && (
             <p className="p-6 text-gray-500 text-sm italic">No courses found.</p>
@@ -380,7 +346,6 @@ const InstructorChatGroups: React.FC = () => {
       {(!isMobile || (isMobile && !showChatList)) && (
         <div className="flex-1 bg-gray-50 h-full">
           {selectedCourseId ? (
-            // Pass key prop to force re-render when courseId changes
             <CourseChatDisplay key={selectedCourseId} courseId={selectedCourseId} />
           ) : (
             <div className="h-full flex items-center justify-center">

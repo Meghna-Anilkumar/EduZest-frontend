@@ -1,14 +1,15 @@
 import React from "react";
 import { Participant, OnlineUser } from "./CourseChatDisplay";
+import { Socket } from "socket.io-client";
 
 interface ParticipantsModalProps {
   participants: Participant[];
   onlineUsers: OnlineUser[];
   isOpen: boolean;
   onClose: () => void;
-  isInstructor: boolean; 
+  isInstructor: boolean;
   courseId: string;
-  socket: any; 
+  socket: Socket; // Properly typed Socket.IO client instance
 }
 
 const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
@@ -20,12 +21,14 @@ const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
   courseId,
   socket,
 }) => {
-  const getInitials = (name: string) => {
+  const getInitials = (name: string): string => {
     return name
+      .trim()
       .split(" ")
-      .map((word) => word[0])
+      .filter((word) => word.length > 0)
+      .map((word) => word[0].toUpperCase())
       .join("")
-      .toUpperCase();
+      .slice(0, 2); // Limit to 2 initials for consistency
   };
 
   const handleBlock = (userId: string) => {
@@ -45,14 +48,16 @@ const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
           <h3 className="text-lg font-bold text-gray-800">All Participants</h3>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-red-500"
+            className="text-gray-500 hover:text-red-500 transition-colors"
             title="Close"
+            aria-label="Close participants modal"
           >
             <svg
               className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 strokeLinecap="round"
@@ -63,23 +68,25 @@ const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
             </svg>
           </button>
         </div>
+
         {participants.length > 0 ? (
           <ul className="space-y-3">
             {participants.map((participant) => {
               const isOnline = onlineUsers.some(
                 (user) => user.userId === participant.userId
               );
+
               return (
                 <li
                   key={participant.userId}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <div
-                    className={`h-8 w-8 rounded-full ${
+                    className={`h-8 w-8 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${
                       participant.role === "instructor"
                         ? "bg-blue-200"
                         : "bg-gray-200"
-                    } flex items-center justify-center overflow-hidden`}
+                    }`}
                   >
                     {participant.profilePic ? (
                       <img
@@ -89,43 +96,45 @@ const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
                       />
                     ) : (
                       <span
-                        className={`${
+                        className={`text-sm font-semibold ${
                           participant.role === "instructor"
                             ? "text-blue-700"
                             : "text-gray-700"
-                        } text-sm font-semibold`}
+                        }`}
                       >
                         {getInitials(participant.name)}
                       </span>
                     )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
                       {participant.name}
                       {participant.role === "instructor" && " (Instructor)"}
                     </p>
                     <p className="text-xs text-gray-500">
                       {isOnline ? "Online" : "Offline"}
-                      {participant.isChatBlocked && " (Blocked)"}
+                      {participant.isChatBlocked && " • Blocked"}
                     </p>
                   </div>
+
                   {isInstructor && participant.role === "student" && (
                     <div className="flex gap-2">
                       {participant.isChatBlocked ? (
                         <button
                           onClick={() => handleUnblock(participant.userId)}
-                          className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                          title="Unblock from chat"
+                          className="text-xs px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                          title="Unblock user from chat"
                         >
                           Add
                         </button>
                       ) : (
                         <button
                           onClick={() => handleBlock(participant.userId)}
-                          className="text-xs px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                          title="Block from chat"
+                          className="text-xs px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                          title="Block user from chat"
                         >
-                         Remove
+                          Remove
                         </button>
                       )}
                     </div>
@@ -135,7 +144,7 @@ const ParticipantsModal: React.FC<ParticipantsModalProps> = ({
             })}
           </ul>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 text-center py-4">
             No participants found for this course.
           </p>
         )}

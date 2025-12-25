@@ -82,16 +82,13 @@ const CouponsPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<() => void>(
-    () => () => {}
-  );
+  const [confirmAction, setConfirmAction] = useState<() => Promise<void>>(() => async () => {});
   const [confirmMessage, setConfirmMessage] = useState("");
   const [limit] = useState(10);
-  const [searchQuery, setSearchQuery] = useState<string>(""); // State for search query
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Modified fetchCoupons to include searchQuery
   const fetchCoupons = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -103,25 +100,25 @@ const CouponsPage: React.FC = () => {
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
       setTotalCoupons(result.totalCoupons);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to fetch coupons";
+    } catch (err) {
+      const errorObj = err as { message?: string };
+      const errorMessage = errorObj.message ?? "Failed to fetch coupons";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [dispatch, currentPage, limit, searchQuery]); // Add searchQuery to dependencies
+  }, [dispatch, currentPage, limit, searchQuery]);
 
   useEffect(() => {
     fetchCoupons();
   }, [fetchCoupons]);
 
-  // Handle search input change
   const handleSearchChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const query = event.target.value.trim();
       setSearchQuery(query);
-      setCurrentPage(1); // Reset to first page on search
+      setCurrentPage(1);
     },
     []
   );
@@ -148,8 +145,9 @@ const CouponsPage: React.FC = () => {
           setIsAddModalOpen(false);
           resetForm();
           await fetchCoupons();
-        } catch (err: any) {
-          const errorMessage = err.message || "Failed to create coupon";
+        } catch (err) {
+          const errorObj = err as { message?: string };
+          const errorMessage = errorObj.message ?? "Failed to create coupon";
           setError(errorMessage);
           toast.error(errorMessage);
         }
@@ -186,8 +184,9 @@ const CouponsPage: React.FC = () => {
             toast.success("Coupon updated successfully");
             setIsEditModalOpen(false);
             await fetchCoupons();
-          } catch (err: any) {
-            const errorMessage = err.message || "Failed to update coupon";
+          } catch (err) {
+            const errorObj = err as { message?: string };
+            const errorMessage = errorObj.message ?? "Failed to update coupon";
             setError(errorMessage);
             toast.error(errorMessage);
           }
@@ -198,7 +197,6 @@ const CouponsPage: React.FC = () => {
   });
 
   const handleDeleteCoupon = (couponId: string, code: string) => {
-    console.log("Deleting coupon with ID:", couponId);
     setConfirmMessage(`Are you sure you want to delete the coupon "${code}"?`);
     setConfirmAction(() => async () => {
       try {
@@ -212,8 +210,9 @@ const CouponsPage: React.FC = () => {
         } else {
           await fetchCoupons();
         }
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to delete coupon";
+      } catch (err) {
+        const errorObj = err as { message?: string };
+        const errorMessage = errorObj.message ?? "Failed to delete coupon";
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -232,7 +231,7 @@ const CouponsPage: React.FC = () => {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Coupons</h1>
           <div className="flex items-center gap-4">
-            <SearchBar onSearchChange={handleSearchChange} /> {/* Add SearchBar */}
+            <SearchBar onSearchChange={handleSearchChange} />
             <button
               onClick={() => setIsAddModalOpen(true)}
               className="bg-[#49bbbd] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-[#3a9a9b] transition-colors"

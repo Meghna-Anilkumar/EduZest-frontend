@@ -6,12 +6,22 @@ import { AppDispatch, RootState } from "../../redux/store";
 import { updateInstructorProfileThunk } from "../../redux/actions/userActions";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+
 const Header = lazy(() => import("../../components/common/users/Header"));
+
+interface FormValues {
+  username: string;
+  email: string;
+  dob: string;
+  gender: string;
+  qualification: string;
+}
 
 const InstructorProfilePage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const userData = useSelector((state: RootState) => state.user.userData);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -20,7 +30,9 @@ const InstructorProfilePage = () => {
 
   const getMinDate = () => {
     const today = new Date();
-    return new Date(today.getFullYear() - 16, today.getMonth(), today.getDate()).toISOString().split("T")[0];
+    return new Date(today.getFullYear() - 16, today.getMonth(), today.getDate())
+      .toISOString()
+      .split("T")[0];
   };
 
   const validationSchema = Yup.object({
@@ -31,19 +43,18 @@ const InstructorProfilePage = () => {
       .max(getMinDate(), "You must be at least 16 years old")
       .transform((curr, orig) => (orig === "" ? null : curr)),
     gender: Yup.string().oneOf(["Male", "Female", "Other", ""], "Invalid gender selection"),
-    qualification: Yup.string()
+    qualification: Yup.string(),
   });
 
-  const [initialValues, setInitialValues] = useState({
+  const [initialValues, setInitialValues] = useState<FormValues>({
     username: "",
     email: "",
     dob: "",
     gender: "",
-    qualification: ""
+    qualification: "",
   });
 
   useEffect(() => {
-    console.log("User Data from Redux:", userData);
     if (userData) {
       setInitialValues({
         username: userData.name || "",
@@ -52,7 +63,7 @@ const InstructorProfilePage = () => {
           ? new Date(userData.profile.dob).toISOString().split("T")[0]
           : "",
         gender: userData.profile?.gender || "",
-        qualification: userData.qualification?.toString() || ""
+        qualification: userData.qualification?.toString() || "",
       });
       setProfilePic(userData.profile?.profilePic || null);
     }
@@ -70,7 +81,7 @@ const InstructorProfilePage = () => {
     }
   };
 
-  const handleSubmit = async (values: typeof initialValues) => {
+  const handleSubmit = async (values: FormValues) => {
     try {
       const formData = new FormData();
       formData.append("email", values.email);
@@ -78,21 +89,19 @@ const InstructorProfilePage = () => {
       formData.append("dob", values.dob || "");
       formData.append("gender", values.gender || "");
       formData.append("qualification", values.qualification || "");
+
       if (profileFile) {
         formData.append("profilePic", profileFile);
       }
 
-      for (const [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
-      }
-
       await dispatch(updateInstructorProfileThunk(formData)).unwrap();
-      
+
       setIsSaved(true);
       setErrorMessage(null);
       setTimeout(() => setIsSaved(false), 2000);
-    } catch (error: any) {
-      const errorMsg = error?.message || "An error occurred while updating profile";
+    } catch (err) {
+      const errorObj = err as { message?: string };
+      const errorMsg = errorObj.message ?? "An error occurred while updating profile";
       setErrorMessage(errorMsg);
       setTimeout(() => setErrorMessage(null), 5000);
     }
@@ -183,7 +192,9 @@ const InstructorProfilePage = () => {
               {({ isSubmitting }) => (
                 <Form className="space-y-6">
                   <div>
-                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                      Username
+                    </label>
                     <Field
                       type="text"
                       id="username"
@@ -195,7 +206,9 @@ const InstructorProfilePage = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Primary Email</label>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                      Primary Email
+                    </label>
                     <Field
                       type="email"
                       id="email"
@@ -207,7 +220,9 @@ const InstructorProfilePage = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                    <label htmlFor="dob" className="block text-sm font-medium text-gray-700 mb-2">
+                      Date of Birth
+                    </label>
                     <Field
                       type="date"
                       id="dob"
@@ -218,7 +233,9 @@ const InstructorProfilePage = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
+                      Gender
+                    </label>
                     <Field
                       as="select"
                       id="gender"
@@ -234,7 +251,9 @@ const InstructorProfilePage = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 mb-2">Qualifications</label>
+                    <label htmlFor="qualification" className="block text-sm font-medium text-gray-700 mb-2">
+                      Qualifications
+                    </label>
                     <Field
                       type="text"
                       id="qualification"

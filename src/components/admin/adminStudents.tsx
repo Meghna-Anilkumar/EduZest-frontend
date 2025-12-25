@@ -18,6 +18,7 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
+import { AxiosError } from "axios";
 
 const Sidebar = lazy(() => import("../common/admin/AdminSidebar"));
 
@@ -39,7 +40,7 @@ export const AdminStudents: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [studentToToggle, setStudentToToggle] = useState<{
@@ -48,24 +49,43 @@ export const AdminStudents: React.FC = () => {
   } | null>(null);
 
   const fetchStudents = useCallback(
-    async (page: number, search: string = "") => {
-      console.log("Fetching students with:", { page, limit: studentsPerPage, search });
+    async (page: number, search: string = ""): Promise<void> => {
+      console.log("Fetching students with:", {
+        page,
+        limit: studentsPerPage,
+        search,
+      });
+
       setLoading(true);
       setError(null);
+
       try {
-        const response = await dispatch(
+        const response: GetStudentsResponse = await dispatch(
           getAllStudentsAction({
             page,
             limit: studentsPerPage,
             search: search || undefined,
           })
         ).unwrap();
+
         console.log("Fetch students response:", response);
-        setStudents(response?.data?.students || []);
-        setTotalPages(response?.data?.totalPages || 1);
-      } catch (error: any) {
+
+        setStudents(response.data?.students ?? []);
+        setTotalPages(response.data?.totalPages ?? 1);
+      } catch (error: unknown) {
         console.error("Fetch students error:", error);
-        setError(error.response?.data?.message || "Failed to fetch students");
+
+        let errorMessage = "Failed to fetch students";
+
+        if (error instanceof AxiosError) {
+          errorMessage =
+            (error.response?.data as { message?: string })?.message ??
+            errorMessage;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -148,7 +168,9 @@ export const AdminStudents: React.FC = () => {
         className={`
           fixed lg:static
           inset-y-0 left-0
-          transform ${isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          transform ${
+            isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }
           lg:translate-x-0 transition-transform duration-300 ease-in-out
           z-50 lg:z-0
         `}
@@ -218,7 +240,10 @@ export const AdminStudents: React.FC = () => {
                         <td className="px-4 lg:px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
                           <button
                             onClick={() =>
-                              handleBlockUnblockClick(student._id, student.isBlocked ?? false)
+                              handleBlockUnblockClick(
+                                student._id,
+                                student.isBlocked ?? false
+                              )
                             }
                             className={`px-3 py-1 rounded-md text-sm font-medium text-white ${
                               student.isBlocked

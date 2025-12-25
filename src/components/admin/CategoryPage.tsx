@@ -70,7 +70,6 @@ const CategoryManagement = () => {
   const limit = 5;
 
   useEffect(() => {
-    console.log("Fetching categories for page:", page, "search:", searchTerm);
     dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
   }, [dispatch, page, searchTerm]);
 
@@ -85,8 +84,9 @@ const CategoryManagement = () => {
       setCategoryName("");
       setErrorMessage(null);
       dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to create category");
+    } catch (err) {
+      const error = err as { message?: string };
+      setErrorMessage(error.message ?? "Failed to create category");
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };
@@ -110,11 +110,20 @@ const CategoryManagement = () => {
       ).unwrap();
       setErrorMessage(null);
       dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
-    } catch (error: any) {
-      setErrorMessage(error.message || "Failed to update category");
+
+      // Close modal and clear selected category
+      setEditModalOpen(false);
+      setSelectedCategory(null);
+    } catch (error) {
+      const err = error as { message?: string };
+      setErrorMessage(err.message ?? "Failed to update category");
       setTimeout(() => setErrorMessage(null), 5000);
     }
+  };
+
+  const handleCloseEditModal = () => {
     setEditModalOpen(false);
+    setSelectedCategory(null); // Critical fix: clear previous data
   };
 
   const handleToggleBlockClick = (categoryId: string, isActive: boolean) => {
@@ -128,8 +137,9 @@ const CategoryManagement = () => {
       await dispatch(deleteCategoryAction(categoryToToggle.id)).unwrap();
       setErrorMessage(null);
       dispatch(getAllCategoriesAction({ page, limit, search: searchTerm }));
-    } catch (error: any) {
-      setErrorMessage(error.message || "Failed to toggle category status");
+    } catch (error) {
+      const err = error as { message?: string };
+      setErrorMessage(err.message ?? "Failed to toggle category status");
       setTimeout(() => setErrorMessage(null), 5000);
     }
     setConfirmDialogOpen(false);
@@ -174,7 +184,7 @@ const CategoryManagement = () => {
         <Sidebar />
       </Box>
 
-      {/* Main Content Area with scrolling */}
+      {/* Main Content Area */}
       <Box
         component="main"
         sx={{
@@ -309,10 +319,11 @@ const CategoryManagement = () => {
         </Paper>
       </Box>
 
+      {/* Edit Modal - only render when a category is selected */}
       {selectedCategory && (
         <EditCategoryModal
           open={editModalOpen}
-          onClose={() => setEditModalOpen(false)}
+          onClose={handleCloseEditModal}
           categoryName={selectedCategory.name}
           onConfirm={handleConfirmEdit}
         />

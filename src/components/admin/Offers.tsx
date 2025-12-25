@@ -77,8 +77,8 @@ const OffersPage: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<() => void>(
-    () => () => {}
+  const [confirmAction, setConfirmAction] = useState<() => Promise<void>>(
+    () => async () => {}
   );
   const [confirmMessage, setConfirmMessage] = useState("");
   const [limit] = useState(10);
@@ -93,8 +93,9 @@ const OffersPage: React.FC = () => {
       setCategories(
         result.categories.filter((category: Category) => category.isActive)
       );
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to fetch categories";
+    } catch (err) {
+      const errorObj = err as { message?: string };
+      const errorMessage = errorObj.message ?? "Failed to fetch categories";
       toast.error(errorMessage);
     }
   }, [dispatch]);
@@ -110,8 +111,9 @@ const OffersPage: React.FC = () => {
       setCurrentPage(result.currentPage);
       setTotalPages(result.totalPages);
       setTotalOffers(result.totalOffers);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to fetch offers";
+    } catch (err) {
+      const errorObj = err as { message?: string };
+      const errorMessage = errorObj.message ?? "Failed to fetch offers";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -144,8 +146,9 @@ const OffersPage: React.FC = () => {
           setIsAddModalOpen(false);
           resetForm();
           await fetchOffers();
-        } catch (err: any) {
-          const errorMessage = err.message || "Failed to create offer";
+        } catch (err) {
+          const errorObj = err as { message?: string };
+          const errorMessage = errorObj.message ?? "Failed to create offer";
           setError(errorMessage);
           toast.error(errorMessage);
         }
@@ -162,7 +165,7 @@ const OffersPage: React.FC = () => {
     },
     validationSchema: editOfferValidationSchema,
     enableReinitialize: true,
-    onSubmit: (values, { resetForm }: FormikHelpers<OfferFormValues>) => {
+    onSubmit: (values) => {
       if (selectedOffer) {
         setConfirmMessage("Are you sure you want to update this offer?");
         setConfirmAction(() => async () => {
@@ -179,11 +182,11 @@ const OffersPage: React.FC = () => {
             ).unwrap();
             toast.success("Offer updated successfully");
             setIsEditModalOpen(false);
-            setSelectedOffer(null); // Clear selected offer
-            resetForm(); // Reset form values
-            await fetchOffers(); // Refresh offers list
-          } catch (err: any) {
-            const errorMessage = err.message || "Failed to update offer";
+            setSelectedOffer(null);
+            await fetchOffers();
+          } catch (err) {
+            const errorObj = err as { message?: string };
+            const errorMessage = errorObj.message ?? "Failed to update offer";
             setError(errorMessage);
             toast.error(errorMessage);
           }
@@ -192,6 +195,11 @@ const OffersPage: React.FC = () => {
       }
     },
   });
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedOffer(null); // Clear selected offer when closing modal
+  };
 
   const handleDeleteOffer = (offerId: string, categoryName: string) => {
     setConfirmMessage(
@@ -209,8 +217,9 @@ const OffersPage: React.FC = () => {
         } else {
           await fetchOffers();
         }
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to delete offer";
+      } catch (err) {
+        const errorObj = err as { message?: string };
+        const errorMessage = errorObj.message ?? "Failed to delete offer";
         setError(errorMessage);
         toast.error(errorMessage);
       }
@@ -347,6 +356,8 @@ const OffersPage: React.FC = () => {
             onPageChange={handlePageChange}
           />
         </div>
+
+        {/* Add Modal */}
         {isAddModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -474,6 +485,8 @@ const OffersPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Edit Modal */}
         {isEditModalOpen && selectedOffer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -578,7 +591,7 @@ const OffersPage: React.FC = () => {
                 <div className="mt-6 flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsEditModalOpen(false)}
+                    onClick={handleCloseEditModal}
                     className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors duration-150"
                   >
                     Cancel
@@ -607,6 +620,7 @@ const OffersPage: React.FC = () => {
             </div>
           </div>
         )}
+
         <ConfirmationModal
           isOpen={isConfirmModalOpen}
           onClose={() => setIsConfirmModalOpen(false)}
