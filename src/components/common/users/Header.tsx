@@ -105,12 +105,12 @@ const Header = () => {
 
   const toggleMenu = () => {
     setIsMenuOpen((prevState) => !prevState);
-    setIsNotificationsOpen(false); // Close notifications when menu is toggled
+    setIsNotificationsOpen(false); 
   };
 
   const toggleNotifications = () => {
     setIsNotificationsOpen((prev) => !prev);
-    setIsMenuOpen(false); // Close menu when notifications are toggled
+    setIsMenuOpen(false); 
   };
 
   const handleLogout = () => {

@@ -11,7 +11,6 @@ const API_URL_USERS =
 const API_URL_ADMIN =
   import.meta.env.VITE_API_URL_ADMIN || "http://localhost:8080/admin";
 
-// Create Axios instances
 export const serverInstance: AxiosInstance = axios.create({
   baseURL: API_URL,
   withCredentials: true,
@@ -27,59 +26,88 @@ export const serverAdmin: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
-// Shared flag to prevent multiple simultaneous refresh attempts
 let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
 
-// Generic success handler
+const processQueue = (error: AxiosError | null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
 const handleSuccess = <T>(response: AxiosResponse<T>): AxiosResponse<T> => {
   return response;
 };
 
-// Enhanced error handler with proper typing
 const handleError = async (
   error: AxiosError<{ message?: string; logout?: boolean }>
-): Promise<never> => {
+): Promise<AxiosResponse> => {
   const originalRequest = error.config as (InternalAxiosRequestConfig & {
     _retry?: boolean;
   }) | undefined;
 
-  // Handle 401 Unauthorized - Token expired
-  if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-    originalRequest._retry = true;
-
-    if (!isRefreshing) {
-      isRefreshing = true;
-
-      try {
-        const refreshResponse = await serverUser.post<{ success: boolean; message?: string }>(
-          "/refresh-token"
-        );
-
-        isRefreshing = false;
-
-        if (refreshResponse.data.success) {
-          // Retry the original request with new token (cookie updated via httpOnly)
-          return axios(originalRequest);
-        } else {
-          console.error("Token refresh failed:", refreshResponse.data.message);
-          window.location.href = "/login";
-          return Promise.reject(error);
-        }
-      } catch (refreshError) {
-        console.error("Error during token refresh:", refreshError);
-        isRefreshing = false;
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
-      }
-    }
-
-    // If another request is already refreshing, just wait and retry
-    // Note: In a production app with many concurrent requests, you'd queue them.
-    // This simple version just rejects if refresh is in progress.
+  // Skip refresh token endpoint itself to avoid infinite loop
+  if (originalRequest?.url?.includes('/refresh-token')) {
+    console.error("Refresh token request failed, redirecting to login");
+    isRefreshing = false;
+    processQueue(error);
+    window.location.href = "/login";
     return Promise.reject(error);
   }
 
-  // Handle 403 Forbidden
+  if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (isRefreshing) {
+      // If already refreshing, queue this request
+      return new Promise<AxiosResponse>((resolve, reject) => {
+        failedQueue.push({ 
+          resolve: (value?: unknown) => resolve(value as AxiosResponse), 
+          reject 
+        });
+      })
+        .then(() => {
+          return axios(originalRequest);
+        })
+        .catch((err) => {
+          return Promise.reject(err);
+        });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const refreshResponse = await serverUser.post<{ success: boolean; message?: string }>(
+        "/refresh-token"
+      );
+
+      if (refreshResponse.data.success) {
+        isRefreshing = false;
+        processQueue(null);
+        return axios(originalRequest);
+      } else {
+        console.error("Token refresh failed:", refreshResponse.data.message);
+        isRefreshing = false;
+        processQueue(error);
+        window.location.href = "/login";
+        return Promise.reject(error);
+      }
+    } catch (refreshError) {
+      console.error("Error during token refresh:", refreshError);
+      isRefreshing = false;
+      processQueue(error);
+      window.location.href = "/login";
+      return Promise.reject(refreshError);
+    }
+  }
+
   if (error.response?.status === 403) {
     const data = error.response.data;
     if (data?.logout) {
@@ -91,16 +119,13 @@ const handleError = async (
     return Promise.reject(error);
   }
 
-  // Handle 500 Internal Server Error
   if (error.response?.status === 500) {
     console.error("Server error. Please try again later.");
   }
 
-  // For all other errors, reject
   return Promise.reject(error);
 };
 
-// Attach interceptors to all instances
 const attachInterceptors = (instance: AxiosInstance): void => {
   instance.interceptors.response.use(handleSuccess, handleError);
 };
