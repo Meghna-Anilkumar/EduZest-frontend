@@ -67,9 +67,9 @@ const handleError = async (
     if (isRefreshing) {
       // If already refreshing, queue this request
       return new Promise<AxiosResponse>((resolve, reject) => {
-        failedQueue.push({ 
-          resolve: (value?: unknown) => resolve(value as AxiosResponse), 
-          reject 
+        failedQueue.push({
+          resolve: (value?: unknown) => resolve(value as AxiosResponse),
+          reject
         });
       })
         .then(() => {
@@ -84,7 +84,7 @@ const handleError = async (
     isRefreshing = true;
 
     try {
-      const refreshResponse = await serverUser.post<{ success: boolean; message?: string }>(
+      const refreshResponse = await serverInstance.post(
         "/refresh-token"
       );
 
